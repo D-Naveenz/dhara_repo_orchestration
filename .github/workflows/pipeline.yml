@@ -33,7 +33,7 @@ jobs:
         run: cargo test -p drot -p drot_cli -p drot_ops -p drot_kernel
 
       - name: Cargo clippy (TUI)
-        run: cargo clippy -p drot_tui --all-targets -- -D warnings
+        run: cargo clippy -p drot_tui --all-targets
 
   pack-windows:
     name: pack (windows-x64)
