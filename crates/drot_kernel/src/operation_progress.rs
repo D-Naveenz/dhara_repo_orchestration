@@ -7,7 +7,7 @@ use std::sync::{Mutex, OnceLock, mpsc::Sender};
 use std::time::Instant;
 
 use crate::filedefs::{TridBuildProgress, TridBuildStage};
-use crate::logging::{interactive_mode_enabled, ELAPSED_UI_THRESHOLD};
+use crate::logging::{ELAPSED_UI_THRESHOLD, interactive_mode_enabled};
 
 /// Lifecycle phase for operation progress.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -199,7 +199,11 @@ fn publish_snapshot(plan: &OperationPlan) {
         return;
     };
     let snapshot = snapshot_from_plan(plan);
-    if let Some(sender) = slot.lock().expect("interactive progress lock poisoned").as_ref() {
+    if let Some(sender) = slot
+        .lock()
+        .expect("interactive progress lock poisoned")
+        .as_ref()
+    {
         let _ = sender.send(snapshot);
     }
 }
@@ -478,10 +482,8 @@ pub fn apply_trid_progress(update: &TridBuildProgress) {
                             format!("Parsing definitions ({}/{})", update.current, total);
                     } else {
                         let total = update.total.unwrap_or(0);
-                        plan.steps[index].detail = format!(
-                            "Parsing definitions ({}/{})",
-                            update.current, total
-                        );
+                        plan.steps[index].detail =
+                            format!("Parsing definitions ({}/{})", update.current, total);
                     }
                 }
             }
@@ -766,9 +768,6 @@ mod tests {
 
         let snapshot = with_plan(|plan| snapshot_from_plan(plan));
         assert_eq!(snapshot.active_step, Some("parse"));
-        assert_eq!(
-            snapshot.step_label,
-            "Reading definition files…"
-        );
+        assert_eq!(snapshot.step_label, "Reading definition files…");
     }
 }

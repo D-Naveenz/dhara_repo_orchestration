@@ -8,7 +8,7 @@ use crate::operation_progress::{
     set_command_milestone,
 };
 
-use super::audit::{format_duration, summarize_command_result, AUDIT_TARGET};
+use super::audit::{AUDIT_TARGET, format_duration, summarize_command_result};
 
 pub const ELAPSED_UI_THRESHOLD: Duration = Duration::from_secs(4);
 
@@ -132,21 +132,9 @@ pub fn command_labels(command_id: &str) -> ActivityLabel {
             "verified package",
             "package verification",
         ),
-        "package.pack" => (
-            "packaging release",
-            "packaged release",
-            "release packaging",
-        ),
-        "package.publish" => (
-            "publishing package",
-            "published package",
-            "package publish",
-        ),
-        "release.run" => (
-            "running release",
-            "completed release",
-            "release run",
-        ),
+        "package.pack" => ("packaging release", "packaged release", "release packaging"),
+        "package.publish" => ("publishing package", "published package", "package publish"),
+        "release.run" => ("running release", "completed release", "release run"),
         "quality.run" => (
             "running quality checks",
             "completed quality checks",

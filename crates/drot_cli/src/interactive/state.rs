@@ -288,16 +288,12 @@ impl AppState {
         }
     }
 
-    pub fn apply_activation_confirm(
-        &mut self,
-        repo_root: &std::path::Path,
-    ) -> anyhow::Result<()> {
+    pub fn apply_activation_confirm(&mut self, repo_root: &std::path::Path) -> anyhow::Result<()> {
         let Some(prompt) = self.activation_prompt.take() else {
             return Ok(());
         };
         apply_config_drift(repo_root, &prompt.drifts)?;
-        self.status_message =
-            "Configuration drift applied from dhara.config.toml.".to_owned();
+        self.status_message = "Configuration drift applied from dhara.config.toml.".to_owned();
         self.status_tone = StatusTone::Success;
         Ok(())
     }

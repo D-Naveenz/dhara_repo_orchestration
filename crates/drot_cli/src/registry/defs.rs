@@ -4,7 +4,7 @@ use crate::commands::{
     defs_sync_embedded, defs_verify,
 };
 
-use super::{command, RegisteredCommand};
+use super::{RegisteredCommand, command};
 
 pub fn section() -> SectionSpec {
     SectionSpec {

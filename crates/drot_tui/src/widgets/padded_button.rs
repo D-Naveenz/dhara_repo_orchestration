@@ -23,9 +23,7 @@ fn button_style(state: &ButtonState, theme: &Theme) -> Style {
             .bg(palette.highlight_bg)
             .add_modifier(Modifier::BOLD);
     }
-    Style::default()
-        .fg(palette.text)
-        .bg(palette.surface_raised)
+    Style::default().fg(palette.text).bg(palette.surface_raised)
 }
 
 pub fn render_padded_button(

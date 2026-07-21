@@ -3,11 +3,11 @@ pub mod modals;
 use drot_cli::command::{CommandRegistry, CommandSpec, FieldKind};
 use drot_cli::forms::FormValue;
 use drot_cli::interactive::{AppState, DiagnosticSeverity, MainTab};
+use ratatui::Frame;
 use ratatui::layout::Rect;
 use ratatui::style::Style;
 use ratatui::text::Line;
 use ratatui::widgets::{Paragraph, Widget};
-use ratatui::Frame;
 use ratatui_interact::components::{
     CheckBox, CheckBoxState, InputState, ScrollableContentState, Tab, TabViewAction, TabViewState,
 };
@@ -70,12 +70,10 @@ pub fn render_center_panel(
         &mut click_registry,
         frame.buffer_mut(),
     );
-    tab_table::render_tab_separator(frame, Rect::new(
-        panel_inner.x,
-        panel_inner.y + 1,
-        panel_inner.width,
-        1,
-    ));
+    tab_table::render_tab_separator(
+        frame,
+        Rect::new(panel_inner.x, panel_inner.y + 1, panel_inner.width, 1),
+    );
 
     let selected_tab = tab_state.selected_index;
     let content_focused = shell_focus.is_focused(&TuiFocus::TabContent);
@@ -84,7 +82,14 @@ pub fn render_center_panel(
     system_scroll.set_focused(content_focused && selected_tab == 3);
 
     match selected_tab {
-        0 => render_info_tab(layout.body, frame.buffer_mut(), state, registry, info_scroll, theme),
+        0 => render_info_tab(
+            layout.body,
+            frame.buffer_mut(),
+            state,
+            registry,
+            info_scroll,
+            theme,
+        ),
         1 => render_options_tab(
             frame,
             layout.body,
@@ -98,7 +103,13 @@ pub fn render_center_panel(
             content_focused,
             option_field_clicks,
         ),
-        2 => render_trouble_tab(layout.body, frame.buffer_mut(), state, trouble_scroll, theme),
+        2 => render_trouble_tab(
+            layout.body,
+            frame.buffer_mut(),
+            state,
+            trouble_scroll,
+            theme,
+        ),
         3 => render_system_tab(layout.body, frame.buffer_mut(), state, system_scroll, theme),
         _ => {}
     }
@@ -201,13 +212,8 @@ fn render_options_tab(
                 FormValue::Text(_),
                 FieldKind::Text | FieldKind::Path | FieldKind::BrowsablePath { .. },
             ) if selected && editing_form => {
-                let region = dhara_input::render_field_input(
-                    frame,
-                    row,
-                    &field.label,
-                    option_input,
-                    theme,
-                );
+                let region =
+                    dhara_input::render_field_input(frame, row, &field.label, option_input, theme);
                 option_field_clicks.register(region.area, index);
             }
             (

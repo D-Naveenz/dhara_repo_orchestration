@@ -1,6 +1,6 @@
+use ratatui::Frame;
 use ratatui::layout::Rect;
 use ratatui::widgets::{Block, Widget};
-use ratatui::Frame;
 
 use crate::theme as dhara_theme;
 

@@ -1,8 +1,8 @@
+use ratatui::Frame;
 use ratatui::layout::Rect;
 use ratatui::style::{Color, Style};
 use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, Paragraph, Widget};
-use ratatui::Frame;
 
 use drot_cli::interactive::{AppState, MainTab};
 
@@ -112,15 +112,13 @@ pub fn render_command_bar(frame: &mut Frame<'_>, area: Rect, ctx: &FooterContext
     let line = hints_line(&hints);
 
     frame.render_widget(Block::default().style(theme::bar_style()), area);
-    Paragraph::new(line)
-        .style(theme::bar_style())
-        .render(
-            Rect {
-                x: area.x + 1,
-                y: area.y,
-                width: area.width.saturating_sub(2),
-                height: 1,
-            },
-            frame.buffer_mut(),
-        );
+    Paragraph::new(line).style(theme::bar_style()).render(
+        Rect {
+            x: area.x + 1,
+            y: area.y,
+            width: area.width.saturating_sub(2),
+            height: 1,
+        },
+        frame.buffer_mut(),
+    );
 }

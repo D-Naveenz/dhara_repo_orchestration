@@ -2,13 +2,9 @@ use std::collections::BTreeMap;
 use std::sync::Arc;
 
 use anyhow::{Result, bail};
-use drot_kernel::{
-    LoggingOptions, CommandOutcome, CommandRun, ensure_logging,
-};
+use drot_kernel::{CommandOutcome, CommandRun, LoggingOptions, ensure_logging};
 
-pub use drot_kernel::{
-    CommandResult, ReportField, RunMode, StructuredReport, ToolContext,
-};
+pub use drot_kernel::{CommandResult, ReportField, RunMode, StructuredReport, ToolContext};
 
 pub type CommandHandler =
     Arc<dyn Fn(&ToolContext, &[String]) -> anyhow::Result<CommandResult> + Send + Sync + 'static>;
@@ -31,9 +27,7 @@ pub enum ArgBinding {
 pub enum FieldKind {
     Text,
     Path,
-    BrowsablePath {
-        dialog_title: &'static str,
-    },
+    BrowsablePath { dialog_title: &'static str },
     Boolean,
     Select(&'static [&'static str]),
 }

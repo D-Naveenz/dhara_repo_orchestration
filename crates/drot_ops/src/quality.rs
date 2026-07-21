@@ -5,14 +5,18 @@ use anyhow::{Result, bail};
 
 use drot_kernel::{repo_config::DharaRepoConfig, subprocess::run_command};
 
-use crate::workflow_progress::{begin_workflow, plan_unit_step, run_planned_step, run_workflow_step};
+use crate::workflow_progress::{
+    begin_workflow, plan_unit_step, run_planned_step, run_workflow_step,
+};
 
 const WORKSPACE_CRATES: &[&str] = &["dhara_storage_dal", "dhara_storage", "dharastorage-ffi"];
 
 const OTHER_CLIPPY_CRATES: &[&str] = &["dhara_storage_dal", "dharastorage-ffi"];
 
 pub fn run_fmt(repo_root: &Path, check: bool) -> Result<()> {
-    run_workflow_step("fmt", "Formatting Rust", "Running cargo fmt", || run_fmt_inner(repo_root, check))
+    run_workflow_step("fmt", "Formatting Rust", "Running cargo fmt", || {
+        run_fmt_inner(repo_root, check)
+    })
 }
 
 fn run_fmt_inner(repo_root: &Path, check: bool) -> Result<()> {
@@ -63,7 +67,9 @@ fn run_clippy_inner(repo_root: &Path) -> Result<()> {
 }
 
 pub fn run_doc(repo_root: &Path) -> Result<()> {
-    run_workflow_step("doc", "Building docs", "Running cargo doc", || run_doc_inner(repo_root))
+    run_workflow_step("doc", "Building docs", "Running cargo doc", || {
+        run_doc_inner(repo_root)
+    })
 }
 
 fn run_doc_inner(repo_root: &Path) -> Result<()> {
@@ -172,19 +178,29 @@ pub fn run_all(
         run_clippy_inner(repo_root)
     })?;
     if !skip_docs {
-        run_planned_step("doc", "Building docs", "Running cargo doc", || run_doc_inner(repo_root))?;
-    }
-    run_planned_step("test-rust", "Running Rust tests", "Running cargo test", || {
-        run_test_rust_inner(repo_root)
-    })?;
-    if include_dotnet {
-        run_planned_step("test-dotnet", "Running .NET tests", "Running dotnet test", || {
-            run_command(
-                "dotnet",
-                &["test".to_owned(), config.ci.tests_project.clone()],
-                repo_root,
-            )
+        run_planned_step("doc", "Building docs", "Running cargo doc", || {
+            run_doc_inner(repo_root)
         })?;
+    }
+    run_planned_step(
+        "test-rust",
+        "Running Rust tests",
+        "Running cargo test",
+        || run_test_rust_inner(repo_root),
+    )?;
+    if include_dotnet {
+        run_planned_step(
+            "test-dotnet",
+            "Running .NET tests",
+            "Running dotnet test",
+            || {
+                run_command(
+                    "dotnet",
+                    &["test".to_owned(), config.ci.tests_project.clone()],
+                    repo_root,
+                )
+            },
+        )?;
     } else if !skip_dotnet {
         drot_kernel::log_module_step_debug("dotnet not found; skipping .NET tests");
     }

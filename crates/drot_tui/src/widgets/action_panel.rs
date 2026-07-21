@@ -1,10 +1,8 @@
 use drot_kernel::RunPhase;
+use ratatui::Frame;
 use ratatui::layout::{Constraint, Layout, Rect};
 use ratatui::widgets::{Block, Borders, Widget};
-use ratatui::Frame;
-use ratatui_interact::components::{
-    ButtonState, Progress, ProgressStyle, Spinner, SpinnerState,
-};
+use ratatui_interact::components::{ButtonState, Progress, ProgressStyle, Spinner, SpinnerState};
 use ratatui_interact::theme::Theme;
 use ratatui_interact::traits::ClickRegionRegistry;
 
@@ -12,14 +10,16 @@ use drot_cli::interactive::AppState;
 
 use crate::focus::TuiFocus;
 use crate::theme as dhara_theme;
-use crate::widgets::{panel, padded_button, status_line};
 use crate::theme::ValidationTone;
+use crate::widgets::{padded_button, panel, status_line};
 
 fn dhara_progress_style(theme: &Theme) -> ProgressStyle {
     let mut style = ProgressStyle::from(theme);
     style.bordered = false;
     style.unfilled_color = dhara_theme::PANEL_BG;
-    style.label_style = style.label_style.remove_modifier(ratatui::style::Modifier::BOLD);
+    style.label_style = style
+        .label_style
+        .remove_modifier(ratatui::style::Modifier::BOLD);
     style
 }
 
@@ -53,14 +53,8 @@ pub fn render_action_panel(
     render_status(frame, layout[1], state, spinner, theme);
 
     let running = state.active_run.is_some();
-    let cancelable = state
-        .active_run
-        .as_ref()
-        .is_some_and(|run| run.cancelable);
-    let can_reset = state
-        .tree_view
-        .selected_command_id
-        .is_some();
+    let cancelable = state.active_run.as_ref().is_some_and(|run| run.cancelable);
+    let can_reset = state.tree_view.selected_command_id.is_some();
 
     run_btn.set_enabled(!running);
     cancel_btn.set_enabled(running && cancelable);
@@ -159,7 +153,9 @@ fn render_status(
     let status = format_status_line(state);
     if state.active_run.is_some() && area.width > 4 {
         let spin_area = Rect::new(area.x, area.y, 2, 1);
-        Spinner::new(spinner).theme(theme).render(spin_area, frame.buffer_mut());
+        Spinner::new(spinner)
+            .theme(theme)
+            .render(spin_area, frame.buffer_mut());
         status_line::render_status_line(
             Rect::new(area.x + 2, area.y, area.width.saturating_sub(2), 1),
             &status,

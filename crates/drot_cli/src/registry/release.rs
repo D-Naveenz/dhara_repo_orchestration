@@ -1,7 +1,7 @@
 use crate::command::SectionSpec;
 use crate::commands::release_run_command;
 
-use super::{command, RegisteredCommand};
+use super::{RegisteredCommand, command};
 
 pub fn section() -> SectionSpec {
     SectionSpec {

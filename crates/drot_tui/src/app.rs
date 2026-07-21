@@ -1,11 +1,13 @@
 use std::io::{self, IsTerminal, Stdout};
 use std::path::PathBuf;
-use std::sync::{Arc, Mutex};
 use std::sync::mpsc::{self, Receiver};
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 use anyhow::{Context, Result};
-use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers, MouseEvent, MouseEventKind};
+use crossterm::event::{
+    self, Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers, MouseEvent, MouseEventKind,
+};
 use crossterm::execute;
 use crossterm::terminal::{
     EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode,
@@ -13,17 +15,19 @@ use crossterm::terminal::{
 use drot_cli::command::{CommandRegistry, FieldKind, RunMode, ToolContext};
 use drot_cli::interactive::{ActivationPrompt, AppState, MainTab};
 use drot_kernel::{
-    ProgressSnapshot, activation::run_activation, ensure_workspace_state,
-    logging::init_progress_settings, load_runtime_cache, register_interactive_progress_sender,
+    ProgressSnapshot,
+    activation::run_activation,
+    ensure_workspace_state, load_runtime_cache,
+    logging::init_progress_settings,
+    register_interactive_progress_sender,
     repo_config::{ConfigDriftItem, show},
     resolve_and_persist_repository, unregister_interactive_progress_sender,
 };
 use ratatui::layout::{Constraint, Layout, Rect};
 use ratatui_interact::components::{
-    ButtonState, CheckBoxState, InputState, ScrollableContentState,
-    SpinnerState, TabViewAction, TabViewState, TreeViewState as WidgetTreeState,
-    handle_scrollable_content_key, handle_scrollable_content_mouse, handle_tab_view_key,
-    handle_tab_view_mouse,
+    ButtonState, CheckBoxState, InputState, ScrollableContentState, SpinnerState, TabViewAction,
+    TabViewState, TreeViewState as WidgetTreeState, handle_scrollable_content_key,
+    handle_scrollable_content_mouse, handle_tab_view_key, handle_tab_view_mouse,
 };
 use ratatui_interact::events::{get_char, is_left_click};
 use ratatui_interact::theme::Theme;
@@ -35,11 +39,11 @@ use crate::adapters::task_tree::{
 };
 use crate::boot::TuiBootParams;
 use crate::command_bar::{FooterContext, render_command_bar};
-use crate::focus::{focus_panel_at_pointer, point_in_rect, ShellFocus, TuiFocus};
+use crate::focus::{ShellFocus, TuiFocus, focus_panel_at_pointer, point_in_rect};
 use crate::screens::modals::{ModalHost, ModalOutcome};
 use crate::screens::{
-    apply_option_widgets_to_form, cycle_form_field, render_center_panel, sync_option_widgets_from_form,
-    sync_state_from_tab_view, tab_index,
+    apply_option_widgets_to_form, cycle_form_field, render_center_panel,
+    sync_option_widgets_from_form, sync_state_from_tab_view, tab_index,
 };
 use crate::theme::interact_theme;
 use crate::widgets::{action_panel, title_bar};
@@ -62,7 +66,8 @@ pub struct DharaTui {
     pub editing_form: bool,
     pub theme: Theme,
     pub task_tree_widget: WidgetTreeState,
-    pub task_tree_nodes: Vec<ratatui_interact::components::TreeNode<crate::adapters::task_tree::TaskTreeData>>,
+    pub task_tree_nodes:
+        Vec<ratatui_interact::components::TreeNode<crate::adapters::task_tree::TaskTreeData>>,
     pub tab_view_state: TabViewState,
     pub info_scroll: ScrollableContentState,
     pub trouble_scroll: ScrollableContentState,
@@ -329,7 +334,8 @@ fn draw(frame: &mut ratatui::Frame<'_>, app: &mut DharaTui) {
         &mut app.option_field_clicks,
     );
     app.tab_clicks = center_clicks.registry;
-    let center_chunks = Layout::vertical([Constraint::Length(1), Constraint::Min(1)]).split(body[1]);
+    let center_chunks =
+        Layout::vertical([Constraint::Length(1), Constraint::Min(1)]).split(body[1]);
     app.center_content_area = center_chunks[1];
 
     action_panel::render_action_panel(
@@ -377,8 +383,14 @@ fn handle_key(app: &mut DharaTui, key: KeyEvent) -> Result<()> {
         return Ok(());
     }
 
-    if app.shell_focus.is_focused(&TuiFocus::MainTabs) || app.shell_focus.is_focused(&TuiFocus::TabContent) {
-        if handle_tab_view_key(&mut app.tab_view_state, &key, ratatui_interact::components::TabPosition::Top) {
+    if app.shell_focus.is_focused(&TuiFocus::MainTabs)
+        || app.shell_focus.is_focused(&TuiFocus::TabContent)
+    {
+        if handle_tab_view_key(
+            &mut app.tab_view_state,
+            &key,
+            ratatui_interact::components::TabPosition::Top,
+        ) {
             app.state.main_tab = sync_state_from_tab_view(&app.tab_view_state);
             return Ok(());
         }
@@ -412,10 +424,18 @@ fn handle_tree_keys(app: &mut DharaTui, code: KeyCode) -> Result<()> {
     ) {
         TreeKeyAction::SelectionChanged | TreeKeyAction::Scrolled => {
             app.task_row = task_row_from_widget(&app.task_tree_widget);
-            sync_nav_from_widget(&app.task_tree_widget, &mut app.state.tree_view, &app.task_tree_nodes);
+            sync_nav_from_widget(
+                &app.task_tree_widget,
+                &mut app.state.tree_view,
+                &app.task_tree_nodes,
+            );
         }
         TreeKeyAction::Toggled => {
-            sync_nav_from_widget(&app.task_tree_widget, &mut app.state.tree_view, &app.task_tree_nodes);
+            sync_nav_from_widget(
+                &app.task_tree_widget,
+                &mut app.state.tree_view,
+                &app.task_tree_nodes,
+            );
         }
         TreeKeyAction::Activate => {
             apply_tree_selection(
@@ -574,7 +594,11 @@ fn handle_mouse(app: &mut DharaTui, mouse: MouseEvent) {
             mouse.row,
         );
 
-        if app.tab_clicks.handle_click(mouse.column, mouse.row).is_some() {
+        if app
+            .tab_clicks
+            .handle_click(mouse.column, mouse.row)
+            .is_some()
+        {
             handle_tab_view_mouse(&mut app.tab_view_state, &app.tab_clicks, &mouse);
             app.state.main_tab = sync_state_from_tab_view(&app.tab_view_state);
             app.shell_focus.focus(TuiFocus::TabContent);
@@ -596,7 +620,10 @@ fn handle_mouse(app: &mut DharaTui, mouse: MouseEvent) {
             );
         }
 
-        if let Some(&field_index) = app.option_field_clicks.handle_click(mouse.column, mouse.row) {
+        if let Some(&field_index) = app
+            .option_field_clicks
+            .handle_click(mouse.column, mouse.row)
+        {
             app.shell_focus.focus(TuiFocus::TabContent);
             app.state.main_tab = MainTab::Options;
             app.tab_view_state.select(tab_index(MainTab::Options));
@@ -715,7 +742,9 @@ fn handle_form_edit_key(app: &mut DharaTui, key: KeyEvent) -> Result<()> {
                 form.selected_field = app.form_field;
             }
         }
-        KeyCode::Char(' ') if field.is_some_and(|f| matches!(f.kind, drot_cli::command::FieldKind::Boolean)) => {
+        KeyCode::Char(' ')
+            if field.is_some_and(|f| matches!(f.kind, drot_cli::command::FieldKind::Boolean)) =>
+        {
             app.option_checkbox.toggle();
         }
         KeyCode::Backspace => {
@@ -800,7 +829,8 @@ fn activate_focused(app: &mut DharaTui) {
 fn finish_repository_setup(app: &mut DharaTui, repo_root: PathBuf) -> Result<()> {
     let context = build_context(&app.exe_root, &app.boot, repo_root.clone());
     init_progress_settings(&context);
-    let pending = run_activation(&repo_root, app.boot.yes, RunMode::Interactive)?.unwrap_or_default();
+    let pending =
+        run_activation(&repo_root, app.boot.yes, RunMode::Interactive)?.unwrap_or_default();
     let workspace = ensure_workspace_state(&context);
     app.state = AppState::with_workspace(
         AppState::repository_label_from_path(&repo_root),

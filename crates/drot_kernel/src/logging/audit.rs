@@ -174,10 +174,7 @@ impl tracing::field::Visit for DiagnosticMessage {
     fn record_debug(&mut self, field: &tracing::field::Field, value: &dyn std::fmt::Debug) {
         if field.name() == "message" && self.text.is_empty() {
             self.text = format!("{value:?}");
-            if self.text.len() >= 2
-                && self.text.starts_with('"')
-                && self.text.ends_with('"')
-            {
+            if self.text.len() >= 2 && self.text.starts_with('"') && self.text.ends_with('"') {
                 self.text = self.text[1..self.text.len() - 1].to_owned();
             }
         }

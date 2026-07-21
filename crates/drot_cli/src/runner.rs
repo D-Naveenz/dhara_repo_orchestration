@@ -3,7 +3,8 @@ use std::thread::{self, JoinHandle};
 
 use crate::command::{CommandRegistry, CommandResult, RunMode, ToolContext};
 use drot_kernel::{
-    OperationProgressGuard, OutputCaptureGuard, OutputEvent, cancel_active_subprocess, complete_progress,
+    OperationProgressGuard, OutputCaptureGuard, OutputEvent, cancel_active_subprocess,
+    complete_progress,
 };
 
 pub struct RunHandle {

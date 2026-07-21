@@ -1,8 +1,10 @@
 use crossterm::event::{KeyCode, MouseEvent};
 use drot_cli::command::CommandRegistry;
-use drot_cli::interactive::{AppState, NavTree, TreeNode as NavNode, TreeViewState as NavTreeState};
-use ratatui::layout::Rect;
+use drot_cli::interactive::{
+    AppState, NavTree, TreeNode as NavNode, TreeViewState as NavTreeState,
+};
 use ratatui::Frame;
+use ratatui::layout::Rect;
 use ratatui_interact::components::{
     TreeNode, TreeView, TreeViewState as WidgetTreeState, get_selected_id,
 };
@@ -165,13 +167,9 @@ pub fn handle_tree_mouse(
     let visible_idx = widget.scroll as usize + rel_row;
     widget.selected_index = visible_idx.min(count - 1);
     widget.ensure_visible(count);
-    scrollable_tree::auto_scroll_selection(
-        nodes,
-        widget,
-        h_scroll,
-        inner.width,
-        |node| node.data.label.as_str(),
-    );
+    scrollable_tree::auto_scroll_selection(nodes, widget, h_scroll, inner.width, |node| {
+        node.data.label.as_str()
+    });
     true
 }
 
@@ -251,12 +249,10 @@ pub fn handle_tree_key(
             TreeKeyAction::Toggled
         }
         KeyCode::Right => {
-            let max = scrollable_tree::max_horizontal_scroll(
-                nodes,
-                widget,
-                viewport_width,
-                |node| node.data.label.as_str(),
-            );
+            let max =
+                scrollable_tree::max_horizontal_scroll(nodes, widget, viewport_width, |node| {
+                    node.data.label.as_str()
+                });
             if *h_scroll < max {
                 *h_scroll = h_scroll.saturating_add(1);
                 TreeKeyAction::Scrolled
@@ -275,13 +271,9 @@ pub fn handle_tree_key(
         action,
         TreeKeyAction::SelectionChanged | TreeKeyAction::Toggled
     ) {
-        scrollable_tree::auto_scroll_selection(
-            nodes,
-            widget,
-            h_scroll,
-            viewport_width,
-            |node| node.data.label.as_str(),
-        );
+        scrollable_tree::auto_scroll_selection(nodes, widget, h_scroll, viewport_width, |node| {
+            node.data.label.as_str()
+        });
     }
     action
 }
@@ -305,11 +297,7 @@ pub fn sync_tree_scroll(
     h_scroll: &mut u16,
     viewport_width: u16,
 ) {
-    scrollable_tree::auto_scroll_selection(
-        nodes,
-        widget,
-        h_scroll,
-        viewport_width,
-        |node| node.data.label.as_str(),
-    );
+    scrollable_tree::auto_scroll_selection(nodes, widget, h_scroll, viewport_width, |node| {
+        node.data.label.as_str()
+    });
 }

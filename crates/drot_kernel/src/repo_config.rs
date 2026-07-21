@@ -431,12 +431,10 @@ fn managed_csproj_snapshot_from_content(
     let project =
         Element::parse(content.as_bytes()).context("failed to parse Dhara.Storage.csproj")?;
     let readme_file = file_name(&config.nuget.readme)?;
-    let readme_include = find_pack_none_include(
-        &project,
-        &[config.nuget.readme.as_str(), readme_file],
-    )
-    .map(|path| normalize_include_path(&path))
-    .unwrap_or_default();
+    let readme_include =
+        find_pack_none_include(&project, &[config.nuget.readme.as_str(), readme_file])
+            .map(|path| normalize_include_path(&path))
+            .unwrap_or_default();
     let icon_include = config.nuget.icon.as_deref().and_then(|icon| {
         let icon_file = file_name(icon).ok()?;
         find_pack_none_include(&project, &[icon, icon_file])
@@ -594,7 +592,8 @@ fn insert_property_in_first_group(content: &str, name: &str, value: &str) -> Res
         .find('>')
         .context("csproj has a malformed Project opening tag")?;
     let insert_at = project_open + rel_close + 1;
-    let insertion = format!("\n  <PropertyGroup>\n    <{name}>{value}</{name}>\n  </PropertyGroup>");
+    let insertion =
+        format!("\n  <PropertyGroup>\n    <{name}>{value}</{name}>\n  </PropertyGroup>");
     let mut updated = String::with_capacity(content.len() + insertion.len());
     updated.push_str(&content[..insert_at]);
     updated.push_str(&insertion);
@@ -609,8 +608,7 @@ fn patch_pack_none_include(
     current_include: &str,
 ) -> Result<()> {
     let expected_include = normalize_include_path(expected_include);
-    if !current_include.is_empty() && normalize_include_path(current_include) == expected_include
-    {
+    if !current_include.is_empty() && normalize_include_path(current_include) == expected_include {
         return Ok(());
     }
 
@@ -884,7 +882,8 @@ mod tests {
     fn write_required_files(repo_root: &Path) {
         fs::create_dir_all(repo_root.join("src/bindings/csharp/Dhara.Storage")).unwrap();
         fs::create_dir_all(repo_root.join("src/bindings/csharp/Dhara.Storage.Tests")).unwrap();
-        fs::create_dir_all(repo_root.join("src/bindings/csharp/Dhara.Storage.ConsumerSmoke")).unwrap();
+        fs::create_dir_all(repo_root.join("src/bindings/csharp/Dhara.Storage.ConsumerSmoke"))
+            .unwrap();
         fs::write(repo_root.join(CONFIG_PATH), "placeholder").unwrap();
         fs::write(repo_root.join(ROOT_CARGO_TOML_PATH), "[workspace]\n").unwrap();
         fs::write(repo_root.join(ENV_EXAMPLE_PATH), "NUGET_API_KEY=\n").unwrap();
@@ -1002,9 +1001,11 @@ mod tests {
         .unwrap();
 
         let drifts = detect_config_drift(temp.path()).unwrap();
-        assert!(!drifts
-            .iter()
-            .any(|item| item.kind == ConfigDriftKind::WorkspaceCargoToml));
+        assert!(
+            !drifts
+                .iter()
+                .any(|item| item.kind == ConfigDriftKind::WorkspaceCargoToml)
+        );
     }
 
     #[test]
@@ -1025,9 +1026,8 @@ mod tests {
     #[test]
     fn sync_csproj_uses_project_relative_package_assets() {
         let mut config = sample_config();
-        config.nuget.icon = Some(
-            "src/bindings/csharp/Dhara.Storage/assets/dhara-logo-colored_sm.png".to_owned(),
-        );
+        config.nuget.icon =
+            Some("src/bindings/csharp/Dhara.Storage/assets/dhara-logo-colored_sm.png".to_owned());
         let updated = sync_csproj(
             r#"<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
@@ -1103,8 +1103,7 @@ mod tests {
 
         let drifts = detect_config_drift(temp.path()).unwrap();
         assert!(drifts.iter().any(|item| {
-            item.kind == ConfigDriftKind::WorkspaceCargoToml
-                && item.summary.contains("0.2.0")
+            item.kind == ConfigDriftKind::WorkspaceCargoToml && item.summary.contains("0.2.0")
         }));
     }
 

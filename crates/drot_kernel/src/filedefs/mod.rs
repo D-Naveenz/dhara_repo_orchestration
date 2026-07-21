@@ -33,14 +33,8 @@ impl DefsPaths {
     pub fn from_context(context: &ToolContext) -> Self {
         Self {
             repo_root: context.repo_root.clone(),
-            package_dir: resolve_package_dir(
-                &context.tool_root,
-                context.package_dir.as_deref(),
-            ),
-            output_dir: resolve_defs_output_dir(
-                &context.repo_root,
-                context.output_dir.as_deref(),
-            ),
+            package_dir: resolve_package_dir(&context.tool_root, context.package_dir.as_deref()),
+            output_dir: resolve_defs_output_dir(&context.repo_root, context.output_dir.as_deref()),
             logs_dir: resolve_logs_dir(&context.tool_root, context.logs_dir.as_deref()),
         }
     }

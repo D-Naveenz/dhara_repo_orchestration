@@ -1,5 +1,5 @@
 use anyhow::Result;
-use drot_kernel::{has_committed_progress_plan, ProgressSession};
+use drot_kernel::{ProgressSession, has_committed_progress_plan};
 
 /// Runs one workflow step with progress when interactive or when a parent plan is active.
 pub fn run_workflow_step(

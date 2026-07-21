@@ -14,10 +14,7 @@ struct FlatNode<'a, T> {
     parent_is_last: Vec<bool>,
 }
 
-fn flatten_visible<'a, T>(
-    nodes: &'a [TreeNode<T>],
-    state: &TreeViewState,
-) -> Vec<FlatNode<'a, T>>
+fn flatten_visible<'a, T>(nodes: &'a [TreeNode<T>], state: &TreeViewState) -> Vec<FlatNode<'a, T>>
 where
     T: std::fmt::Debug,
 {
@@ -283,11 +280,7 @@ pub fn max_horizontal_scroll<T: std::fmt::Debug>(
     let view = viewport_width as usize;
     let mut max_line = 0usize;
     for flat in &visible {
-        let (prefix, _) = build_prefix(
-            &style,
-            flat,
-            state,
-        );
+        let (prefix, _) = build_prefix(&style, flat, state);
         max_line = max_line.max(prefix.width() + label(flat.node).width());
     }
     max_line.saturating_sub(view) as u16

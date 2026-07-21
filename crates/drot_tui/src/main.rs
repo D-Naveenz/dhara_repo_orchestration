@@ -47,8 +47,7 @@ fn main() -> Result<()> {
     };
 
     if let Some(repo_root) = try_early_repository(&exe_root, cli.repository.clone())? {
-        let pending_activation =
-            run_activation(&repo_root, cli.yes, run_mode)?.unwrap_or_default();
+        let pending_activation = run_activation(&repo_root, cli.yes, run_mode)?.unwrap_or_default();
         let context = build_context(
             repo_root,
             exe_root.clone(),
@@ -210,7 +209,9 @@ fn parse_root_args(args: Vec<String>) -> Result<RootArgs> {
                 index += 1;
             }
             other => {
-                bail!("unexpected argument '{other}' (drot_tui does not take subcommands; use drot for CLI)");
+                bail!(
+                    "unexpected argument '{other}' (drot_tui does not take subcommands; use drot for CLI)"
+                );
             }
         }
     }

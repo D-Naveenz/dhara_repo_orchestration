@@ -6,9 +6,8 @@ pub mod registry;
 pub mod runner;
 
 pub use command::{
-    ArgBinding, CommandHandler, CommandRegistry, CommandResult, CommandSpec, CommandUi,
-    FieldKind, FieldSpec, ReportField, RunMode, SectionSpec, StructuredReport, ToolCapability,
-    ToolContext,
+    ArgBinding, CommandHandler, CommandRegistry, CommandResult, CommandSpec, CommandUi, FieldKind,
+    FieldSpec, ReportField, RunMode, SectionSpec, StructuredReport, ToolCapability, ToolContext,
 };
 pub use forms::{CommandForm, FormValue};
 pub use interactive::{

@@ -1,7 +1,7 @@
+use ratatui::Frame;
 use ratatui::layout::{Constraint, Layout, Rect};
 use ratatui::style::Style;
 use ratatui::widgets::{Block, Widget};
-use ratatui::Frame;
 use ratatui_interact::components::{Tab, TabView, TabViewState};
 use ratatui_interact::theme::Theme;
 use ratatui_interact::traits::ClickRegionRegistry;
@@ -14,8 +14,12 @@ pub struct TabTableLayout {
 }
 
 pub fn split_tab_table(area: Rect) -> TabTableLayout {
-    let chunks = Layout::vertical([Constraint::Length(1), Constraint::Length(1), Constraint::Min(0)])
-        .split(area);
+    let chunks = Layout::vertical([
+        Constraint::Length(1),
+        Constraint::Length(1),
+        Constraint::Min(0),
+    ])
+    .split(area);
     TabTableLayout {
         header: chunks[0],
         body: chunks[2],

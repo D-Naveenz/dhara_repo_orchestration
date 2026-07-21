@@ -6,7 +6,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::Instant;
 
 use rayon::prelude::*;
-use sevenz_rust::{Archive, default_entry_extract_fn, decompress_file_with_extract_fn};
+use sevenz_rust::{Archive, decompress_file_with_extract_fn, default_entry_extract_fn};
 use tempfile::{TempDir, tempdir};
 use tracing::debug;
 

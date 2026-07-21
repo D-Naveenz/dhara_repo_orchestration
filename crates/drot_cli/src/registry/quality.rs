@@ -4,7 +4,7 @@ use crate::commands::{
     quality_test_dotnet_command, quality_test_rust_command,
 };
 
-use super::{command, RegisteredCommand};
+use super::{RegisteredCommand, command};
 
 pub fn section() -> SectionSpec {
     SectionSpec {

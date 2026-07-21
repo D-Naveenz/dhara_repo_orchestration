@@ -7,17 +7,18 @@ use ratatui::Frame;
 use ratatui::layout::{Layout, Rect};
 use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span};
-use ratatui::widgets::{Block, Clear, Paragraph, Wrap, Widget};
+use ratatui::widgets::{Block, Clear, Paragraph, Widget, Wrap};
+use ratatui_interact::components::InputState;
 use ratatui_interact::components::{DialogConfig, DialogFocusTarget, DialogState, PopupDialog};
 use ratatui_interact::events::{get_char, is_backspace, is_delete};
 use ratatui_interact::theme::Theme;
 use ratatui_interact::traits::{ClickRegionRegistry, ContainerAction, EventResult};
-use ratatui_interact::components::InputState;
 
 use crate::theme::{self, ValidationTone};
 use crate::widgets::{
-    dhara_input, modal_footer, modal_shell, status_line,
+    dhara_input, modal_footer,
     modal_footer::{ModalFooterButton, footer_layout_constraints},
+    modal_shell, status_line,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -223,9 +224,7 @@ impl ModalHost {
     fn map_repo_action(&mut self, action: ContainerAction) -> Option<ModalOutcome> {
         match action {
             ContainerAction::Submit => match &self.repo_state.children.path_status {
-                RepoPathStatus::Valid(root) => {
-                    Some(ModalOutcome::RepositoryResolved(root.clone()))
-                }
+                RepoPathStatus::Valid(root) => Some(ModalOutcome::RepositoryResolved(root.clone())),
                 RepoPathStatus::Empty => Some(ModalOutcome::RepositoryPathRequired),
                 RepoPathStatus::Invalid(_) => None,
             },
@@ -258,25 +257,24 @@ impl ModalHost {
         let prompt = state.activation_prompt.as_ref().expect("activation prompt");
         let mut config = self.activation_config.clone();
         config = config.theme(theme);
-        let mut dialog =
-            PopupDialog::new(&config, &mut self.activation_state, |frame, area, _| {
-                modal_shell::fill_modal_background(frame, area);
-                let mut lines = vec![
-                    Line::from(Span::styled(
-                        "Configuration drift detected",
-                        Style::default().add_modifier(Modifier::BOLD),
-                    )),
-                    Line::from(""),
-                ];
-                for drift in &prompt.drifts {
-                    lines.push(Line::from(format!("  • {}", drift.summary)));
-                }
-                lines.push(Line::from(""));
-                lines.push(Line::from("Apply drift from dhara.config.toml?"));
-                Paragraph::new(lines)
-                    .wrap(Wrap { trim: true })
-                    .render(area, frame.buffer_mut());
-            });
+        let mut dialog = PopupDialog::new(&config, &mut self.activation_state, |frame, area, _| {
+            modal_shell::fill_modal_background(frame, area);
+            let mut lines = vec![
+                Line::from(Span::styled(
+                    "Configuration drift detected",
+                    Style::default().add_modifier(Modifier::BOLD),
+                )),
+                Line::from(""),
+            ];
+            for drift in &prompt.drifts {
+                lines.push(Line::from(format!("  • {}", drift.summary)));
+            }
+            lines.push(Line::from(""));
+            lines.push(Line::from("Apply drift from dhara.config.toml?"));
+            Paragraph::new(lines)
+                .wrap(Wrap { trim: true })
+                .render(area, frame.buffer_mut());
+        });
         dialog.render(frame);
     }
 
@@ -326,10 +324,9 @@ impl ModalHost {
                     state: content.ok_btn.clone(),
                 },
             ];
-            content.ok_btn.set_enabled(matches!(
-                content.path_status,
-                RepoPathStatus::Valid(_)
-            ));
+            content
+                .ok_btn
+                .set_enabled(matches!(content.path_status, RepoPathStatus::Valid(_)));
             buttons[0].state = content.cancel_btn.clone();
             buttons[1].state = content.ok_btn.clone();
 
@@ -476,14 +473,11 @@ impl ModalHost {
             .handle_click(mouse.column, mouse.row)
             .is_some()
         {
-            self.repo_state
-                .focus
-                .set(DialogFocusTarget::Child(0));
+            self.repo_state.focus.set(DialogFocusTarget::Child(0));
             return None;
         }
 
-        let mut dialog =
-            PopupDialog::new(&self.repo_config, &mut self.repo_state, |_, _, _| {});
+        let mut dialog = PopupDialog::new(&self.repo_config, &mut self.repo_state, |_, _, _| {});
         match dialog.handle_mouse_with_screen(mouse, screen) {
             EventResult::Action(action) => Some(action),
             _ => None,

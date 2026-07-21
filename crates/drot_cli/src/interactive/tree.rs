@@ -40,10 +40,7 @@ pub struct TreeViewState {
 
 impl NavTree {
     pub fn from_registry(registry: &CommandRegistry) -> Self {
-        let roots = vec![
-            build_favorites_group(registry),
-            build_tasks_group(registry),
-        ];
+        let roots = vec![build_favorites_group(registry), build_tasks_group(registry)];
         Self { roots }
     }
 }
@@ -52,14 +49,15 @@ fn build_favorites_group(registry: &CommandRegistry) -> TreeNode {
     let children = QUICK_ACTIONS
         .iter()
         .filter_map(|id| {
-            registry.commands().find(|command| command.id == *id).map(|command| {
-                TreeNode {
+            registry
+                .commands()
+                .find(|command| command.id == *id)
+                .map(|command| TreeNode {
                     label: command.summary.to_owned(),
                     path_key: format!("{FAVORITES_GROUP}/{}", command.id),
                     command_id: Some(command.id),
                     children: Vec::new(),
-                }
-            })
+                })
         })
         .collect();
 

@@ -27,9 +27,12 @@ pub fn is_repo_root(path: &Path) -> bool {
 
 /// Canonical directory containing the running `drot` executable (`exe_path`).
 pub fn resolve_exe_root(current_exe: PathBuf) -> Result<PathBuf> {
-    let parent = current_exe
-        .parent()
-        .with_context(|| format!("failed to resolve directory for '{}'", current_exe.display()))?;
+    let parent = current_exe.parent().with_context(|| {
+        format!(
+            "failed to resolve directory for '{}'",
+            current_exe.display()
+        )
+    })?;
     Ok(canonicalize_path(parent))
 }
 
@@ -181,14 +184,8 @@ mod tests {
             default_artifacts_dir(&tool),
             PathBuf::from("/exe/artifacts")
         );
-        assert_eq!(
-            default_nuget_dir(&tool),
-            PathBuf::from("/exe/output/nuget")
-        );
-        assert_eq!(
-            default_package_dir(&tool),
-            PathBuf::from("/exe/package")
-        );
+        assert_eq!(default_nuget_dir(&tool), PathBuf::from("/exe/output/nuget"));
+        assert_eq!(default_package_dir(&tool), PathBuf::from("/exe/package"));
     }
 
     #[test]

@@ -6,7 +6,7 @@ use tracing::debug;
 
 use drot_kernel::CommandResult;
 use drot_kernel::{
-    has_committed_progress_plan,
+    ProgressSession, has_committed_progress_plan,
     logging::log_module_step_debug,
     paths::{default_artifacts_dir, resolve_output_dir},
     repo_config::{DharaRepoConfig, load_env, verify_release},
@@ -14,7 +14,6 @@ use drot_kernel::{
         inspect_package_entries, run_command, run_command_expect_failure,
         run_command_with_env_redacted, write_nuget_config,
     },
-    ProgressSession,
 };
 
 use crate::native_rids::{
@@ -128,7 +127,9 @@ pub fn pack(
 
 fn setup_pack_plan(config: &DharaRepoConfig, options: &PackageOptions) -> Result<()> {
     let runtimes = buildable_runtimes_on_host(&config.ci.native_runtimes);
-    if runtimes.is_empty() && options.native_stage_override.is_none() && native_stage_from_env().is_none()
+    if runtimes.is_empty()
+        && options.native_stage_override.is_none()
+        && native_stage_from_env().is_none()
     {
         bail!("no native runtimes are buildable on the current host");
     }
@@ -165,7 +166,11 @@ pub fn verify(
             plan_unit_step(&session, "pack", "Packing NuGet package");
             plan_unit_step(&session, "restore-smoke", "Restoring smoke consumer");
             plan_unit_step(&session, "run-smoke", "Running smoke consumer");
-            plan_unit_step(&session, "reject-check", "Verifying unsupported runtime rejection");
+            plan_unit_step(
+                &session,
+                "reject-check",
+                "Verifying unsupported runtime rejection",
+            );
             plan_unit_step(&session, "aot-restore", "Restoring AOT smoke consumer");
             plan_unit_step(&session, "aot-publish", "Publishing AOT smoke consumer");
             session.commit();
@@ -296,9 +301,12 @@ pub fn publish(
     if nested {
         verify(repo_root, tool_root, config, options)?;
     } else {
-        run_planned_step("verify", "Verifying package", "Running package verification", || {
-            verify(repo_root, tool_root, config, options).map(|_| ())
-        })?;
+        run_planned_step(
+            "verify",
+            "Verifying package",
+            "Running package verification",
+            || verify(repo_root, tool_root, config, options).map(|_| ()),
+        )?;
     }
 
     if !options.execute_publish {

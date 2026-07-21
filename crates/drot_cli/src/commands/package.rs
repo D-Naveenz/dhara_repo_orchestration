@@ -58,8 +58,7 @@ pub(crate) fn package_stage_native_command(
 
     #[cfg(windows)]
     if args.msvc_env {
-        let exe =
-            std::env::current_exe().context("failed to resolve drot executable path")?;
+        let exe = std::env::current_exe().context("failed to resolve drot executable path")?;
         let mut command = format!("\"{}\" package stage-native", exe.display());
         if args.configuration != "Release" {
             command.push_str(&format!(" --configuration {}", args.configuration));
@@ -134,8 +133,7 @@ pub(crate) fn package_publish_command(
 pub(crate) fn release_run_command(context: &ToolContext, args: &[String]) -> Result<CommandResult> {
     #[cfg(windows)]
     if std::env::var_os("DHARA_TOOL_INSIDE_MSVC").is_none() {
-        let exe =
-            std::env::current_exe().context("failed to resolve drot executable path")?;
+        let exe = std::env::current_exe().context("failed to resolve drot executable path")?;
         let mut command = format!(
             "set DHARA_TOOL_INSIDE_MSVC=1&& \"{}\" release run",
             exe.display()

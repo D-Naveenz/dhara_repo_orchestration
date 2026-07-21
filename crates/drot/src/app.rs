@@ -4,9 +4,7 @@ use std::path::{Path, PathBuf};
 
 use anyhow::{Context, Result, bail};
 
-use drot_cli::{
-    CommandRegistry, DharaStorageCapability, RunMode, ToolCapability, ToolContext,
-};
+use drot_cli::{CommandRegistry, DharaStorageCapability, RunMode, ToolCapability, ToolContext};
 use drot_kernel::{
     activation::run_activation, ensure_workspace_state, log_session_end, paths::resolve_exe_root,
     resolve_and_persist_repository, try_cached_repository, workers,

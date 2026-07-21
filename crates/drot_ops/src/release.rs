@@ -7,13 +7,16 @@ use xmltree::{Element, XMLNode};
 
 use drot_kernel::CommandResult;
 use drot_kernel::{
+    ProgressSession,
     logging::log_module_step_debug,
     repo_config::{DharaRepoConfig, load_env, verify_release},
     subprocess::run_command,
-    ProgressSession,
 };
 
-use crate::{nuget, workflow_progress::{begin_workflow, plan_unit_step, run_planned_step}, PackageOptions};
+use crate::{
+    PackageOptions, nuget,
+    workflow_progress::{begin_workflow, plan_unit_step, run_planned_step},
+};
 
 const CARGO_REGISTRY_TOKEN_ENV: &str = "CARGO_REGISTRY_TOKEN";
 

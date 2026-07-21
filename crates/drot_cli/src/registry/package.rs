@@ -4,7 +4,7 @@ use crate::commands::{
     package_stage_native_command, verify_package_command,
 };
 
-use super::{command, RegisteredCommand};
+use super::{RegisteredCommand, command};
 
 pub fn native_section() -> SectionSpec {
     SectionSpec {

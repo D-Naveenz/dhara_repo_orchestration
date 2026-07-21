@@ -2,8 +2,8 @@ pub mod activation;
 pub mod context;
 pub mod filedefs;
 pub mod logging;
-pub mod operation_progress;
 pub mod msvc;
+pub mod operation_progress;
 pub mod output;
 pub mod paths;
 pub mod repo_config;
@@ -12,9 +12,7 @@ pub mod subprocess;
 pub mod workers;
 pub mod workspace;
 
-pub use context::{
-    CommandResult, ReportField, RunMode, StructuredReport, ToolContext,
-};
+pub use context::{CommandResult, ReportField, RunMode, StructuredReport, ToolContext};
 pub use filedefs::{
     BuilderError, DefsCommand, DefsPaths, LoadedPackage, PackageSummary, ReduceTraceDetail,
     SyncEmbeddedOutcome, SyncEmbeddedStatus, TridBuildProgress, TridBuildStage,
@@ -22,24 +20,26 @@ pub use filedefs::{
     load_package, normalize_package, packages_match, print_defs_help, sync_embedded_package,
     write_package,
 };
-pub use operation_progress::{
-    OperationProgressGuard, ProgressSession, ProgressSnapshot, ProgressStep, RunPhase,
-    adjust_step_weight, apply_trid_progress, begin_analyzing, begin_single_shot, clear_run_activity,
-    clear_run_clock, commit_plan, complete_progress, has_committed_progress_plan, install_run_clock,
-    plan_step, register_interactive_progress_sender, set_command_activity, set_command_milestone,
-    set_step_message, set_step_total, tick_step, unregister_interactive_progress_sender,
-};
 pub use logging::{
-    ActivityLabel, CommandOutcome, CommandRun, ELAPSED_UI_THRESHOLD, LoggingOptions, LoggingRuntime,
-    command_labels, current_log_path, ensure_logging, format_command_args, init_logging,
-    log_build_progress, log_file_path, log_module_step_debug, log_module_step_error,
+    ActivityLabel, CommandOutcome, CommandRun, ELAPSED_UI_THRESHOLD, LoggingOptions,
+    LoggingRuntime, command_labels, current_log_path, ensure_logging, format_command_args,
+    init_logging, log_build_progress, log_file_path, log_module_step_debug, log_module_step_error,
     log_module_step_warn, log_session_begin, log_session_end, log_transform_statistics,
     phase_activity_label, summarize_command_result, write_session_record,
+};
+pub use operation_progress::{
+    OperationProgressGuard, ProgressSession, ProgressSnapshot, ProgressStep, RunPhase,
+    adjust_step_weight, apply_trid_progress, begin_analyzing, begin_single_shot,
+    clear_run_activity, clear_run_clock, commit_plan, complete_progress,
+    has_committed_progress_plan, install_run_clock, plan_step,
+    register_interactive_progress_sender, set_command_activity, set_command_milestone,
+    set_step_message, set_step_total, tick_step, unregister_interactive_progress_sender,
 };
 pub use output::{
     OutputCaptureGuard, OutputEvent, OutputStream, cancel_active_subprocess, emit_stderr_line,
     emit_stdout_line, emit_warn_line,
 };
+pub use paths::{is_repo_root, normalize_repository_input, resolve_exe_root};
 pub use repo_config::{
     CONFIG_PATH, CiConfig, ConfigDriftItem, ConfigDriftKind, DharaRepoConfig, ENV_EXAMPLE_PATH,
     ENV_LOCAL_PATH, NuGetConfig, PublishConfig, ROOT_CARGO_TOML_PATH, ShowOutput, TargetsConfig,
@@ -47,14 +47,13 @@ pub use repo_config::{
     load_config, load_env, parse_env_content, set_version, show, sync_cargo_toml, sync_csproj,
     validate_config, verify_release,
 };
-pub use subprocess::{
-    inspect_package_entries, run_command, run_command_expect_failure, run_command_with_env,
-    run_command_with_env_redacted, write_nuget_config,
-};
-pub use paths::{is_repo_root, normalize_repository_input, resolve_exe_root};
 pub use runtime_cache::{
     RuntimeCache, load_runtime_cache, resolve_and_persist_repository, runtime_cache_path,
     save_runtime_cache, stale_cached_repository, try_cached_repository,
+};
+pub use subprocess::{
+    inspect_package_entries, run_command, run_command_expect_failure, run_command_with_env,
+    run_command_with_env_redacted, write_nuget_config,
 };
 pub use workspace::{
     DefsPackageStatus, WorkspaceSnapshot, ensure_workspace_state, next_package_revision,

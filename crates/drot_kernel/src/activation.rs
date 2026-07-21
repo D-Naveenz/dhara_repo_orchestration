@@ -43,7 +43,9 @@ fn prompt_direct_activation(
         eprintln!("  - {}", item.summary);
     }
     eprint!("Apply changes? [y/N]: ");
-    io::stderr().flush().context("failed to flush activation prompt")?;
+    io::stderr()
+        .flush()
+        .context("failed to flush activation prompt")?;
 
     let mut answer = String::new();
     io::stdin()
@@ -77,7 +79,7 @@ mod tests {
 
     use super::*;
     use crate::repo_config::{
-        CONFIG_PATH, ConfigDriftKind, ConfigDriftItem, ROOT_CARGO_TOML_PATH, detect_config_drift,
+        CONFIG_PATH, ConfigDriftItem, ConfigDriftKind, ROOT_CARGO_TOML_PATH, detect_config_drift,
     };
 
     fn write_minimal_repo(repo_root: &std::path::Path) {
@@ -98,7 +100,11 @@ mod tests {
         )
         .unwrap();
         fs::write(repo_root.join(".env.example"), "NUGET_API_KEY=\n").unwrap();
-        fs::write(repo_root.join("src/bindings/csharp/Dhara.Storage/README.md"), "# pkg").unwrap();
+        fs::write(
+            repo_root.join("src/bindings/csharp/Dhara.Storage/README.md"),
+            "# pkg",
+        )
+        .unwrap();
         fs::create_dir_all(repo_root.join("src/core/dhara_storage_dal/resources")).unwrap();
         fs::write(
             repo_root.join("src/core/dhara_storage_dal/resources/filedefs.dat"),

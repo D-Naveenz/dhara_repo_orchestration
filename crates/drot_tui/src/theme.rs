@@ -36,9 +36,7 @@ pub fn modal_panel_style() -> Style {
 }
 
 pub fn bar_style() -> Style {
-    Style::default()
-        .fg(TEXT)
-        .bg(Color::Rgb(40, 40, 46))
+    Style::default().fg(TEXT).bg(Color::Rgb(40, 40, 46))
 }
 
 pub fn border_only_style() -> Style {
