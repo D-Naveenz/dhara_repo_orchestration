@@ -161,20 +161,18 @@ pub fn verify(
     ));
 
     let nested = has_committed_progress_plan();
-    if !nested {
-        if let Some(session) = begin_workflow("Planning package verification…") {
-            plan_unit_step(&session, "pack", "Packing NuGet package");
-            plan_unit_step(&session, "restore-smoke", "Restoring smoke consumer");
-            plan_unit_step(&session, "run-smoke", "Running smoke consumer");
-            plan_unit_step(
-                &session,
-                "reject-check",
-                "Verifying unsupported runtime rejection",
-            );
-            plan_unit_step(&session, "aot-restore", "Restoring AOT smoke consumer");
-            plan_unit_step(&session, "aot-publish", "Publishing AOT smoke consumer");
-            session.commit();
-        }
+    if !nested && let Some(session) = begin_workflow("Planning package verification…") {
+        plan_unit_step(&session, "pack", "Packing NuGet package");
+        plan_unit_step(&session, "restore-smoke", "Restoring smoke consumer");
+        plan_unit_step(&session, "run-smoke", "Running smoke consumer");
+        plan_unit_step(
+            &session,
+            "reject-check",
+            "Verifying unsupported runtime rejection",
+        );
+        plan_unit_step(&session, "aot-restore", "Restoring AOT smoke consumer");
+        plan_unit_step(&session, "aot-publish", "Publishing AOT smoke consumer");
+        session.commit();
     }
 
     let run_step = |id, label, detail, op: &dyn Fn() -> Result<()>| {
@@ -288,14 +286,12 @@ pub fn publish(
     ));
 
     let nested = has_committed_progress_plan();
-    if !nested {
-        if let Some(session) = begin_workflow("Planning package publish…") {
-            plan_unit_step(&session, "verify", "Verifying package");
-            if options.execute_publish {
-                plan_unit_step(&session, "push", "Publishing to NuGet feed");
-            }
-            session.commit();
+    if !nested && let Some(session) = begin_workflow("Planning package publish…") {
+        plan_unit_step(&session, "verify", "Verifying package");
+        if options.execute_publish {
+            plan_unit_step(&session, "push", "Publishing to NuGet feed");
         }
+        session.commit();
     }
 
     if nested {

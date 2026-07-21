@@ -133,9 +133,7 @@ pub fn clear_run_clock() {
 
 fn elapsed_secs_from_clock() -> Option<u64> {
     RUN_STARTED.with(|slot| {
-        let Some(started) = *slot.borrow() else {
-            return None;
-        };
+        let started = (*slot.borrow())?;
         let elapsed = started.elapsed();
         if elapsed >= ELAPSED_UI_THRESHOLD {
             Some(elapsed.as_secs())

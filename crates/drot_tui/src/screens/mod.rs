@@ -195,7 +195,7 @@ fn render_options_tab(
             (FormValue::Boolean(value), FieldKind::Boolean) if selected && editing_form => {
                 let mut cb = CheckBoxState::new(*value);
                 cb.set_focused(true);
-                let region = CheckBox::new(&field.label, &cb)
+                let region = CheckBox::new(field.label, &cb)
                     .theme(theme)
                     .render_stateful(row, frame.buffer_mut());
                 option_field_clicks.register(region.area, index);
@@ -203,7 +203,7 @@ fn render_options_tab(
             (FormValue::Boolean(value), FieldKind::Boolean) => {
                 let mut cb = CheckBoxState::new(*value);
                 cb.set_focused(selected && content_focused);
-                let region = CheckBox::new(&field.label, &cb)
+                let region = CheckBox::new(field.label, &cb)
                     .theme(theme)
                     .render_stateful(row, frame.buffer_mut());
                 option_field_clicks.register(region.area, index);
@@ -213,7 +213,7 @@ fn render_options_tab(
                 FieldKind::Text | FieldKind::Path | FieldKind::BrowsablePath { .. },
             ) if selected && editing_form => {
                 let region =
-                    dhara_input::render_field_input(frame, row, &field.label, option_input, theme);
+                    dhara_input::render_field_input(frame, row, field.label, option_input, theme);
                 option_field_clicks.register(region.area, index);
             }
             (

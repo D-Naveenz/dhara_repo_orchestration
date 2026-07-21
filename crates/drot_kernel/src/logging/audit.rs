@@ -152,16 +152,9 @@ fn resolve_log_levels(min: bool, trace: bool, run_mode: RunMode) -> (LevelFilter
 
 struct InteractiveDiagnosticLayer;
 
+#[derive(Default)]
 struct DiagnosticMessage {
     text: String,
-}
-
-impl Default for DiagnosticMessage {
-    fn default() -> Self {
-        Self {
-            text: String::new(),
-        }
-    }
 }
 
 impl tracing::field::Visit for DiagnosticMessage {
@@ -191,7 +184,7 @@ where
         _ctx: tracing_subscriber::layer::Context<'_, S>,
     ) {
         let level = event.metadata().level();
-        if !matches!(level, &Level::WARN | &Level::ERROR) {
+        if !matches!(*level, Level::WARN | Level::ERROR) {
             return;
         }
 
@@ -201,9 +194,9 @@ where
             return;
         }
 
-        match level {
-            &Level::WARN => emit_warn_line(message.text),
-            &Level::ERROR => emit_stderr_line(message.text),
+        match *level {
+            Level::WARN => emit_warn_line(message.text),
+            Level::ERROR => emit_stderr_line(message.text),
             _ => {}
         }
     }

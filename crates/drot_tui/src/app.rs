@@ -383,23 +383,20 @@ fn handle_key(app: &mut DharaTui, key: KeyEvent) -> Result<()> {
         return Ok(());
     }
 
-    if app.shell_focus.is_focused(&TuiFocus::MainTabs)
-        || app.shell_focus.is_focused(&TuiFocus::TabContent)
-    {
-        if handle_tab_view_key(
+    if (app.shell_focus.is_focused(&TuiFocus::MainTabs)
+        || app.shell_focus.is_focused(&TuiFocus::TabContent))
+        && handle_tab_view_key(
             &mut app.tab_view_state,
             &key,
             ratatui_interact::components::TabPosition::Top,
-        ) {
-            app.state.main_tab = sync_state_from_tab_view(&app.tab_view_state);
-            return Ok(());
-        }
+        )
+    {
+        app.state.main_tab = sync_state_from_tab_view(&app.tab_view_state);
+        return Ok(());
     }
 
-    if app.shell_focus.is_focused(&TuiFocus::TabContent) {
-        if handle_tab_content_key(app, &key) {
-            return Ok(());
-        }
+    if app.shell_focus.is_focused(&TuiFocus::TabContent) && handle_tab_content_key(app, &key) {
+        return Ok(());
     }
 
     match app.shell_focus.current() {
@@ -528,10 +525,10 @@ fn handle_tab_content_key(app: &mut DharaTui, key: &KeyEvent) -> bool {
                     &mut app.option_input,
                     &mut app.option_checkbox,
                 );
-                if let Some(command) = app.state.selected_command(&app.registry) {
-                    if let Some(form) = app.state.forms.get_mut(command.id) {
-                        form.selected_field = app.form_field;
-                    }
+                if let Some(command) = app.state.selected_command(&app.registry)
+                    && let Some(form) = app.state.forms.get_mut(command.id)
+                {
+                    form.selected_field = app.form_field;
                 }
                 true
             }
@@ -632,22 +629,19 @@ fn handle_mouse(app: &mut DharaTui, mouse: MouseEvent) {
                 if let Some(form) = app.state.forms.get_mut(command.id) {
                     form.selected_field = field_index;
                 }
-                if let Some(field) = command.ui.fields.get(field_index) {
-                    if matches!(field.kind, FieldKind::Boolean) {
-                        if let Some(form) = app.state.forms.get_mut(command.id) {
-                            if let drot_cli::forms::FormValue::Boolean(value) =
-                                &mut form.values[field_index]
-                            {
-                                *value = !*value;
-                            }
-                        }
-                    }
+                if let Some(field) = command.ui.fields.get(field_index)
+                    && matches!(field.kind, FieldKind::Boolean)
+                    && let Some(form) = app.state.forms.get_mut(command.id)
+                    && let drot_cli::forms::FormValue::Boolean(value) =
+                        &mut form.values[field_index]
+                {
+                    *value = !*value;
                 }
             }
         }
 
         if let Some(focus) = app.shell_clicks.handle_click(mouse.column, mouse.row) {
-            app.shell_focus.focus(focus.clone());
+            app.shell_focus.focus(*focus);
             if matches!(
                 focus,
                 TuiFocus::ActionRun | TuiFocus::ActionCancel | TuiFocus::ActionReset
@@ -709,10 +703,10 @@ fn apply_modal_outcome(app: &mut DharaTui, outcome: ModalOutcome) {
             app.state.should_quit = true;
         }
         ModalOutcome::ActivationConfirmed => {
-            if let Some(context) = app.context.as_ref() {
-                if let Err(error) = app.state.apply_activation_confirm(&context.repo_root) {
-                    app.state.status_message = error.to_string();
-                }
+            if let Some(context) = app.context.as_ref()
+                && let Err(error) = app.state.apply_activation_confirm(&context.repo_root)
+            {
+                app.state.status_message = error.to_string();
             }
         }
         ModalOutcome::ActivationDeclined => {
@@ -758,10 +752,9 @@ fn handle_form_edit_key(app: &mut DharaTui, key: KeyEvent) -> Result<()> {
                         | drot_cli::command::FieldKind::Path
                         | drot_cli::command::FieldKind::BrowsablePath { .. }
                 )
-            }) {
-                if let Some(ch) = get_char(&key) {
-                    app.option_input.insert_char(ch);
-                }
+            }) && let Some(ch) = get_char(&key)
+            {
+                app.option_input.insert_char(ch);
             }
         }
         _ => {}
@@ -813,10 +806,10 @@ fn activate_focused(app: &mut DharaTui) {
                 &mut app.option_input,
                 &mut app.option_checkbox,
             );
-            if let Some(command) = app.state.selected_command(&app.registry) {
-                if let Some(form) = app.state.forms.get_mut(command.id) {
-                    form.selected_field = app.form_field;
-                }
+            if let Some(command) = app.state.selected_command(&app.registry)
+                && let Some(form) = app.state.forms.get_mut(command.id)
+            {
+                form.selected_field = app.form_field;
             }
         }
         Some(TuiFocus::ActionRun) | Some(TuiFocus::ActionCancel) | Some(TuiFocus::ActionReset) => {

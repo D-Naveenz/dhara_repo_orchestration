@@ -175,7 +175,7 @@ pub fn phase_activity_label(stage: crate::filedefs::TridBuildStage) -> &'static 
 }
 
 fn command_id_to_words(command_id: &str) -> String {
-    command_id.replace('.', " ").replace('-', " ")
+    command_id.replace(['.', '-'], " ")
 }
 
 #[cfg(test)]
