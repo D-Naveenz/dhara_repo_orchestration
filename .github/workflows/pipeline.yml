@@ -1,0 +1,103 @@
+name: Pipeline
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: write
+
+jobs:
+  quality:
+    name: quality
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Cargo fmt
+        run: cargo fmt --all -- --check
+
+      - name: Cargo clippy (CLI path)
+        run: cargo clippy -p drot -p drot_cli -p drot_ops -p drot_kernel --all-targets -- -D warnings
+
+      - name: Cargo test (CLI path)
+        run: cargo test -p drot -p drot_cli -p drot_ops -p drot_kernel
+
+      - name: Cargo clippy (TUI)
+        run: cargo clippy -p drot_tui --all-targets -- -D warnings
+
+  pack-windows:
+    name: pack (windows-x64)
+    needs: quality
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Build drot (dist)
+        run: cargo build -p drot --profile dist
+
+      - name: Stage artifact
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dist-out
+          cp target/dist/drot.exe dist-out/drot.exe
+          if [ -d target/dist/package ]; then
+            cp -a target/dist/package dist-out/package
+          elif [ -d package ]; then
+            cp -a package dist-out/package
+          fi
+
+      - name: Upload drot-windows-x64
+        uses: actions/upload-artifact@v7
+        with:
+          name: drot-windows-x64
+          path: dist-out/
+          if-no-files-found: error
+
+  pack-linux:
+    name: pack (linux-x64)
+    needs: quality
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Build drot (dist)
+        run: cargo build -p drot --profile dist
+
+      - name: Stage artifact
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dist-out
+          cp target/dist/drot dist-out/drot
+          chmod +x dist-out/drot
+          if [ -d target/dist/package ]; then
+            cp -a target/dist/package dist-out/package
+          elif [ -d package ]; then
+            cp -a package dist-out/package
+          fi
+
+      - name: Upload drot-linux-x64
+        uses: actions/upload-artifact@v7
+        with:
+          name: drot-linux-x64
+          path: dist-out/
+          if-no-files-found: error
