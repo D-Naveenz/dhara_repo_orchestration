@@ -2,7 +2,7 @@
 
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 
-Operator tooling for [Dhara Storage](https://github.com/D-Naveenz/dhara_storage) workspaces.
+Operator tooling for [Dhara Storage](https://github.com/D-Naveenz/dhara_storage) workspaces (and other Dhara repositories via product plugins).
 
 | Binary | Audience |
 |--------|----------|
@@ -14,21 +14,23 @@ Version authority is this workspace's `[workspace.package].version` in `Cargo.to
 ## Layout
 
 ```
-crates/
-  drot_kernel/   # paths, config, logging, defs I/O
-  drot_ops/      # quality, verify, release, native merge
-  drot_cli/      # command registry, forms, interactive state
-  drot/          # CLI binary
-  drot_tui/      # TUI library + binary
-package/         # TrID archives copied beside the CLI at build
+src/
+  drot_kernel/         # Dhara framework: paths, config, logging, host APIs, root args
+  drot_dhara_storage/  # Storage product plugin (commands, ops, filedefs)
+    package/           # TrID archives copied beside the CLI at build
+    data/              # MIME/extension catalogs (compile-time)
+  drot/                # CLI binary
+  drot_tui/            # TUI library + binary
 ```
+
+Hosts register plugins at startup via `drot_dhara_storage::plugins()` / `install_hooks()`. Dynamic cdylib discovery is deferred; see kernel `bootstrap` / `product` modules for the compile-time seam.
 
 ## Local build
 
 ```bash
 cargo build -p drot --profile dist
 cargo build -p drot_tui
-cargo test -p drot -p drot_cli -p drot_ops -p drot_kernel
+cargo test -p drot -p drot_kernel -p drot_dhara_storage
 ```
 
 ## CI artifacts

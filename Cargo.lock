@@ -538,20 +538,31 @@ name = "drot"
 version = "0.9.12"
 dependencies = [
  "anyhow",
- "drot_cli",
+ "drot_dhara_storage",
  "drot_kernel",
  "tempfile",
 ]
 
 [[package]]
-name = "drot_cli"
+name = "drot_dhara_storage"
 version = "0.9.12"
 dependencies = [
  "anyhow",
+ "chrono",
  "clap",
+ "dhara_storage_dal",
  "drot_kernel",
- "drot_ops",
+ "once_cell",
+ "quick-xml 0.41.0",
+ "rayon",
+ "serde",
+ "sevenz-rust",
  "tempfile",
+ "thiserror 2.0.19",
+ "toml",
+ "toml_edit",
+ "tracing",
+ "xmltree",
 ]
 
 [[package]]
@@ -560,16 +571,11 @@ version = "0.9.12"
 dependencies = [
  "anyhow",
  "chrono",
- "dhara_storage_dal",
  "once_cell",
- "quick-xml 0.41.0",
  "rayon",
  "semver",
  "serde",
- "sevenz-rust",
- "shlex",
  "tempfile",
- "thiserror 2.0.19",
  "toml",
  "toml_edit",
  "tracing",
@@ -580,26 +586,12 @@ dependencies = [
 ]
 
 [[package]]
-name = "drot_ops"
-version = "0.9.12"
-dependencies = [
- "anyhow",
- "drot_kernel",
- "semver",
- "serde",
- "tempfile",
- "toml_edit",
- "tracing",
- "xmltree",
-]
-
-[[package]]
 name = "drot_tui"
 version = "0.9.12"
 dependencies = [
  "anyhow",
  "crossterm",
- "drot_cli",
+ "drot_dhara_storage",
  "drot_kernel",
  "ratatui",
  "ratatui-crossterm",
