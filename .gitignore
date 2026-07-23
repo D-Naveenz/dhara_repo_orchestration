@@ -75,7 +75,3 @@ $RECYCLE.BIN/
 # Local runtime
 runtime.toml
 *.log
-# Large TrID inputs — keep locally beside the binary; do not commit
-/package/triddefs_xml.7z
-/package/triddefs_xml.source.toml
-/package/triddefs_xml/
