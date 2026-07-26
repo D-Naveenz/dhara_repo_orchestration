@@ -27,10 +27,10 @@ jobs:
         run: cargo fmt --all -- --check
 
       - name: Cargo clippy (CLI path)
-        run: cargo clippy -p drot -p drot_cli -p drot_ops -p drot_kernel --all-targets -- -D warnings
+        run: cargo clippy -p drot -p drot_dhara_storage -p drot_kernel --all-targets -- -D warnings
 
       - name: Cargo test (CLI path)
-        run: cargo test -p drot -p drot_cli -p drot_ops -p drot_kernel
+        run: cargo test -p drot -p drot_dhara_storage -p drot_kernel
 
       - name: Cargo clippy (TUI)
         run: cargo clippy -p drot_tui --all-targets
@@ -57,8 +57,8 @@ jobs:
           cp target/dist/drot.exe dist-out/drot.exe
           if [ -d target/dist/package ]; then
             cp -a target/dist/package dist-out/package
-          elif [ -d package ]; then
-            cp -a package dist-out/package
+          elif [ -d src/drot_dhara_storage/package ]; then
+            cp -a src/drot_dhara_storage/package dist-out/package
           fi
 
       - name: Upload drot-windows-x64
@@ -91,8 +91,8 @@ jobs:
           chmod +x dist-out/drot
           if [ -d target/dist/package ]; then
             cp -a target/dist/package dist-out/package
-          elif [ -d package ]; then
-            cp -a package dist-out/package
+          elif [ -d src/drot_dhara_storage/package ]; then
+            cp -a src/drot_dhara_storage/package dist-out/package
           fi
 
       - name: Upload drot-linux-x64

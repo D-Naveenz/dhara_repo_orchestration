@@ -1,45 +1,70 @@
-# DROT — Dhara Repository Orchestration Tool
+# DROT
 
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 
-Operator tooling for [Dhara Storage](https://github.com/D-Naveenz/dhara_storage) workspaces.
+**Dhara Repository Orchestration Tool** — operator CLI and TUI for Dhara workspaces (config, packaging, file definitions, release flows).
 
-| Binary | Audience |
-|--------|----------|
-| **`drot`** | Direct CLI for CI, scripts, and agents |
-| **`drot_tui`** | Interactive TUI for human developers |
+Host repositories such as [dhara_storage][dhara-storage] pin this project as a git submodule and do **not** co-own the tool version. Version authority is this workspace’s `[workspace.package].version` in `Cargo.toml`.
 
-Version authority is this workspace's `[workspace.package].version` in `Cargo.toml` (currently **0.9.12**). Host repos (such as `dhara_storage`) pin a commit via git submodule at `tooling/drot` and do not co-own the tool version.
+| Binary | Who it is for |
+|--------|----------------|
+| `drot` | CI, scripts, and automation |
+| `drot_tui` | Interactive use by developers |
 
-## Layout
+## Prerequisites
 
-```
-crates/
-  drot_kernel/   # paths, config, logging, defs I/O
-  drot_ops/      # quality, verify, release, native merge
-  drot_cli/      # command registry, forms, interactive state
-  drot/          # CLI binary
-  drot_tui/      # TUI library + binary
-package/         # TrID archives copied beside the CLI at build
-```
+- Rust **stable** toolchain
+- Access to the host workspace you are operating on (for storage product plugins)
 
-## Local build
+## Install / build
+
+From this repository root:
 
 ```bash
 cargo build -p drot --profile dist
 cargo build -p drot_tui
-cargo test -p drot -p drot_cli -p drot_ops -p drot_kernel
 ```
 
-## CI artifacts
+Run tests:
 
-On PR and merge to `main`, workflows upload architecture-specific CLI packages:
+```bash
+cargo test -p drot -p drot_kernel -p drot_dhara_storage
+```
 
-- `drot-windows-x64`
-- `drot-linux-x64`
+Consumers often download CI artifacts (`drot-windows-x64`, `drot-linux-x64`) for the pinned submodule commit instead of compiling DROT in their own CI.
 
-Consumers (e.g. `dhara_storage`) download the artifact matching the runner OS for the pinned submodule commit — they never compile DROT in their CI.
+## Usage
+
+### 1. Point at a host repository
+
+Typical invocations from a host (example: dhara_storage) use `-r` / `--repo` after the binary is on your `PATH` or under `target/dist/`.
+
+### 2. Common operator flows
+
+Exact subcommands depend on the product plugin (for example `drot_dhara_storage`). Typical areas:
+
+- Config activation and environment scaffolding
+- Native staging / package verify
+- File definition sync and inspect
+- Release dry-runs
+
+Prefer the host repo’s [AGENTS.md][dhara-agents] / scripts for the exact commands that host expects.
+
+### 3. TUI
+
+```bash
+cargo run -p drot_tui
+```
+
+## Related
+
+- Host product: [dhara_storage][dhara-storage]
+- Orchestration repo: [dhara_repo_orchestration][orch]
 
 ## License
 
-Apache-2.0
+Apache-2.0.
+
+[dhara-storage]: https://github.com/D-Naveenz/dhara_storage
+[dhara-agents]: https://github.com/D-Naveenz/dhara_storage/blob/main/AGENTS.md
+[orch]: https://github.com/D-Naveenz/dhara_repo_orchestration
