@@ -3,7 +3,7 @@ use std::path::{Path, PathBuf};
 
 use dhara_storage_dal::{
     DEFINITION_PACKAGE_IDENTIFIER, DEFINITION_PACKAGE_SIGNATURE, DefinitionPackage,
-    decode_definition_package, encode_definition_package,
+    bundled_definition_package, decode_definition_package, encode_definition_package,
 };
 use thiserror::Error;
 use tracing::debug;
@@ -115,11 +115,18 @@ pub fn load_package(path: impl AsRef<Path>) -> Result<LoadedPackage, BuilderErro
     Ok(LoadedPackage { package })
 }
 
+/// Load the definitions package embedded in the published `dhara_storage_dal` crate.
+///
+/// Operator sync/pack paths use disk under `dhara_storage/resources`; this helper stays on the
+/// crates.io codec embed so DROT CI (no storage checkout) and standalone tests still work until
+/// `dhara_storage_core` publishes its own codec package.
 pub fn load_bundled_package() -> Result<DefinitionPackage, BuilderError> {
-    let path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("../../../../src/core/dhara_storage/resources/filedefs.dat");
-    debug!(path = %path.display(), "loading embedded runtime definitions package from disk");
-    load_package(path).map(|loaded| loaded.package)
+    debug!("loading bundled runtime definitions package from dhara_storage_dal");
+    bundled_definition_package()
+        .cloned()
+        .map_err(|err| BuilderError::Package {
+            message: err.to_string(),
+        })
 }
 
 pub fn load_bundled_package_from(
