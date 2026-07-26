@@ -1,5 +1,5 @@
 use std::process::Child;
-use std::sync::{mpsc::Sender, Arc, Mutex};
+use std::sync::{Arc, Mutex, mpsc::Sender};
 
 use once_cell::sync::Lazy;
 

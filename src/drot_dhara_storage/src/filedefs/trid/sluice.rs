@@ -3,8 +3,8 @@ use std::collections::HashSet;
 use once_cell::sync::Lazy;
 
 use super::{
-    mime::{MimeConfidence, MimeResolution},
     ParsedTridDefinition,
+    mime::{MimeConfidence, MimeResolution},
 };
 
 const LEVEL1: &str = include_str!(concat!(
@@ -131,7 +131,7 @@ fn score_definition(
 mod tests {
     use super::score_definition;
     use crate::filedefs::trid::{
-        mime::MimeConfidence, ParsedTridDefinition, TridPattern, TridSignature,
+        ParsedTridDefinition, TridPattern, TridSignature, mime::MimeConfidence,
     };
 
     #[test]

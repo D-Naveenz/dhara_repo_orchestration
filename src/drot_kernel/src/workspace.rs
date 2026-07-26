@@ -183,8 +183,8 @@ mod tests {
     use tempfile::tempdir;
 
     use super::{
-        analyze_defs_package, next_package_revision, record_package_written, DefsPackageStatus,
-        PackageMeta, WorkspaceSnapshot,
+        DefsPackageStatus, PackageMeta, WorkspaceSnapshot, analyze_defs_package,
+        next_package_revision, record_package_written,
     };
     use crate::context::{RunMode, ToolContext};
     use crate::paths::default_defs_package_path;

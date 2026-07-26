@@ -4,4 +4,4 @@ pub mod tree;
 pub use state::{
     ActivationPrompt, AppState, DiagnosticLine, DiagnosticSeverity, MainTab, StatusTone,
 };
-pub use tree::{NavTree, TreeNode, TreeViewState, VisibleTreeRow, FAVORITES_GROUP, QUICK_ACTIONS};
+pub use tree::{FAVORITES_GROUP, NavTree, QUICK_ACTIONS, TreeNode, TreeViewState, VisibleTreeRow};

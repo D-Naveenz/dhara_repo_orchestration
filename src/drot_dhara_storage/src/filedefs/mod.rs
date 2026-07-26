@@ -9,8 +9,8 @@ use anyhow::Result;
 
 use drot_kernel::paths::{resolve_defs_output_dir, resolve_logs_dir, resolve_package_dir};
 use drot_kernel::{
-    current_log_path, log_file_path, CommandResult, ReportField as CommandReportField,
-    StructuredReport, ToolContext,
+    CommandResult, ReportField as CommandReportField, StructuredReport, ToolContext,
+    current_log_path, log_file_path,
 };
 
 pub use package::*;
@@ -158,6 +158,7 @@ pub fn print_defs_help() -> String {
 fn resolve_action(command: DefsCommand, paths: &DefsPaths) -> BuilderAction {
     match command {
         DefsCommand::Pack { output } => BuilderAction::Pack {
+            embedded: drot_kernel::paths::embedded_defs_package_path(&paths.repo_root),
             output: output.unwrap_or_else(|| paths.default_package_output_path()),
         },
         DefsCommand::BuildTridXml { input, output } => BuilderAction::BuildTridXml {

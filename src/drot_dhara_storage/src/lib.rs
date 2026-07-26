@@ -7,9 +7,9 @@ pub mod registry;
 
 use std::path::Path;
 
+use drot_kernel::ToolCapability;
 use drot_kernel::product::{ProductHooks, set_product_hooks};
 use drot_kernel::workspace::{DefsPackageStatus, WorkspaceSnapshot};
-use drot_kernel::ToolCapability;
 
 pub use registry::DharaStorageCapability;
 
@@ -25,15 +25,15 @@ static STORAGE_HOOKS: StorageProductHooks = StorageProductHooks;
 
 impl ProductHooks for StorageProductHooks {
     fn cargo_workspace_deps(&self) -> &'static [&'static str] {
-        &["dhara_storage_dal", "dhara_storage"]
+        &["dhara_storage_core", "dhara_storage"]
     }
 
     fn embedded_defs_relative(&self) -> &'static str {
-        "src/core/dhara_storage_dal/resources/filedefs.dat"
+        "src/core/dhara_storage/resources/filedefs.dat"
     }
 
     fn embedded_defs_dir_relative(&self) -> &'static str {
-        "src/core/dhara_storage_dal/resources"
+        "src/core/dhara_storage/resources"
     }
 
     fn analyze_defs_package(&self, defs_path: &Path) -> WorkspaceSnapshot {

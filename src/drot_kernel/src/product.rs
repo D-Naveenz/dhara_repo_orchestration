@@ -4,7 +4,7 @@ use std::sync::OnceLock;
 use crate::workspace::WorkspaceSnapshot;
 
 pub trait ProductHooks: Send + Sync {
-    /// Cargo workspace dependency names to sync on version bump (e.g. dhara_storage_dal, dhara_storage).
+    /// Cargo workspace dependency names to sync on version bump (e.g. dhara_storage_core, dhara_storage).
     fn cargo_workspace_deps(&self) -> &'static [&'static str];
     /// Relative path from repo root to embedded defs package file.
     fn embedded_defs_relative(&self) -> &'static str;

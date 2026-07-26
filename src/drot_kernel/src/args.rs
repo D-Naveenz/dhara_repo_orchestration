@@ -1,6 +1,6 @@
 use std::path::{Path, PathBuf};
 
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result, bail};
 
 use crate::runtime_cache::{resolve_and_persist_repository, try_cached_repository};
 
@@ -169,7 +169,7 @@ mod tests {
     use crate::repo_config::CONFIG_PATH;
     use crate::runtime_cache::{resolve_and_persist_repository, try_cached_repository};
 
-    use super::{parse_root_args, try_early_repository, ParseMode};
+    use super::{ParseMode, parse_root_args, try_early_repository};
 
     #[test]
     fn repository_flag_parsed() {

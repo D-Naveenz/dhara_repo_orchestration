@@ -1,4 +1,4 @@
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 
 /// Native library file name placed under `runtimes/{rid}/native/`.
 pub fn native_lib_filename(rid: &str) -> Result<&'static str> {

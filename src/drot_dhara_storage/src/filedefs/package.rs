@@ -2,17 +2,17 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use dhara_storage_dal::{
-    bundled_definition_package, decode_definition_package, encode_definition_package,
-    DefinitionPackage, DEFINITION_PACKAGE_IDENTIFIER, DEFINITION_PACKAGE_SIGNATURE,
+    DEFINITION_PACKAGE_IDENTIFIER, DEFINITION_PACKAGE_SIGNATURE, DefinitionPackage,
+    decode_definition_package, encode_definition_package,
 };
 use thiserror::Error;
 use tracing::debug;
 
-use drot_kernel::workspace::{record_package_written, PackageMeta};
+use drot_kernel::workspace::{PackageMeta, record_package_written};
 
 pub use crate::filedefs::trid::{
-    build_trid_xml_package_with_progress, ReduceTraceDetail, TridBuildProgress, TridBuildStage,
-    TridBuildStats, TridTransformReport,
+    ReduceTraceDetail, TridBuildProgress, TridBuildStage, TridBuildStats, TridTransformReport,
+    build_trid_xml_package_with_progress,
 };
 
 #[derive(Debug, Error)]
@@ -116,12 +116,16 @@ pub fn load_package(path: impl AsRef<Path>) -> Result<LoadedPackage, BuilderErro
 }
 
 pub fn load_bundled_package() -> Result<DefinitionPackage, BuilderError> {
-    debug!("loading bundled runtime definitions package");
-    bundled_definition_package()
-        .cloned()
-        .map_err(|err| BuilderError::Package {
-            message: err.to_string(),
-        })
+    let path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("../../../../src/core/dhara_storage/resources/filedefs.dat");
+    debug!(path = %path.display(), "loading embedded runtime definitions package from disk");
+    load_package(path).map(|loaded| loaded.package)
+}
+
+pub fn load_bundled_package_from(
+    path: impl AsRef<Path>,
+) -> Result<DefinitionPackage, BuilderError> {
+    load_package(path).map(|loaded| loaded.package)
 }
 
 pub fn write_package(
@@ -287,8 +291,8 @@ mod tests {
     use tempfile::tempdir;
 
     use super::{
-        load_bundled_package, normalize_package, packages_match, sync_embedded_package,
-        write_package, PackageSummary, SyncEmbeddedStatus,
+        PackageSummary, SyncEmbeddedStatus, load_bundled_package, normalize_package,
+        packages_match, sync_embedded_package, write_package,
     };
 
     use dhara_storage_dal::{DEFINITION_PACKAGE_SIGNATURE, PACKAGE_VERSION};

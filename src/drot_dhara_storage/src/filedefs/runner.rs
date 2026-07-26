@@ -2,9 +2,9 @@ use std::path::{Path, PathBuf};
 
 use crate::filedefs::trid_progress::log_transform_statistics;
 use crate::filedefs::{
-    build_trid_xml_package_with_progress, inspect_package, load_bundled_package, normalize_package,
-    packages_match, sync_embedded_package, write_package, SyncEmbeddedStatus, TridBuildProgress,
-    TridTransformReport,
+    SyncEmbeddedStatus, TridBuildProgress, TridTransformReport,
+    build_trid_xml_package_with_progress, inspect_package, load_bundled_package_from,
+    normalize_package, packages_match, sync_embedded_package, write_package,
 };
 use drot_kernel::logging::{log_module_step_debug, log_module_step_warn};
 use drot_kernel::output::emit_stdout_line;
@@ -12,6 +12,7 @@ use drot_kernel::output::emit_stdout_line;
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum BuilderAction {
     Pack {
+        embedded: PathBuf,
         output: PathBuf,
     },
     BuildTridXml {
@@ -121,15 +122,16 @@ where
     let long_running = action.is_long_running();
 
     let report = match action {
-        BuilderAction::Pack { output } => {
-            log_module_step_debug("loading bundled runtime package");
-            let package = load_bundled_package()?;
+        BuilderAction::Pack { embedded, output } => {
+            log_module_step_debug("loading embedded runtime package from disk");
+            let package = load_bundled_package_from(&embedded)?;
             let written = write_package(&package, &output)?;
             log_module_step_debug(&format!("wrote bundled package to {}", written.display()));
             CommandReport {
                 title: "Bundled Package".to_string(),
                 status: ReportStatus::Success,
                 fields: vec![
+                    field("Source", embedded.display().to_string()),
                     field("Output", written.display().to_string()),
                     field("Log", log_path.display().to_string()),
                 ],

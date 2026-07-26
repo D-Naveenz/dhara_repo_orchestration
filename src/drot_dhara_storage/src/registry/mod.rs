@@ -105,7 +105,9 @@ mod tests {
             .collect::<Vec<_>>();
         assert_eq!(
             sections,
-            vec!["config", "defs", "native", "package", "quality", "release", "verify", "version"]
+            vec![
+                "config", "defs", "native", "package", "quality", "release", "verify", "version"
+            ]
         );
 
         let commands = registry
@@ -116,8 +118,10 @@ mod tests {
         assert!(commands.contains(&"defs.inspect-trid-xml"));
         assert!(commands.contains(&"verify.package"));
         assert!(commands.contains(&"release.run"));
-        assert!(registry
-            .commands()
-            .all(|command| !command.ui.description.trim().is_empty()));
+        assert!(
+            registry
+                .commands()
+                .all(|command| !command.ui.description.trim().is_empty())
+        );
     }
 }

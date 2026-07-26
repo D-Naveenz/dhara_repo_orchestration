@@ -19,7 +19,7 @@ mod source;
 mod source_manifest;
 
 use mime::mime_catalog;
-use sluice::{extension_seeds, SluiceCandidate};
+use sluice::{SluiceCandidate, extension_seeds};
 use source_manifest::load_definitions_release;
 
 const VALIDATED_TAGS: u32 = 48;

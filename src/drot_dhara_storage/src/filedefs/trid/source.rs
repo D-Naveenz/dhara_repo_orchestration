@@ -6,15 +6,15 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::Instant;
 
 use rayon::prelude::*;
-use sevenz_rust::{decompress_file_with_extract_fn, default_entry_extract_fn, Archive};
-use tempfile::{tempdir, TempDir};
+use sevenz_rust::{Archive, decompress_file_with_extract_fn, default_entry_extract_fn};
+use tempfile::{TempDir, tempdir};
 use tracing::debug;
 
 use crate::filedefs::BuilderError;
 
 use super::{
-    model::parse_trid_xml_definition, ParsedTridDefinition, TridBuildProgress, TridBuildStage,
-    TridBuildStats,
+    ParsedTridDefinition, TridBuildProgress, TridBuildStage, TridBuildStats,
+    model::parse_trid_xml_definition,
 };
 
 const PARALLEL_PARSE_THRESHOLD: usize = 8;

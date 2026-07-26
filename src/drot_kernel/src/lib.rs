@@ -33,8 +33,9 @@ pub use interactive::{
 pub use logging::{
     ActivityLabel, CommandOutcome, CommandRun, ELAPSED_UI_THRESHOLD, LoggingOptions,
     LoggingRuntime, command_labels, current_log_path, ensure_logging, format_command_args,
-    init_logging, log_file_path, log_module_step_debug, log_module_step_error, log_module_step_warn,
-    log_session_begin, log_session_end, summarize_command_result, write_session_record,
+    init_logging, log_file_path, log_module_step_debug, log_module_step_error,
+    log_module_step_warn, log_session_begin, log_session_end, summarize_command_result,
+    write_session_record,
 };
 pub use operation_progress::{
     OperationProgressGuard, ProgressSession, ProgressSnapshot, ProgressStep, RunPhase,

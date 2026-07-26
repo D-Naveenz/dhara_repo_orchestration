@@ -8,7 +8,7 @@ use crate::operation_progress::{
     set_command_milestone,
 };
 
-use super::audit::{format_duration, summarize_command_result, AUDIT_TARGET};
+use super::audit::{AUDIT_TARGET, format_duration, summarize_command_result};
 
 pub const ELAPSED_UI_THRESHOLD: Duration = Duration::from_secs(4);
 

@@ -3,8 +3,8 @@ use std::thread::{self, JoinHandle};
 
 use crate::command::{CommandRegistry, CommandResult, RunMode, ToolContext};
 use crate::{
-    cancel_active_subprocess, complete_progress, OperationProgressGuard, OutputCaptureGuard,
-    OutputEvent,
+    OperationProgressGuard, OutputCaptureGuard, OutputEvent, cancel_active_subprocess,
+    complete_progress,
 };
 
 pub struct RunHandle {
@@ -80,7 +80,7 @@ mod tests {
         CommandRegistry, CommandResult, CommandSpec, CommandUi, RunMode, SectionSpec, ToolContext,
     };
 
-    use super::{start_run, RunCompletion};
+    use super::{RunCompletion, start_run};
 
     fn report_handler(_: &ToolContext, _: &[String]) -> Result<CommandResult> {
         Ok(CommandResult::with_message("done"))

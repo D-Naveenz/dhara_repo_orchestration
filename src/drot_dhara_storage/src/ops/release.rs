@@ -1,22 +1,21 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result, bail};
 use toml_edit::DocumentMut;
 use xmltree::{Element, XMLNode};
 
 use drot_kernel::CommandResult;
 use drot_kernel::{
-    logging::log_module_step_debug,
-    repo_config::{load_env, verify_release, DharaRepoConfig},
-    subprocess::run_command,
     ProgressSession,
+    logging::log_module_step_debug,
+    repo_config::{DharaRepoConfig, load_env, verify_release},
+    subprocess::run_command,
 };
 
 use crate::ops::{
-    nuget,
+    PackageOptions, nuget,
     workflow_progress::{begin_workflow, plan_unit_step, run_planned_step},
-    PackageOptions,
 };
 
 const CARGO_REGISTRY_TOKEN_ENV: &str = "CARGO_REGISTRY_TOKEN";
@@ -235,7 +234,7 @@ fn validate_versions_synced(repo_root: &Path, config: &DharaRepoConfig) -> Resul
         expected,
         "workspace.package.version",
     )?;
-    for dependency in ["dhara_storage_dal", "dhara_storage"] {
+    for dependency in ["dhara_storage_core", "dhara_storage"] {
         require_toml_version(
             &cargo,
             &["workspace", "dependencies", dependency, "version"],
@@ -363,7 +362,7 @@ mod tests {
 [workspace.package]
 version = "{cargo_version}"
 [workspace.dependencies]
-dhara_storage_dal = {{ version = "{cargo_version}", path = "src/core/dhara_storage_dal" }}
+dhara_storage_core = {{ version = "{cargo_version}", path = "src/core/dhara_storage_core" }}
 dhara_storage = {{ version = "{cargo_version}", path = "src/core/dhara_storage" }}
 "#
             ),
@@ -407,18 +406,21 @@ dhara_storage = {{ version = "{cargo_version}", path = "src/core/dhara_storage" 
 
         let error = ensure_secret(temp.path(), &config.publish.api_key_env).unwrap_err();
 
-        assert!(error
-            .to_string()
-            .contains("DHARA_TOOL_TEST_MISSING_NUGET_KEY"));
+        assert!(
+            error
+                .to_string()
+                .contains("DHARA_TOOL_TEST_MISSING_NUGET_KEY")
+        );
     }
 
     #[test]
     fn cargo_release_dry_run_allows_local_validation_state() {
         let args = cargo_release_args(true);
 
-        assert!(args
-            .windows(2)
-            .any(|pair| pair[0] == "--allow-branch" && pair[1] == "*"));
+        assert!(
+            args.windows(2)
+                .any(|pair| pair[0] == "--allow-branch" && pair[1] == "*")
+        );
         assert!(args.contains(&"--no-verify".to_owned()));
         assert!(!args.contains(&"--execute".to_owned()));
     }
@@ -427,9 +429,10 @@ dhara_storage = {{ version = "{cargo_version}", path = "src/core/dhara_storage" 
     fn cargo_release_execute_requires_main_and_execute_flag() {
         let args = cargo_release_args(false);
 
-        assert!(args
-            .windows(2)
-            .any(|pair| pair[0] == "--allow-branch" && pair[1] == "main"));
+        assert!(
+            args.windows(2)
+                .any(|pair| pair[0] == "--allow-branch" && pair[1] == "main")
+        );
         assert!(args.contains(&"--execute".to_owned()));
     }
 }

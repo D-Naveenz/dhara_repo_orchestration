@@ -2,21 +2,21 @@ use std::path::PathBuf;
 
 #[cfg(windows)]
 use anyhow::Context;
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 
 use drot_kernel::paths::resolve_path_against_repo;
 use drot_kernel::{CommandResult, ToolContext};
 
 use crate::ops::native_merge::merge_native_stages;
 use crate::ops::nuget::{
-    pack as pack_package, publish as publish_package, stage_native_for_host, PackageOptions,
+    PackageOptions, pack as pack_package, publish as publish_package, stage_native_for_host,
 };
 use crate::ops::release::run as run_release;
 use crate::ops::verify::verify_package;
 
 use super::{
-    current_config, package_options, parse_args, publish_options, release_options, NativeMergeArgs,
-    PackageArgs, PublishArgs, ReleaseRunArgs, StageNativeArgs,
+    NativeMergeArgs, PackageArgs, PublishArgs, ReleaseRunArgs, StageNativeArgs, current_config,
+    package_options, parse_args, publish_options, release_options,
 };
 
 pub(crate) fn verify_package_command(

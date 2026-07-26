@@ -1,10 +1,10 @@
 use std::io::{self, IsTerminal, Write};
 use std::path::Path;
 
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result, bail};
 
 use crate::context::RunMode;
-use crate::repo_config::{apply_config_drift, detect_config_drift, ConfigDriftItem};
+use crate::repo_config::{ConfigDriftItem, apply_config_drift, detect_config_drift};
 
 /// Applies manifest drift immediately when `yes` is set.
 ///
@@ -79,7 +79,7 @@ mod tests {
 
     use super::*;
     use crate::repo_config::{
-        detect_config_drift, ConfigDriftItem, ConfigDriftKind, CONFIG_PATH, ROOT_CARGO_TOML_PATH,
+        CONFIG_PATH, ConfigDriftItem, ConfigDriftKind, ROOT_CARGO_TOML_PATH, detect_config_drift,
     };
 
     fn write_minimal_repo(repo_root: &std::path::Path) {
@@ -96,7 +96,7 @@ mod tests {
         .unwrap();
         fs::write(
             repo_root.join(ROOT_CARGO_TOML_PATH),
-            "[workspace]\n[workspace.package]\nversion = \"0.1.0\"\n[workspace.dependencies]\ndhara_storage_dal = { version = \"0.1.0\", path = \"src/core/dhara_storage_dal\" }\ndhara_storage = { version = \"0.1.0\", path = \"src/core/dhara_storage\" }\n",
+            "[workspace]\n[workspace.package]\nversion = \"0.1.0\"\n[workspace.dependencies]\ndhara_storage_core = { version = \"0.1.0\", path = \"src/core/dhara_storage_core\" }\ndhara_storage = { version = \"0.1.0\", path = \"src/core/dhara_storage\" }\n",
         )
         .unwrap();
         fs::write(repo_root.join(".env.example"), "NUGET_API_KEY=\n").unwrap();
@@ -105,9 +105,9 @@ mod tests {
             "# pkg",
         )
         .unwrap();
-        fs::create_dir_all(repo_root.join("src/core/dhara_storage_dal/resources")).unwrap();
+        fs::create_dir_all(repo_root.join("src/core/dhara_storage/resources")).unwrap();
         fs::write(
-            repo_root.join("src/core/dhara_storage_dal/resources/filedefs.dat"),
+            repo_root.join("src/core/dhara_storage/resources/filedefs.dat"),
             b"dat",
         )
         .unwrap();
@@ -123,9 +123,11 @@ mod tests {
         let cargo = fs::read_to_string(temp.path().join(ROOT_CARGO_TOML_PATH)).unwrap();
         assert!(cargo.contains("version = \"0.2.0\""));
         let remaining = detect_config_drift(temp.path()).unwrap();
-        assert!(!remaining
-            .iter()
-            .any(|item| item.kind == ConfigDriftKind::WorkspaceCargoToml));
+        assert!(
+            !remaining
+                .iter()
+                .any(|item| item.kind == ConfigDriftKind::WorkspaceCargoToml)
+        );
     }
 
     #[test]

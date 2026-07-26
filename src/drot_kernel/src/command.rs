@@ -1,9 +1,9 @@
 use std::collections::BTreeMap;
 use std::sync::Arc;
 
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 
-use crate::logging::{ensure_logging, CommandOutcome, CommandRun, LoggingOptions};
+use crate::logging::{CommandOutcome, CommandRun, LoggingOptions, ensure_logging};
 
 pub use crate::context::{CommandResult, ReportField, RunMode, StructuredReport, ToolContext};
 

@@ -1,7 +1,7 @@
 use crate::commands::{config_env_init, config_show, version_bump, version_set};
 use drot_kernel::SectionSpec;
 
-use super::{command, RegisteredCommand};
+use super::{RegisteredCommand, command};
 
 pub fn section() -> SectionSpec {
     SectionSpec {

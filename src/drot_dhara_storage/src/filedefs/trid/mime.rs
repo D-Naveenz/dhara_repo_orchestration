@@ -198,7 +198,7 @@ fn levenshtein_distance(left: &str, right: &str) -> usize {
 mod tests {
     use std::collections::HashMap;
 
-    use super::{clean_basic_mime_type, mime_catalog, MimeConfidence};
+    use super::{MimeConfidence, clean_basic_mime_type, mime_catalog};
 
     #[test]
     fn cleans_common_mime_typos() {
@@ -237,8 +237,10 @@ mod tests {
         let catalog = mime_catalog();
         let mut cache = HashMap::new();
 
-        assert!(catalog
-            .canonicalize("definitely/not-a-real-type", &mut cache)
-            .is_none());
+        assert!(
+            catalog
+                .canonicalize("definitely/not-a-real-type", &mut cache)
+                .is_none()
+        );
     }
 }

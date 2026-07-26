@@ -1,7 +1,7 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result, bail};
 
 pub fn merge_native_stages(output: &Path, inputs: &[PathBuf]) -> Result<()> {
     if output.exists() {
@@ -84,12 +84,16 @@ mod tests {
         let output = temp.path().join("merged");
         merge_native_stages(&output, &[win.clone(), linux.clone()]).unwrap();
 
-        assert!(output
-            .join("runtimes/win-x64/native/dharastorage.dll")
-            .is_file());
-        assert!(output
-            .join("runtimes/linux-x64/native/libdharastorage.so")
-            .is_file());
+        assert!(
+            output
+                .join("runtimes/win-x64/native/dharastorage.dll")
+                .is_file()
+        );
+        assert!(
+            output
+                .join("runtimes/linux-x64/native/libdharastorage.so")
+                .is_file()
+        );
     }
 
     #[test]

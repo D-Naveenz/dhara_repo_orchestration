@@ -1,7 +1,7 @@
 use std::path::Path;
 use std::process::Command;
 
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 
 use drot_kernel::{repo_config::DharaRepoConfig, subprocess::run_command};
 
@@ -9,9 +9,9 @@ use crate::ops::workflow_progress::{
     begin_workflow, plan_unit_step, run_planned_step, run_workflow_step,
 };
 
-const WORKSPACE_CRATES: &[&str] = &["dhara_storage_dal", "dhara_storage", "dharastorage-ffi"];
+const WORKSPACE_CRATES: &[&str] = &["dhara_storage_core", "dhara_storage", "dharastorage-ffi"];
 
-const OTHER_CLIPPY_CRATES: &[&str] = &["dhara_storage_dal", "dharastorage-ffi"];
+const OTHER_CLIPPY_CRATES: &[&str] = &["dhara_storage_core", "dharastorage-ffi"];
 
 pub fn run_fmt(repo_root: &Path, check: bool) -> Result<()> {
     run_workflow_step("fmt", "Formatting Rust", "Running cargo fmt", || {
@@ -117,7 +117,7 @@ fn run_test_rust_inner(repo_root: &Path) -> Result<()> {
         &[
             "test".to_owned(),
             "-p".to_owned(),
-            "dhara_storage_dal".to_owned(),
+            "dhara_storage_core".to_owned(),
         ],
         repo_root,
     )?;

@@ -10,8 +10,8 @@ use std::time::{Duration, Instant};
 use tracing::debug;
 
 use drot_kernel::{
-    begin_analyzing, commit_plan, has_committed_progress_plan, plan_step, set_step_message,
-    set_step_total, tick_step, RunMode, ToolContext,
+    RunMode, ToolContext, begin_analyzing, commit_plan, has_committed_progress_plan, plan_step,
+    set_step_message, set_step_total, tick_step,
 };
 
 use crate::filedefs::{ReduceTraceDetail, TridBuildProgress, TridBuildStage, TridTransformReport};

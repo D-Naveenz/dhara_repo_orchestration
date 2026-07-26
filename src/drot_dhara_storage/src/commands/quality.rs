@@ -4,7 +4,7 @@ use drot_kernel::{CommandResult, ToolContext};
 
 use crate::ops::quality;
 
-use super::{current_config, parse_args, NoArgs, QualityFmtArgs, QualityRunArgs};
+use super::{NoArgs, QualityFmtArgs, QualityRunArgs, current_config, parse_args};
 
 pub(crate) fn quality_fmt_command(context: &ToolContext, args: &[String]) -> Result<CommandResult> {
     let Some(args) = parse_args::<QualityFmtArgs>("quality fmt", args)? else {

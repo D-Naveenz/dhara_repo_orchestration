@@ -3,10 +3,10 @@
 //! Design and rollout: [`docs/tui-progress.md`](../../../../docs/tui-progress.md).
 
 use std::cell::RefCell;
-use std::sync::{mpsc::Sender, Mutex, OnceLock};
+use std::sync::{Mutex, OnceLock, mpsc::Sender};
 use std::time::Instant;
 
-use crate::logging::{interactive_mode_enabled, ELAPSED_UI_THRESHOLD};
+use crate::logging::{ELAPSED_UI_THRESHOLD, interactive_mode_enabled};
 
 /// Lifecycle phase for operation progress.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

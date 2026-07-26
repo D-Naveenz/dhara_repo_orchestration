@@ -1,7 +1,7 @@
 use std::path::Path;
 use std::process::Command;
 
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result, bail};
 
 pub fn run_with_msvc_env(command: &str) -> Result<()> {
     let vs_install = locate_visual_studio_install()?;

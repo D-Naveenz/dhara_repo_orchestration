@@ -4,10 +4,10 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result, bail};
 use semver::Version;
 use serde::{Deserialize, Serialize};
-use toml_edit::{value, DocumentMut};
+use toml_edit::{DocumentMut, value};
 use xmltree::{Element, XMLNode};
 
 pub const CONFIG_PATH: &str = "dhara.config.toml";
@@ -255,7 +255,7 @@ pub fn sync_cargo_toml(content: &str, version: &str) -> Result<String> {
 }
 
 fn default_cargo_workspace_deps() -> &'static [&'static str] {
-    &["dhara_storage_dal", "dhara_storage"]
+    &["dhara_storage_core", "dhara_storage"]
 }
 
 fn cargo_workspace_deps() -> &'static [&'static str] {
@@ -925,7 +925,7 @@ mod tests {
             "png",
         )
         .unwrap();
-        fs::create_dir_all(repo_root.join("src/core/dhara_storage_dal/resources")).unwrap();
+        fs::create_dir_all(repo_root.join("src/core/dhara_storage/resources")).unwrap();
         fs::write(
             repo_root.join(crate::paths::runtime_defs_relative()),
             "placeholder",
@@ -973,14 +973,14 @@ mod tests {
     #[test]
     fn sync_cargo_toml_updates_workspace_version() {
         let updated = sync_cargo_toml(
-            "[workspace]\n[workspace.package]\nversion = \"0.1.0\"\n[workspace.dependencies]\ndhara_storage_dal = { version = \"0.1.0\", path = \"src/core/dhara_storage_dal\" }\ndhara_storage = { version = \"0.1.0\", path = \"src/core/dhara_storage\" }\n",
+            "[workspace]\n[workspace.package]\nversion = \"0.1.0\"\n[workspace.dependencies]\ndhara_storage_core = { version = \"0.1.0\", path = \"src/core/dhara_storage_core\" }\ndhara_storage = { version = \"0.1.0\", path = \"src/core/dhara_storage\" }\n",
             "0.2.0",
         )
         .unwrap();
 
         assert!(updated.contains("version = \"0.2.0\""));
         assert!(updated.contains(
-            "dhara_storage_dal = { version = \"0.2.0\", path = \"src/core/dhara_storage_dal\" }"
+            "dhara_storage_core = { version = \"0.2.0\", path = \"src/core/dhara_storage_core\" }"
         ));
         assert!(updated.contains(
             "dhara_storage = { version = \"0.2.0\", path = \"src/core/dhara_storage\" }"
@@ -989,7 +989,7 @@ mod tests {
 
     #[test]
     fn cargo_toml_needs_sync_ignores_line_endings_when_versions_match() {
-        let formatted = "[workspace]\r\n[workspace.package]\r\nversion = \"0.2.0\"\r\n[workspace.dependencies]\r\ndhara_storage_dal = { version = \"0.2.0\", path = \"src/core/dhara_storage_dal\" }\r\ndhara_storage = { version = \"0.2.0\", path = \"src/core/dhara_storage\" }\r\n";
+        let formatted = "[workspace]\r\n[workspace.package]\r\nversion = \"0.2.0\"\r\n[workspace.dependencies]\r\ndhara_storage_core = { version = \"0.2.0\", path = \"src/core/dhara_storage_core\" }\r\ndhara_storage = { version = \"0.2.0\", path = \"src/core/dhara_storage\" }\r\n";
 
         assert!(!cargo_toml_needs_sync(formatted, "0.2.0").unwrap());
         assert_eq!(sync_cargo_toml(formatted, "0.2.0").unwrap(), formatted);
@@ -1007,14 +1007,16 @@ mod tests {
         .unwrap();
         fs::write(
             temp.path().join(ROOT_CARGO_TOML_PATH),
-            "[workspace]\r\n[workspace.package]\r\nversion = \"0.2.0\"\r\n[workspace.dependencies]\r\ndhara_storage_dal = { version = \"0.2.0\", path = \"src/core/dhara_storage_dal\" }\r\ndhara_storage = { version = \"0.2.0\", path = \"src/core/dhara_storage\" }\r\n",
+            "[workspace]\r\n[workspace.package]\r\nversion = \"0.2.0\"\r\n[workspace.dependencies]\r\ndhara_storage_core = { version = \"0.2.0\", path = \"src/core/dhara_storage_core\" }\r\ndhara_storage = { version = \"0.2.0\", path = \"src/core/dhara_storage\" }\r\n",
         )
         .unwrap();
 
         let drifts = detect_config_drift(temp.path()).unwrap();
-        assert!(!drifts
-            .iter()
-            .any(|item| item.kind == ConfigDriftKind::WorkspaceCargoToml));
+        assert!(
+            !drifts
+                .iter()
+                .any(|item| item.kind == ConfigDriftKind::WorkspaceCargoToml)
+        );
     }
 
     #[test]
@@ -1106,7 +1108,7 @@ mod tests {
         .unwrap();
         fs::write(
             temp.path().join(ROOT_CARGO_TOML_PATH),
-            "[workspace]\n[workspace.package]\nversion = \"0.1.0\"\n[workspace.dependencies]\ndhara_storage_dal = { version = \"0.1.0\", path = \"src/core/dhara_storage_dal\" }\ndhara_storage = { version = \"0.1.0\", path = \"src/core/dhara_storage\" }\n",
+            "[workspace]\n[workspace.package]\nversion = \"0.1.0\"\n[workspace.dependencies]\ndhara_storage_core = { version = \"0.1.0\", path = \"src/core/dhara_storage_core\" }\ndhara_storage = { version = \"0.1.0\", path = \"src/core/dhara_storage\" }\n",
         )
         .unwrap();
 
@@ -1128,7 +1130,7 @@ mod tests {
         .unwrap();
         fs::write(
             temp.path().join(ROOT_CARGO_TOML_PATH),
-            "[workspace]\n[workspace.package]\nversion = \"0.1.0\"\n[workspace.dependencies]\ndhara_storage_dal = { version = \"0.1.0\", path = \"src/core/dhara_storage_dal\" }\ndhara_storage = { version = \"0.1.0\", path = \"src/core/dhara_storage\" }\n",
+            "[workspace]\n[workspace.package]\nversion = \"0.1.0\"\n[workspace.dependencies]\ndhara_storage_core = { version = \"0.1.0\", path = \"src/core/dhara_storage_core\" }\ndhara_storage = { version = \"0.1.0\", path = \"src/core/dhara_storage\" }\n",
         )
         .unwrap();
 
@@ -1136,10 +1138,12 @@ mod tests {
         apply_config_drift(temp.path(), &drifts).unwrap();
         let cargo = fs::read_to_string(temp.path().join(ROOT_CARGO_TOML_PATH)).unwrap();
         assert!(cargo.contains("version = \"0.2.0\""));
-        assert!(!detect_config_drift(temp.path())
-            .unwrap()
-            .iter()
-            .any(|item| item.kind == ConfigDriftKind::WorkspaceCargoToml));
+        assert!(
+            !detect_config_drift(temp.path())
+                .unwrap()
+                .iter()
+                .any(|item| item.kind == ConfigDriftKind::WorkspaceCargoToml)
+        );
     }
 
     #[test]

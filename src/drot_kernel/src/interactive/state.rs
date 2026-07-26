@@ -2,14 +2,14 @@ use std::collections::BTreeMap;
 use std::path::Path;
 
 use crate::{
-    repo_config::{apply_config_drift, ConfigDriftItem},
-    workspace::DefsPackageStatus,
     OutputStream, ProgressSnapshot, WorkspaceSnapshot,
+    repo_config::{ConfigDriftItem, apply_config_drift},
+    workspace::DefsPackageStatus,
 };
 
 use crate::command::{CommandRegistry, CommandSpec, ToolContext};
 use crate::forms::CommandForm;
-use crate::runner::{cancel_run, start_run, RunCompletion, RunHandle};
+use crate::runner::{RunCompletion, RunHandle, cancel_run, start_run};
 
 use super::tree::{NavTree, TreeViewState};
 
@@ -109,8 +109,7 @@ impl AppState {
         Self::with_workspace(
             label,
             WorkspaceSnapshot {
-                defs_path: Path::new("src/core/dhara_storage_dal/resources/filedefs.dat")
-                    .to_path_buf(),
+                defs_path: Path::new("src/core/dhara_storage/resources/filedefs.dat").to_path_buf(),
                 defs_status: DefsPackageStatus::Missing,
                 package_revision: None,
                 definitions_release: None,
@@ -317,7 +316,7 @@ mod tests {
 
     use anyhow::Result;
 
-    use crate::{workspace::DefsPackageStatus, ProgressSnapshot, RunPhase, WorkspaceSnapshot};
+    use crate::{ProgressSnapshot, RunPhase, WorkspaceSnapshot, workspace::DefsPackageStatus};
 
     use crate::command::{
         CommandRegistry, CommandResult, CommandSpec, CommandUi, RunMode, SectionSpec, ToolContext,

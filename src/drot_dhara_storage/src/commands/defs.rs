@@ -2,9 +2,9 @@ use anyhow::Result;
 
 use drot_kernel::{CommandResult, ToolContext};
 
-use crate::filedefs::{execute as execute_defs, print_defs_help, DefsCommand};
+use crate::filedefs::{DefsCommand, execute as execute_defs, print_defs_help};
 
-use super::{parse_args, InputArg, InputOutputArgs, OutputArg, SyncEmbeddedArgs, VerifyDefsArgs};
+use super::{InputArg, InputOutputArgs, OutputArg, SyncEmbeddedArgs, VerifyDefsArgs, parse_args};
 
 pub(crate) fn defs_pack(context: &ToolContext, args: &[String]) -> Result<CommandResult> {
     let Some(args) = parse_args::<OutputArg>("defs pack", args)? else {

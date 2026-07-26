@@ -4,7 +4,7 @@ use crate::commands::{
 };
 use drot_kernel::SectionSpec;
 
-use super::{command, RegisteredCommand};
+use super::{RegisteredCommand, command};
 
 pub fn section() -> SectionSpec {
     SectionSpec {

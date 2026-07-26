@@ -5,11 +5,11 @@ mod quality;
 
 use std::path::PathBuf;
 
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 use clap::{ArgAction, Parser, ValueEnum};
 
-use drot_kernel::repo_config::{load_config, VersionPart};
 use drot_kernel::ToolContext;
+use drot_kernel::repo_config::{VersionPart, load_config};
 
 use crate::ops::nuget::PackageOptions;
 
@@ -245,7 +245,7 @@ mod tests {
 
     use drot_kernel::{RunMode, ToolContext};
 
-    use super::{parse_args, release_options, ReleaseRunArgs};
+    use super::{ReleaseRunArgs, parse_args, release_options};
 
     fn test_context() -> ToolContext {
         ToolContext {

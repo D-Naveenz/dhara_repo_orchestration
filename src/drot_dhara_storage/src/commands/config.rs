@@ -3,7 +3,7 @@ use anyhow::Result;
 use drot_kernel::repo_config::{bump_version, init_env, set_version, show};
 use drot_kernel::{CommandResult, ToolContext};
 
-use super::{parse_args, NoArgs, VersionBumpArgs, VersionSetArgs};
+use super::{NoArgs, VersionBumpArgs, VersionSetArgs, parse_args};
 
 pub(crate) fn config_show(context: &ToolContext, args: &[String]) -> Result<CommandResult> {
     if parse_args::<NoArgs>("config show", args)?.is_none() {
