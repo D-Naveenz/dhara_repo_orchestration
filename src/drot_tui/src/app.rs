@@ -12,8 +12,8 @@ use crossterm::execute;
 use crossterm::terminal::{
     EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode,
 };
-use drot_kernel::{CommandRegistry, FieldKind, RunMode, ToolContext};
 use drot_kernel::{ActivationPrompt, AppState, MainTab};
+use drot_kernel::{CommandRegistry, FieldKind, RunMode, ToolContext};
 use drot_kernel::{
     ProgressSnapshot,
     activation::run_activation,
@@ -632,8 +632,7 @@ fn handle_mouse(app: &mut DharaTui, mouse: MouseEvent) {
                 if let Some(field) = command.ui.fields.get(field_index)
                     && matches!(field.kind, FieldKind::Boolean)
                     && let Some(form) = app.state.forms.get_mut(command.id)
-                    && let drot_kernel::FormValue::Boolean(value) =
-                        &mut form.values[field_index]
+                    && let drot_kernel::FormValue::Boolean(value) = &mut form.values[field_index]
                 {
                     *value = !*value;
                 }

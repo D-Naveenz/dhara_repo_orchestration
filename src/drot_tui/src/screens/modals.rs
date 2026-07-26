@@ -1,13 +1,13 @@
 use std::path::PathBuf;
 
 use crossterm::event::{KeyCode, KeyEvent, MouseEvent};
-use drot_kernel::paths::normalize_repository_input;
 use drot_kernel::AppState;
+use drot_kernel::paths::normalize_repository_input;
+use ratatui::Frame;
 use ratatui::layout::{Layout, Rect};
 use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, Clear, Paragraph, Widget, Wrap};
-use ratatui::Frame;
 use ratatui_interact::components::InputState;
 use ratatui_interact::components::{DialogConfig, DialogFocusTarget, DialogState, PopupDialog};
 use ratatui_interact::events::{get_char, is_backspace, is_delete};
@@ -17,7 +17,7 @@ use ratatui_interact::traits::{ClickRegionRegistry, ContainerAction, EventResult
 use crate::theme::{self, ValidationTone};
 use crate::widgets::{
     dhara_input, modal_footer,
-    modal_footer::{footer_layout_constraints, ModalFooterButton},
+    modal_footer::{ModalFooterButton, footer_layout_constraints},
     modal_shell, status_line,
 };
 

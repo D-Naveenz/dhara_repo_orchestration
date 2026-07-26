@@ -1,10 +1,10 @@
 use crossterm::event::{KeyCode, MouseEvent};
 use drot_kernel::CommandRegistry;
 use drot_kernel::{AppState, NavTree, TreeNode as NavNode, TreeViewState as NavTreeState};
-use ratatui::layout::Rect;
 use ratatui::Frame;
+use ratatui::layout::Rect;
 use ratatui_interact::components::{
-    get_selected_id, TreeNode, TreeView, TreeViewState as WidgetTreeState,
+    TreeNode, TreeView, TreeViewState as WidgetTreeState, get_selected_id,
 };
 use ratatui_interact::theme::Theme;
 

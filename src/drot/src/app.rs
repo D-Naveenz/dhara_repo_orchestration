@@ -2,12 +2,12 @@ use std::env;
 use std::io::{self, BufRead, IsTerminal, Write};
 use std::path::PathBuf;
 
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result, bail};
 
 use drot_kernel::{
-    activation::run_activation, ensure_workspace_state, log_session_end, parse_root_args,
-    paths::resolve_exe_root, register_plugins, resolve_and_persist_repository,
-    try_early_repository, workers, CommandRegistry, ParseMode, RootArgs, RunMode, ToolContext,
+    CommandRegistry, ParseMode, RootArgs, RunMode, ToolContext, activation::run_activation,
+    ensure_workspace_state, log_session_end, parse_root_args, paths::resolve_exe_root,
+    register_plugins, resolve_and_persist_repository, try_early_repository, workers,
 };
 
 pub fn run() -> Result<()> {

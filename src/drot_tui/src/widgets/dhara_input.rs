@@ -1,5 +1,5 @@
-use ratatui::layout::Rect;
 use ratatui::Frame;
+use ratatui::layout::Rect;
 use ratatui_interact::components::{Input, InputState};
 use ratatui_interact::theme::Theme;
 use ratatui_interact::traits::ClickRegion;

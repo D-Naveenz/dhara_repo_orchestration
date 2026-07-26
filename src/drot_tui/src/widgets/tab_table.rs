@@ -1,7 +1,7 @@
+use ratatui::Frame;
 use ratatui::layout::{Constraint, Layout, Rect};
 use ratatui::style::Style;
 use ratatui::widgets::{Block, Widget};
-use ratatui::Frame;
 use ratatui_interact::components::{Tab, TabView, TabViewState};
 use ratatui_interact::theme::Theme;
 use ratatui_interact::traits::ClickRegionRegistry;

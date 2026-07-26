@@ -1,14 +1,14 @@
 use std::env;
 use std::path::PathBuf;
 
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result, bail};
 
 use drot_kernel::{
-    activation::run_activation, ensure_workspace_state, parse_root_args, paths::resolve_exe_root,
-    register_plugins, stale_cached_repository, try_early_repository, workers, CommandRegistry,
-    ParseMode, RootArgs, RunMode, ToolContext,
+    CommandRegistry, ParseMode, RootArgs, RunMode, ToolContext, activation::run_activation,
+    ensure_workspace_state, parse_root_args, paths::resolve_exe_root, register_plugins,
+    stale_cached_repository, try_early_repository, workers,
 };
-use drot_tui::{can_launch_tui, run_tui, TuiBootParams};
+use drot_tui::{TuiBootParams, can_launch_tui, run_tui};
 
 fn main() -> Result<()> {
     if !can_launch_tui() {

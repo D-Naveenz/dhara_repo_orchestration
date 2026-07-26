@@ -1,7 +1,7 @@
 use drot_kernel::RunPhase;
+use ratatui::Frame;
 use ratatui::layout::{Constraint, Layout, Rect};
 use ratatui::widgets::{Block, Borders, Widget};
-use ratatui::Frame;
 use ratatui_interact::components::{ButtonState, Progress, ProgressStyle, Spinner, SpinnerState};
 use ratatui_interact::theme::Theme;
 use ratatui_interact::traits::ClickRegionRegistry;

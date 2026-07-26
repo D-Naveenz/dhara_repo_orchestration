@@ -3,11 +3,11 @@ pub mod modals;
 use drot_kernel::FormValue;
 use drot_kernel::{AppState, DiagnosticSeverity, MainTab};
 use drot_kernel::{CommandRegistry, CommandSpec, FieldKind};
+use ratatui::Frame;
 use ratatui::layout::Rect;
 use ratatui::style::Style;
 use ratatui::text::Line;
 use ratatui::widgets::{Paragraph, Widget};
-use ratatui::Frame;
 use ratatui_interact::components::{
     CheckBox, CheckBoxState, InputState, ScrollableContentState, Tab, TabViewAction, TabViewState,
 };
