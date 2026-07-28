@@ -9,9 +9,14 @@ use crate::ops::workflow_progress::{
     begin_workflow, plan_unit_step, run_planned_step, run_workflow_step,
 };
 
-const WORKSPACE_CRATES: &[&str] = &["dhara_storage_core", "dhara_storage", "dharastorage-ffi"];
+const WORKSPACE_CRATES: &[&str] = &[
+    "dhara_storage_core",
+    "dhara_storage",
+    "dharastorage-ffi",
+    "dhara-sd",
+];
 
-const OTHER_CLIPPY_CRATES: &[&str] = &["dhara_storage_core", "dharastorage-ffi"];
+const OTHER_CLIPPY_CRATES: &[&str] = &["dhara_storage_core", "dharastorage-ffi", "dhara-sd"];
 
 pub fn run_fmt(repo_root: &Path, check: bool) -> Result<()> {
     run_workflow_step("fmt", "Formatting Rust", "Running cargo fmt", || {

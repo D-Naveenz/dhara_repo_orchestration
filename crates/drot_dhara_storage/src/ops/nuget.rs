@@ -459,14 +459,14 @@ fn stage_native_assets(
             runtime = %rid,
             rust_target = %target,
             stage_root = %stage_root.display(),
-            "staging native asset"
+            "staging dhara-sd sidecar"
         );
         run_command(
             "cargo",
             &[
                 "build".to_owned(),
                 "-p".to_owned(),
-                "dharastorage-ffi".to_owned(),
+                "dhara-sd".to_owned(),
                 profile_flag.to_owned(),
                 "--target".to_owned(),
                 target.clone(),

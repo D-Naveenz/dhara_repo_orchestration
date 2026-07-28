@@ -1,16 +1,18 @@
 use anyhow::{Result, bail};
 
-/// Native library file name placed under `runtimes/{rid}/native/`.
+/// Sidecar daemon file name placed under `runtimes/{rid}/native/`.
+///
+/// NuGet packs `dhara-sd` (not the FFI cdylib). Windows uses `.exe`; other RIDs use the
+/// extensionless binary name until UDS transports ship.
 pub fn native_lib_filename(rid: &str) -> Result<&'static str> {
     match rid {
-        "win-x64" | "win-arm64" => Ok("dharastorage.dll"),
-        "linux-x64" | "linux-arm64" => Ok("libdharastorage.so"),
-        "osx-arm64" => Ok("libdharastorage.dylib"),
-        _ => bail!("unsupported runtime identifier for native library name: {rid}"),
+        "win-x64" | "win-arm64" => Ok("dhara-sd.exe"),
+        "linux-x64" | "linux-arm64" | "osx-arm64" => Ok("dhara-sd"),
+        _ => bail!("unsupported runtime identifier for daemon sidecar name: {rid}"),
     }
 }
 
-/// Package-relative path for a native library entry inside a `.nupkg`.
+/// Package-relative path for a daemon sidecar entry inside a `.nupkg`.
 pub fn package_native_path(rid: &str) -> Result<String> {
     Ok(format!(
         "runtimes/{rid}/native/{}",
@@ -74,18 +76,18 @@ mod tests {
     use super::*;
 
     #[test]
-    fn package_native_paths_use_platform_extensions() {
+    fn package_native_paths_use_daemon_sidecar_names() {
         assert_eq!(
             package_native_path("win-x64").unwrap(),
-            "runtimes/win-x64/native/dharastorage.dll"
+            "runtimes/win-x64/native/dhara-sd.exe"
         );
         assert_eq!(
             package_native_path("linux-arm64").unwrap(),
-            "runtimes/linux-arm64/native/libdharastorage.so"
+            "runtimes/linux-arm64/native/dhara-sd"
         );
         assert_eq!(
             package_native_path("osx-arm64").unwrap(),
-            "runtimes/osx-arm64/native/libdharastorage.dylib"
+            "runtimes/osx-arm64/native/dhara-sd"
         );
     }
 

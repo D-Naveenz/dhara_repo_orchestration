@@ -78,20 +78,20 @@ mod tests {
         let temp = tempdir().unwrap();
         let win = temp.path().join("win-stage");
         let linux = temp.path().join("linux-stage");
-        write_native_asset(&win, "win-x64", "dharastorage.dll");
-        write_native_asset(&linux, "linux-x64", "libdharastorage.so");
+        write_native_asset(&win, "win-x64", "dhara-sd.exe");
+        write_native_asset(&linux, "linux-x64", "dhara-sd");
 
         let output = temp.path().join("merged");
         merge_native_stages(&output, &[win.clone(), linux.clone()]).unwrap();
 
         assert!(
             output
-                .join("runtimes/win-x64/native/dharastorage.dll")
+                .join("runtimes/win-x64/native/dhara-sd.exe")
                 .is_file()
         );
         assert!(
             output
-                .join("runtimes/linux-x64/native/libdharastorage.so")
+                .join("runtimes/linux-x64/native/dhara-sd")
                 .is_file()
         );
     }
