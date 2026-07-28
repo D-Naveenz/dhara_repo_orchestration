@@ -109,7 +109,7 @@ impl AppState {
         Self::with_workspace(
             label,
             WorkspaceSnapshot {
-                defs_path: Path::new("src/core/dhara_storage/resources/filedefs.dat").to_path_buf(),
+                defs_path: Path::new("core/dhara_storage/resources/filedefs.dat").to_path_buf(),
                 defs_status: DefsPackageStatus::Missing,
                 package_revision: None,
                 definitions_release: None,

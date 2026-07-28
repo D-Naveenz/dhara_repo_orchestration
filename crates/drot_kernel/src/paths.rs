@@ -11,8 +11,8 @@ const LOGS: &str = "logs";
 /// Relative path to the operator crate manifest (monorepo layout marker).
 pub const TOOL_CRATE_MANIFEST_RELATIVE: &str = "tooling/drot/Cargo.toml";
 
-const DEFAULT_EMBEDDED_DEFS_DIR_RELATIVE: &str = "src/core/dhara_storage/resources";
-const DEFAULT_EMBEDDED_DEFS_RELATIVE: &str = "src/core/dhara_storage/resources/filedefs.dat";
+const DEFAULT_EMBEDDED_DEFS_DIR_RELATIVE: &str = "core/dhara_storage/resources";
+const DEFAULT_EMBEDDED_DEFS_RELATIVE: &str = "core/dhara_storage/resources/filedefs.dat";
 
 /// Relative path from the repository root to the embedded defs output directory.
 pub fn embedded_defs_dir_relative() -> &'static str {
@@ -206,11 +206,11 @@ mod tests {
         let root = PathBuf::from("/repo");
         assert_eq!(
             default_defs_output_dir(&root),
-            PathBuf::from("/repo/src/core/dhara_storage/resources")
+            PathBuf::from("/repo/core/dhara_storage/resources")
         );
         assert_eq!(
             default_defs_package_path(&root),
-            PathBuf::from("/repo/src/core/dhara_storage/resources/filedefs.dat")
+            PathBuf::from("/repo/core/dhara_storage/resources/filedefs.dat")
         );
     }
 

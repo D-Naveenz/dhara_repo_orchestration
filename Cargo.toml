@@ -1,9 +1,9 @@
 [workspace]
 members = [
-    "src/drot_kernel",
-    "src/drot_dhara_storage",
-    "src/drot_tui",
-    "src/drot",
+    "crates/drot_kernel",
+    "crates/drot_dhara_storage",
+    "crates/drot_tui",
+    "crates/drot",
 ]
 resolver = "3"
 

@@ -75,3 +75,5 @@ $RECYCLE.BIN/
 # Local runtime
 runtime.toml
 *.log
+crates/**/logs/
+artifacts/

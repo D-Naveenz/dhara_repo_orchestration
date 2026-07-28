@@ -57,8 +57,8 @@ jobs:
           cp target/dist/drot.exe dist-out/drot.exe
           if [ -d target/dist/package ]; then
             cp -a target/dist/package dist-out/package
-          elif [ -d src/drot_dhara_storage/package ]; then
-            cp -a src/drot_dhara_storage/package dist-out/package
+          elif [ -d crates/drot_dhara_storage/package ]; then
+            cp -a crates/drot_dhara_storage/package dist-out/package
           fi
 
       - name: Upload drot-windows-x64
@@ -91,8 +91,8 @@ jobs:
           chmod +x dist-out/drot
           if [ -d target/dist/package ]; then
             cp -a target/dist/package dist-out/package
-          elif [ -d src/drot_dhara_storage/package ]; then
-            cp -a src/drot_dhara_storage/package dist-out/package
+          elif [ -d crates/drot_dhara_storage/package ]; then
+            cp -a crates/drot_dhara_storage/package dist-out/package
           fi
 
       - name: Upload drot-linux-x64

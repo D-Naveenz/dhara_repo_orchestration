@@ -29,11 +29,11 @@ impl ProductHooks for StorageProductHooks {
     }
 
     fn embedded_defs_relative(&self) -> &'static str {
-        "src/core/dhara_storage/resources/filedefs.dat"
+        "core/dhara_storage/resources/filedefs.dat"
     }
 
     fn embedded_defs_dir_relative(&self) -> &'static str {
-        "src/core/dhara_storage/resources"
+        "core/dhara_storage/resources"
     }
 
     fn analyze_defs_package(&self, defs_path: &Path) -> WorkspaceSnapshot {

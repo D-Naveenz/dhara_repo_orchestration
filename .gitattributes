@@ -1,0 +1,2 @@
+# Git LFS — built filedefs.dat lives next to the tool and is copied into host embeds.
+*.dat filter=lfs diff=lfs merge=lfs -text

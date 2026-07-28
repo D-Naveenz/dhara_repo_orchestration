@@ -18,7 +18,12 @@ The builder normalizes the date to ISO `YYYY-MM-DD` in the output `filedefs.dat`
   graphical display is available; defs commands in that GUI use the same default.
 
 Small compile-time reference catalogs (MIME types, extension seeds) live in
-[`src/drot_dhara_storage/data/`](../data/) and are
+[`crates/drot_dhara_storage/data/`](../data/) and are
 embedded into the binary â€” they are not copied here.
 
 Source: [TrIDNet - File Identifier](https://mark0.net/soft-tridnet-e.html)
+
+## Built `filedefs.dat` (tool artifact + host embed)
+
+1. Build once with `defs build-trid-xml` / `defs sync-embedded` — output belongs under `{tool_root}/artifacts/filedefs.dat` (LFS in this repo) and is copied into the storage host at `core/dhara_storage/resources/filedefs.dat`.
+2. Avoid two independent rebuilds that can drift; one build, two checkouts of the same blob via LFS/sync.
