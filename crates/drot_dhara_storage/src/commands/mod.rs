@@ -1,3 +1,4 @@
+mod build;
 mod config;
 mod defs;
 mod package;
@@ -13,6 +14,7 @@ use drot_kernel::repo_config::{VersionPart, load_config};
 
 use crate::ops::nuget::PackageOptions;
 
+pub(crate) use build::build_run_command;
 pub(crate) use config::{config_env_init, config_show, version_bump, version_set};
 pub(crate) use defs::{
     defs_build_trid_xml, defs_inspect, defs_inspect_trid_xml, defs_normalize, defs_pack,
@@ -72,6 +74,26 @@ pub(crate) struct NativeMergeArgs {
     pub output: PathBuf,
     #[arg(long)]
     pub input: Vec<PathBuf>,
+}
+
+#[derive(Debug, Parser)]
+pub(crate) struct BuildRunArgs {
+    #[arg(long, action = ArgAction::SetTrue)]
+    pub skip_config: bool,
+    #[arg(long, action = ArgAction::SetTrue)]
+    pub skip_defs: bool,
+    #[arg(long, action = ArgAction::SetTrue)]
+    pub skip_quality: bool,
+    #[arg(long, action = ArgAction::SetTrue)]
+    pub skip_docs: bool,
+    #[arg(long, action = ArgAction::SetTrue)]
+    pub skip_dotnet: bool,
+    #[arg(long, action = ArgAction::SetTrue)]
+    pub skip_native: bool,
+    #[arg(long, action = ArgAction::SetTrue)]
+    pub skip_verify: bool,
+    #[arg(long, default_value = "Release")]
+    pub configuration: String,
 }
 
 #[derive(Debug, Parser)]

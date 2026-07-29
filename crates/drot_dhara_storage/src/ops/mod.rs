@@ -1,5 +1,6 @@
 //! Product operations (quality, package, release, verify, native).
 
+pub mod build;
 pub mod native_merge;
 pub mod native_rids;
 pub mod nuget;

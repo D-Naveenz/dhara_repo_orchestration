@@ -1,3 +1,4 @@
+mod build;
 mod config;
 mod defs;
 mod package;
@@ -48,6 +49,7 @@ impl ToolCapability for DharaStorageCapability {
 impl DharaStorageCapability {
     fn sections(&self) -> Vec<SectionSpec> {
         vec![
+            build::section(),
             config::section(),
             config::version_section(),
             defs::section(),
@@ -61,6 +63,7 @@ impl DharaStorageCapability {
 
     fn commands(&self) -> Vec<RegisteredCommand> {
         let mut commands = Vec::new();
+        commands.extend(build::commands());
         commands.extend(config::commands());
         commands.extend(defs::commands());
         commands.extend(quality::commands());
@@ -106,7 +109,8 @@ mod tests {
         assert_eq!(
             sections,
             vec![
-                "config", "defs", "native", "package", "quality", "release", "verify", "version"
+                "build", "config", "defs", "native", "package", "quality", "release", "verify",
+                "version"
             ]
         );
 
@@ -114,6 +118,7 @@ mod tests {
             .commands()
             .map(|command| command.id)
             .collect::<Vec<_>>();
+        assert!(commands.contains(&"build.run"));
         assert!(commands.contains(&"config.show"));
         assert!(commands.contains(&"defs.inspect-trid-xml"));
         assert!(commands.contains(&"verify.package"));

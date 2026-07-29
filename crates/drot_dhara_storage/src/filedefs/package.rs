@@ -1,9 +1,9 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use dhara_storage_dal::{
+use dhara_storage_core::{
     DEFINITION_PACKAGE_IDENTIFIER, DEFINITION_PACKAGE_SIGNATURE, DefinitionPackage,
-    bundled_definition_package, decode_definition_package, encode_definition_package,
+    decode_definition_package, encode_definition_package,
 };
 use thiserror::Error;
 use tracing::debug;
@@ -113,20 +113,6 @@ pub fn load_package(path: impl AsRef<Path>) -> Result<LoadedPackage, BuilderErro
         message: err.to_string(),
     })?;
     Ok(LoadedPackage { package })
-}
-
-/// Load the definitions package embedded in the published `dhara_storage_dal` crate.
-///
-/// Operator sync/pack paths use disk under `dhara_storage/resources`; this helper stays on the
-/// crates.io codec embed so DROT CI (no storage checkout) and standalone tests still work until
-/// `dhara_storage_core` publishes its own codec package.
-pub fn load_bundled_package() -> Result<DefinitionPackage, BuilderError> {
-    debug!("loading bundled runtime definitions package from dhara_storage_dal");
-    bundled_definition_package()
-        .cloned()
-        .map_err(|err| BuilderError::Package {
-            message: err.to_string(),
-        })
 }
 
 pub fn load_bundled_package_from(
@@ -298,11 +284,19 @@ mod tests {
     use tempfile::tempdir;
 
     use super::{
-        PackageSummary, SyncEmbeddedStatus, load_bundled_package, normalize_package,
-        packages_match, sync_embedded_package, write_package,
+        PackageSummary, SyncEmbeddedStatus, normalize_package, packages_match,
+        sync_embedded_package, write_package,
     };
 
-    use dhara_storage_dal::{DEFINITION_PACKAGE_SIGNATURE, PACKAGE_VERSION};
+    use dhara_storage_core::{
+        DEFINITION_PACKAGE_SIGNATURE, DefinitionPackage, PACKAGE_VERSION,
+        root_definition_package,
+    };
+
+    fn fixture_package() -> DefinitionPackage {
+        crate::filedefs::trid::build_trid_xml_package(fixtures_root())
+            .expect("fixture directory should build")
+    }
 
     fn fixtures_root() -> PathBuf {
         Path::new(env!("CARGO_MANIFEST_DIR"))
@@ -334,8 +328,8 @@ mod tests {
     }
 
     #[test]
-    fn bundled_package_has_expected_summary() {
-        let package = load_bundled_package().expect("bundled package should load");
+    fn fixture_package_has_expected_summary() {
+        let package = fixture_package();
         assert_eq!(package.package_version, PACKAGE_VERSION);
         assert!(!package.definitions.is_empty());
     }
@@ -345,7 +339,7 @@ mod tests {
         let temp = tempdir().unwrap();
         let original = temp.path().join("original.dat");
         let normalized = temp.path().join("normalized.dat");
-        let package = load_bundled_package().expect("bundled package should load");
+        let package = fixture_package();
         write_package(&package, &original).expect("original package should be written");
 
         normalize_package(&original, &normalized).expect("normalized package should be written");
@@ -472,7 +466,7 @@ mod tests {
         let bytes = fs::read(&output_path).expect("package bytes should be readable");
         let loaded = crate::filedefs::load_package(&output_path).expect("package should load");
 
-        assert!(dhara_storage_dal::root_definition_package(&bytes).is_ok());
+        assert!(root_definition_package(&bytes).is_ok());
         assert_eq!(loaded.package, build.package);
     }
 

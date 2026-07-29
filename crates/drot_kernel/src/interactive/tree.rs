@@ -7,6 +7,7 @@ use crate::command::{CommandRegistry, CommandSpec};
 pub const FAVORITES_GROUP: &str = "__favorites__";
 
 pub const QUICK_ACTIONS: &[&str] = &[
+    "build.run",
     "verify.package",
     "config.show",
     "version.bump",

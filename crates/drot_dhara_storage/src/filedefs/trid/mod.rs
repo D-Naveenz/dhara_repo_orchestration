@@ -4,7 +4,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 
 use rayon::prelude::*;
 
-use dhara_storage_dal::{
+use dhara_storage_core::{
     DefinitionPackage, DefinitionRecord, SignatureDefinition, SignaturePattern,
 };
 use tracing::debug;
@@ -290,7 +290,7 @@ fn build_trid_xml_package_with_report_internal(
         "reduced TrID definitions package ready"
     );
 
-    let packaging_version = dhara_storage_dal::PACKAGE_VERSION;
+    let packaging_version = dhara_storage_core::PACKAGE_VERSION;
     let package_revision = next_package_revision_for_build(packaging_version)
         .map_err(|message| BuilderError::Package { message })?;
 

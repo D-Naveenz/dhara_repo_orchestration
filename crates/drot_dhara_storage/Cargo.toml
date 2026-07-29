@@ -12,7 +12,7 @@ publish = false
 anyhow = "1.0"
 chrono = "0.4"
 clap = { version = "4.6", features = ["derive"] }
-dhara_storage_dal = { version = "0.9.0" }
+dhara_storage_core = { version = "0.9", default-features = false }
 drot_kernel = { path = "../drot_kernel" }
 once_cell = "1.21"
 quick-xml = { version = "0.41.0", features = ["serialize"] }
