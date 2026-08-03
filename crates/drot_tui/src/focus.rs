@@ -7,9 +7,8 @@ pub enum TuiFocus {
     TaskTree,
     MainTabs,
     TabContent,
+    OptionsReset,
     ActionRun,
-    ActionCancel,
-    ActionReset,
 }
 
 pub struct ShellFocus {
@@ -22,9 +21,8 @@ impl Default for ShellFocus {
         manager.register(TuiFocus::TaskTree);
         manager.register(TuiFocus::MainTabs);
         manager.register(TuiFocus::TabContent);
+        manager.register(TuiFocus::OptionsReset);
         manager.register(TuiFocus::ActionRun);
-        manager.register(TuiFocus::ActionCancel);
-        manager.register(TuiFocus::ActionReset);
         Self { manager }
     }
 }

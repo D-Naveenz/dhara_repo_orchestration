@@ -4,6 +4,7 @@ pub mod modal_footer;
 pub mod modal_shell;
 pub mod padded_button;
 pub mod panel;
+pub mod progress_bar;
 pub mod scroll_body;
 pub mod scrollable_tree;
 pub mod status_line;

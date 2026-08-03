@@ -10,6 +10,8 @@ pub const MODAL_BG: Color = Color::Rgb(44, 44, 52);
 pub const BORDER: Color = Color::Rgb(64, 64, 72);
 pub const TEXT: Color = Color::Rgb(220, 220, 225);
 pub const MUTED: Color = Color::Rgb(140, 140, 150);
+/// Empty trough behind the Actions progress fill (darker than text MUTED).
+pub const PROGRESS_TRACK: Color = Color::Rgb(48, 48, 56);
 pub const ACCENT: Color = Color::Rgb(90, 160, 220);
 pub const SUCCESS: Color = Color::Rgb(80, 180, 120);
 pub const WARNING: Color = Color::Rgb(220, 180, 80);

@@ -4,12 +4,13 @@ use drot_kernel::FormValue;
 use drot_kernel::{AppState, DiagnosticSeverity, MainTab};
 use drot_kernel::{CommandRegistry, CommandSpec, FieldKind};
 use ratatui::Frame;
-use ratatui::layout::Rect;
+use ratatui::layout::{Constraint, Layout, Rect};
 use ratatui::style::Style;
 use ratatui::text::Line;
 use ratatui::widgets::{Paragraph, Widget};
 use ratatui_interact::components::{
-    CheckBox, CheckBoxState, InputState, ScrollableContentState, Tab, TabViewAction, TabViewState,
+    ButtonState, CheckBox, CheckBoxState, InputState, ScrollableContentState, Tab, TabViewAction,
+    TabViewState,
 };
 use ratatui_interact::theme::Theme;
 use ratatui_interact::traits::ClickRegionRegistry;
@@ -17,7 +18,7 @@ use ratatui_interact::traits::ClickRegionRegistry;
 use crate::focus::TuiFocus;
 use crate::strings::{self, t};
 use crate::theme as dhara_theme;
-use crate::widgets::{dhara_input, panel, scroll_body, tab_table, text_wrap};
+use crate::widgets::{dhara_input, padded_button, panel, scroll_body, tab_table, text_wrap};
 
 pub struct CenterPanelClicks {
     pub registry: ClickRegionRegistry<TabViewAction>,
@@ -47,13 +48,17 @@ pub fn render_center_panel(
     option_input: &InputState,
     option_checkbox: &CheckBoxState,
     option_field_clicks: &mut ClickRegionRegistry<usize>,
+    reset_btn: &mut ButtonState,
+    shell_clicks: &mut ClickRegionRegistry<TuiFocus>,
 ) -> CenterPanelClicks {
     sync_tab_view_from_state(tab_state, state.main_tab);
     tab_state.focused = shell_focus.is_focused(&TuiFocus::MainTabs)
-        || shell_focus.is_focused(&TuiFocus::TabContent);
+        || shell_focus.is_focused(&TuiFocus::TabContent)
+        || shell_focus.is_focused(&TuiFocus::OptionsReset);
 
     let tabs_focused = shell_focus.is_focused(&TuiFocus::MainTabs)
-        || shell_focus.is_focused(&TuiFocus::TabContent);
+        || shell_focus.is_focused(&TuiFocus::TabContent)
+        || shell_focus.is_focused(&TuiFocus::OptionsReset);
     let panel_inner = panel::render_panel(frame, area, "", tabs_focused, false);
 
     let layout = tab_table::split_tab_table(panel_inner);
@@ -96,6 +101,9 @@ pub fn render_center_panel(
             theme,
             content_focused,
             option_field_clicks,
+            reset_btn,
+            shell_focus,
+            shell_clicks,
         ),
         2 => render_trouble_tab(body, frame.buffer_mut(), state, trouble_scroll),
         3 => render_system_tab(body, frame.buffer_mut(), state, system_scroll),
@@ -175,27 +183,56 @@ fn render_options_tab(
     theme: &Theme,
     content_focused: bool,
     option_field_clicks: &mut ClickRegionRegistry<usize>,
+    reset_btn: &mut ButtonState,
+    shell_focus: &crate::focus::ShellFocus,
+    shell_clicks: &mut ClickRegionRegistry<TuiFocus>,
 ) {
+    let chunks = Layout::vertical([Constraint::Min(0), Constraint::Length(1)]).split(area);
+    let fields_area = chunks[0];
+    let footer = chunks[1];
+
+    let running = state.active_run.is_some();
+    let can_reset = state.selected_command(registry).is_some() && !running;
+    reset_btn.set_enabled(can_reset);
+    reset_btn.set_focused(shell_focus.is_focused(&TuiFocus::OptionsReset));
+
+    let reset_w = padded_button::label_width("Reset").max(padded_button::BUTTON_MIN_WIDTH);
+    let reset_w = reset_w.min(footer.width);
+    let reset_area = Rect::new(
+        footer.x + footer.width.saturating_sub(reset_w),
+        footer.y,
+        reset_w,
+        1,
+    );
+    padded_button::render_padded_button(
+        reset_area,
+        "Reset",
+        reset_btn,
+        theme,
+        frame.buffer_mut(),
+    );
+    shell_clicks.register(reset_area, TuiFocus::OptionsReset);
+
     let Some(command) = state.selected_command(registry) else {
-        Paragraph::new(t("options.empty")).render(area, frame.buffer_mut());
+        Paragraph::new(t("options.empty")).render(fields_area, frame.buffer_mut());
         return;
     };
     let Some(form) = state.forms.get(command.id) else {
-        Paragraph::new(t("options.loading")).render(area, frame.buffer_mut());
+        Paragraph::new(t("options.loading")).render(fields_area, frame.buffer_mut());
         return;
     };
 
     if command.ui.fields.is_empty() {
-        Paragraph::new(t("options.none")).render(area, frame.buffer_mut());
+        Paragraph::new(t("options.none")).render(fields_area, frame.buffer_mut());
         return;
     }
 
-    let mut y = area.y;
+    let mut y = fields_area.y;
     for (index, field) in command.ui.fields.iter().enumerate() {
-        if y >= area.y + area.height {
+        if y >= fields_area.y + fields_area.height {
             break;
         }
-        let row = Rect::new(area.x, y, area.width, 1);
+        let row = Rect::new(fields_area.x, y, fields_area.width, 1);
         let selected = index == form_field;
         let style = if selected && content_focused {
             dhara_theme::selected_style()

@@ -74,7 +74,6 @@ pub struct DharaTui {
     pub trouble_scroll: ScrollableContentState,
     pub system_scroll: ScrollableContentState,
     pub run_btn: ButtonState,
-    pub cancel_btn: ButtonState,
     pub reset_btn: ButtonState,
     pub spinner: SpinnerState,
     pub option_input: InputState,
@@ -186,7 +185,6 @@ fn build_app(
         trouble_scroll: ScrollableContentState::new(Vec::new()),
         system_scroll: ScrollableContentState::new(Vec::new()),
         run_btn: ButtonState::enabled(),
-        cancel_btn: ButtonState::disabled(),
         reset_btn: ButtonState::disabled(),
         spinner: SpinnerState::new(),
         option_input: InputState::new(String::new()),
@@ -326,6 +324,8 @@ fn draw(frame: &mut ratatui::Frame<'_>, app: &mut DharaTui) {
         &app.option_input,
         &app.option_checkbox,
         &mut app.option_field_clicks,
+        &mut app.reset_btn,
+        &mut app.shell_clicks,
     );
     app.tab_clicks = center_clicks.registry;
     let center_chunks =
@@ -339,8 +339,6 @@ fn draw(frame: &mut ratatui::Frame<'_>, app: &mut DharaTui) {
         &app.theme,
         &app.shell_focus,
         &mut app.run_btn,
-        &mut app.cancel_btn,
-        &mut app.reset_btn,
         &mut app.spinner,
         &mut app.shell_clicks,
     );
@@ -395,7 +393,7 @@ fn handle_key(app: &mut DharaTui, key: KeyEvent) -> Result<()> {
 
     match app.shell_focus.current() {
         Some(TuiFocus::TaskTree) => handle_tree_keys(app, key.code)?,
-        Some(TuiFocus::ActionRun) | Some(TuiFocus::ActionCancel) | Some(TuiFocus::ActionReset) => {
+        Some(TuiFocus::ActionRun) | Some(TuiFocus::OptionsReset) => {
             if key.code == KeyCode::Enter {
                 trigger_action_button(app);
             }
@@ -612,10 +610,7 @@ fn handle_mouse(app: &mut DharaTui, mouse: MouseEvent) {
 
         if let Some(focus) = app.shell_clicks.handle_click(mouse.column, mouse.row) {
             app.shell_focus.focus(*focus);
-            if matches!(
-                focus,
-                TuiFocus::ActionRun | TuiFocus::ActionCancel | TuiFocus::ActionReset
-            ) {
+            if matches!(focus, TuiFocus::ActionRun | TuiFocus::OptionsReset) {
                 trigger_action_button(app);
             }
         }
@@ -784,7 +779,7 @@ fn activate_focused(app: &mut DharaTui) {
                 form.selected_field = app.form_field;
             }
         }
-        Some(TuiFocus::ActionRun) | Some(TuiFocus::ActionCancel) | Some(TuiFocus::ActionReset) => {
+        Some(TuiFocus::ActionRun) | Some(TuiFocus::OptionsReset) => {
             trigger_action_button(app);
         }
         _ => {}
@@ -881,9 +876,9 @@ fn start_selected_run(app: &mut DharaTui) {
 fn trigger_action_button(app: &mut DharaTui) {
     let running = app.state.active_run.is_some();
     match app.shell_focus.current() {
+        Some(TuiFocus::ActionRun) if running => app.state.cancel_active(),
         Some(TuiFocus::ActionRun) if !running => start_selected_run(app),
-        Some(TuiFocus::ActionCancel) if running => app.state.cancel_active(),
-        Some(TuiFocus::ActionReset) if !running => {
+        Some(TuiFocus::OptionsReset) if !running => {
             if let Some(command) = app.state.selected_command(&app.registry).cloned() {
                 app.state.reset_form(&command);
             }

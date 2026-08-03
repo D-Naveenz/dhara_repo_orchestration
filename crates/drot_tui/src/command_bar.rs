@@ -62,7 +62,11 @@ pub fn footer_hints(ctx: &FooterContext<'_>) -> Vec<(&'static str, &'static str)
                 hints.push(("Wheel", "scroll"));
             }
         },
-        Some(TuiFocus::ActionRun) | Some(TuiFocus::ActionCancel) | Some(TuiFocus::ActionReset) => {
+        Some(TuiFocus::OptionsReset) => {
+            hints.push(("Enter", "reset options"));
+            hints.push(("Click", "reset"));
+        }
+        Some(TuiFocus::ActionRun) => {
             hints.push(("Enter", "activate"));
             hints.push(("Click", "button"));
             if !running {
