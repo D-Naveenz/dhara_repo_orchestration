@@ -925,7 +925,7 @@ mod tests {
             "png",
         )
         .unwrap();
-        fs::create_dir_all(repo_root.join("src/core/dhara_storage/resources")).unwrap();
+        fs::create_dir_all(repo_root.join(crate::paths::embedded_defs_dir_relative())).unwrap();
         fs::write(
             repo_root.join(crate::paths::runtime_defs_relative()),
             "placeholder",
