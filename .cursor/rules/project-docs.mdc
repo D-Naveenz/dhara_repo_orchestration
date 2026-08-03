@@ -1,0 +1,34 @@
+---
+description: DROT project-surface docs; follow project-docs for README/AGENTS/docs
+globs: README.md,**/README.md,AGENTS.md,docs/**/*.md
+alwaysApply: false
+---
+
+# Project docs (DROT)
+
+When creating or editing README / AGENTS / `docs/` in this repository, **read and follow the `project-docs` skill first**, then apply the customizations below.
+
+Source **documentation comments**, file headers, why-comments → **`inline-code-docs`**.
+
+## Ownership
+
+This repository owns **all DROT-specific** documentation and Cursor rules:
+
+| Surface | Location |
+|---------|----------|
+| Agent router | [`AGENTS.md`](../../AGENTS.md) |
+| Deep reference | [`docs/`](../../docs/) |
+| Project README | [`README.md`](../../README.md) |
+
+Host products (e.g. dhara_storage) must **not** duplicate TUI/logging/architecture essays — they link to this submodule / orchestration repo.
+
+## Publish / human surfaces
+
+| README | Audience |
+|--------|----------|
+| [`README.md`](../../README.md) | Operators — CLI/TUI install and usage |
+| Host package READMEs | Product runtime (not this tool) |
+
+## Audience
+
+Speak to **operators and contributors** of the orchestration tool (Rust). Mention host products only as facts (e.g. “pin as submodule”), not as storage runtime tutorials.
