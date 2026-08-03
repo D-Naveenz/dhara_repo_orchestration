@@ -1,3 +1,5 @@
+use std::time::{Duration, Instant};
+
 use crossterm::event::{MouseEvent, MouseEventKind};
 use ratatui::layout::Rect;
 use ratatui::style::Style;
@@ -9,6 +11,99 @@ use crate::theme as dhara_theme;
 
 /// Width of the expand/collapse chevron column (matches `"▶ "` / `"▼ "`).
 const CHEVRON_SPACER: &str = "  ";
+
+/// Delay between marquee column steps.
+const MARQUEE_STEP: Duration = Duration::from_millis(120);
+/// Hold at each end before reversing direction.
+const MARQUEE_PAUSE: Duration = Duration::from_millis(800);
+
+/// Ping-pong horizontal scroll for the selected overflowing tree label.
+#[derive(Debug, Clone)]
+pub struct TreeLabelMarquee {
+    path_key: String,
+    offset: usize,
+    forward: bool,
+    next_step: Instant,
+    pause_until: Instant,
+}
+
+impl Default for TreeLabelMarquee {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl TreeLabelMarquee {
+    pub fn new() -> Self {
+        let now = Instant::now();
+        Self {
+            path_key: String::new(),
+            offset: 0,
+            forward: true,
+            next_step: now,
+            pause_until: now + MARQUEE_PAUSE,
+        }
+    }
+
+    fn reset(&mut self, path_key: &str, now: Instant) {
+        self.path_key = path_key.to_owned();
+        self.offset = 0;
+        self.forward = true;
+        self.next_step = now;
+        self.pause_until = now + MARQUEE_PAUSE;
+    }
+
+    /// Advance ping-pong state for the selected label; returns the column offset to paint.
+    pub fn advance(&mut self, path_key: &str, label: &str, max_width: usize, now: Instant) -> usize {
+        let overflow = label.width().saturating_sub(max_width);
+        if overflow == 0 {
+            self.reset(path_key, now);
+            return 0;
+        }
+
+        if self.path_key != path_key {
+            self.reset(path_key, now);
+            return 0;
+        }
+
+        self.offset = self.offset.min(overflow);
+
+        if now < self.pause_until {
+            return self.offset;
+        }
+
+        if now < self.next_step {
+            return self.offset;
+        }
+
+        // Catch up one step per frame so fast redraws do not skip the text.
+        self.next_step = now + MARQUEE_STEP;
+
+        if self.forward {
+            if self.offset >= overflow {
+                self.forward = false;
+                self.pause_until = now + MARQUEE_PAUSE;
+            } else {
+                self.offset += 1;
+                if self.offset >= overflow {
+                    self.forward = false;
+                    self.pause_until = now + MARQUEE_PAUSE;
+                }
+            }
+        } else if self.offset == 0 {
+            self.forward = true;
+            self.pause_until = now + MARQUEE_PAUSE;
+        } else {
+            self.offset -= 1;
+            if self.offset == 0 {
+                self.forward = true;
+                self.pause_until = now + MARQUEE_PAUSE;
+            }
+        }
+
+        self.offset
+    }
+}
 
 struct FlatNode<'a, T> {
     node: &'a TreeNode<T>,
@@ -140,6 +235,43 @@ fn clip_right(text: &str, max_width: usize) -> String {
     out
 }
 
+/// Skip `offset` display columns, then take up to `max_width` (no ellipsis).
+fn clip_window(text: &str, offset: usize, max_width: usize) -> String {
+    if max_width == 0 {
+        return String::new();
+    }
+
+    let mut skipped = 0usize;
+    let mut started = offset == 0;
+    let mut out = String::new();
+    let mut width = 0usize;
+
+    for ch in text.chars() {
+        let w = ch.width().unwrap_or(0);
+        if !started {
+            if skipped + w > offset {
+                // Wide char straddles the window start — advance past it.
+                skipped += w;
+                started = true;
+                continue;
+            }
+            skipped += w;
+            if skipped == offset {
+                started = true;
+            }
+            continue;
+        }
+
+        if width + w > max_width {
+            break;
+        }
+        out.push(ch);
+        width += w;
+    }
+
+    out
+}
+
 pub fn visible_count<T: std::fmt::Debug>(nodes: &[TreeNode<T>], state: &TreeViewState) -> usize {
     TreeView::new(nodes, state).visible_count()
 }
@@ -149,6 +281,8 @@ pub fn render_clipped_tree<T: std::fmt::Debug>(
     nodes: &[TreeNode<T>],
     state: &TreeViewState,
     label: impl Fn(&TreeNode<T>) -> &str,
+    path_key: impl Fn(&TreeNode<T>) -> &str,
+    marquee: &mut TreeLabelMarquee,
     theme: &Theme,
     buf: &mut ratatui::buffer::Buffer,
 ) {
@@ -160,6 +294,7 @@ pub fn render_clipped_tree<T: std::fmt::Debug>(
     let visible = flatten_visible(nodes, state);
     let scroll = state.scroll as usize;
     let viewport_height = area.height as usize;
+    let now = Instant::now();
 
     for (view_idx, flat_node) in visible
         .iter()
@@ -193,7 +328,17 @@ pub fn render_clipped_tree<T: std::fmt::Debug>(
             continue;
         }
 
-        let clipped = clip_right(label(flat_node.node), label_width);
+        let text = label(flat_node.node);
+        let clipped = if is_selected {
+            let offset = marquee.advance(path_key(flat_node.node), text, label_width, now);
+            if text.width() > label_width {
+                clip_window(text, offset, label_width)
+            } else {
+                text.to_owned()
+            }
+        } else {
+            clip_right(text, label_width)
+        };
         buf.set_string(
             row_area.x + prefix_width as u16,
             row_area.y,
@@ -245,5 +390,31 @@ pub fn handle_tree_wheel<T: std::fmt::Debug>(
             true
         }
         _ => false,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn clip_window_skips_offset_and_limits_width() {
+        assert_eq!(clip_window("abcdefghij", 0, 4), "abcd");
+        assert_eq!(clip_window("abcdefghij", 3, 4), "defg");
+        assert_eq!(clip_window("abcdefghij", 8, 4), "ij");
+        assert_eq!(clip_window("short", 0, 20), "short");
+    }
+
+    #[test]
+    fn marquee_resets_on_path_change_and_steps_forward() {
+        let mut m = TreeLabelMarquee::new();
+        let t0 = Instant::now();
+        assert_eq!(m.advance("a", "abcdefghijklmnopqrstuvwxyz", 5, t0), 0);
+
+        let t1 = t0 + MARQUEE_PAUSE + MARQUEE_STEP;
+        assert_eq!(m.advance("a", "abcdefghijklmnopqrstuvwxyz", 5, t1), 1);
+
+        let t2 = t1 + MARQUEE_STEP;
+        assert_eq!(m.advance("b", "abcdefghijklmnopqrstuvwxyz", 5, t2), 0);
     }
 }

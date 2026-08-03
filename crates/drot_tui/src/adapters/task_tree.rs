@@ -105,6 +105,7 @@ pub fn render_task_tree(
     area: Rect,
     nodes: &[TreeNode<TaskTreeData>],
     widget: &WidgetTreeState,
+    marquee: &mut scrollable_tree::TreeLabelMarquee,
     theme: &Theme,
     focused: bool,
 ) -> Rect {
@@ -126,6 +127,8 @@ pub fn render_task_tree(
         nodes,
         widget,
         |node| node.data.label.as_str(),
+        |node| node.data.path_key.as_str(),
+        marquee,
         theme,
         frame.buffer_mut(),
     );

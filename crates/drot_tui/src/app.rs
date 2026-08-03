@@ -46,7 +46,7 @@ use crate::screens::{
     sync_option_widgets_from_form, sync_state_from_tab_view, tab_index,
 };
 use crate::theme::interact_theme;
-use crate::widgets::{action_panel, title_bar};
+use crate::widgets::{action_panel, scrollable_tree, title_bar};
 
 pub fn can_launch_tui() -> bool {
     io::stdin().is_terminal() && io::stdout().is_terminal()
@@ -68,6 +68,7 @@ pub struct DharaTui {
     pub task_tree_widget: WidgetTreeState,
     pub task_tree_nodes:
         Vec<ratatui_interact::components::TreeNode<crate::adapters::task_tree::TaskTreeData>>,
+    pub tree_label_marquee: scrollable_tree::TreeLabelMarquee,
     pub tab_view_state: TabViewState,
     pub info_scroll: ScrollableContentState,
     pub trouble_scroll: ScrollableContentState,
@@ -179,6 +180,7 @@ fn build_app(
         theme,
         task_tree_widget: WidgetTreeState::new(),
         task_tree_nodes,
+        tree_label_marquee: scrollable_tree::TreeLabelMarquee::new(),
         tab_view_state: TabViewState::new(4),
         info_scroll: ScrollableContentState::new(Vec::new()),
         trouble_scroll: ScrollableContentState::new(Vec::new()),
@@ -303,6 +305,7 @@ fn draw(frame: &mut ratatui::Frame<'_>, app: &mut DharaTui) {
         body[0],
         &app.task_tree_nodes,
         &app.task_tree_widget,
+        &mut app.tree_label_marquee,
         &app.theme,
         tree_focused,
     );
