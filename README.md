@@ -48,17 +48,25 @@ Exact subcommands depend on the product plugin (for example `drot_dhara_storage`
 - File definition sync and inspect
 - Release dry-runs
 
-Prefer the host repo’s [AGENTS.md][dhara-agents] / scripts for the exact commands that host expects.
+Prefer this repo’s [AGENTS.md](AGENTS.md) and the host’s scripts for the exact commands that host expects.
 
 ### 3. TUI
 
+Interactive three-panel shell (`drot_tui`): Tasks tree, tabbed center (Info / Options / Troubleshooting / System), Actions (progress + Run/Cancel).
+
+From a host such as dhara_storage, prefer the host’s `run-drot` script (version-gates against this workspace’s `Cargo.toml`). With no args it opens the TUI; pass `--cli` for the direct CLI.
+
+From this repository root:
+
 ```bash
-cargo run -p drot_tui
+cargo run -p drot_tui --profile dist
 ```
 
 ## Related
 
 - Host product: [dhara_storage][dhara-storage]
+- Tool agent router: [AGENTS.md](AGENTS.md)
+- Deep reference: [docs/](docs/README.md)
 - Orchestration repo: [dhara_repo_orchestration][orch]
 
 ## License
@@ -66,5 +74,4 @@ cargo run -p drot_tui
 Apache-2.0.
 
 [dhara-storage]: https://github.com/D-Naveenz/dhara_storage
-[dhara-agents]: https://github.com/D-Naveenz/dhara_storage/blob/main/AGENTS.md
 [orch]: https://github.com/D-Naveenz/dhara_repo_orchestration
