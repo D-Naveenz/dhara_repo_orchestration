@@ -4,6 +4,7 @@ mod defs;
 mod package;
 mod quality;
 mod release;
+mod strings;
 mod ui;
 
 use std::sync::Arc;

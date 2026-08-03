@@ -4,6 +4,7 @@ mod boot;
 mod command_bar;
 mod focus;
 mod screens;
+mod strings;
 mod theme;
 mod widgets;
 

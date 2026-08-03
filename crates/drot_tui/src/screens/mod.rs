@@ -15,10 +15,9 @@ use ratatui_interact::theme::Theme;
 use ratatui_interact::traits::ClickRegionRegistry;
 
 use crate::focus::TuiFocus;
+use crate::strings::{self, t};
 use crate::theme as dhara_theme;
-use crate::widgets::{dhara_input, panel, scroll_body, tab_table};
-
-const TAB_LABELS: [&str; 4] = ["Info", "Options", "Troubleshooting", "System"];
+use crate::widgets::{dhara_input, panel, scroll_body, tab_table, text_wrap};
 
 pub struct CenterPanelClicks {
     pub registry: ClickRegionRegistry<TabViewAction>,
@@ -58,7 +57,8 @@ pub fn render_center_panel(
     let panel_inner = panel::render_panel(frame, area, "", tabs_focused, false);
 
     let layout = tab_table::split_tab_table(panel_inner);
-    let tabs: Vec<Tab<'_>> = TAB_LABELS.iter().map(|label| Tab::new(label)).collect();
+    let tab_labels = strings::tab_labels();
+    let tabs: Vec<Tab<'_>> = tab_labels.iter().map(|label| Tab::new(label)).collect();
 
     let mut click_registry = ClickRegionRegistry::new();
     option_field_clicks.clear();
@@ -75,6 +75,7 @@ pub fn render_center_panel(
         Rect::new(panel_inner.x, panel_inner.y + 1, panel_inner.width, 1),
     );
 
+    let body = scroll_body::inset_body(layout.body);
     let selected_tab = tab_state.selected_index;
     let content_focused = shell_focus.is_focused(&TuiFocus::TabContent);
     info_scroll.set_focused(content_focused && selected_tab == 0);
@@ -82,17 +83,10 @@ pub fn render_center_panel(
     system_scroll.set_focused(content_focused && selected_tab == 3);
 
     match selected_tab {
-        0 => render_info_tab(
-            layout.body,
-            frame.buffer_mut(),
-            state,
-            registry,
-            info_scroll,
-            theme,
-        ),
+        0 => render_info_tab(body, frame.buffer_mut(), state, registry, info_scroll),
         1 => render_options_tab(
             frame,
-            layout.body,
+            body,
             state,
             registry,
             form_field,
@@ -103,14 +97,8 @@ pub fn render_center_panel(
             content_focused,
             option_field_clicks,
         ),
-        2 => render_trouble_tab(
-            layout.body,
-            frame.buffer_mut(),
-            state,
-            trouble_scroll,
-            theme,
-        ),
-        3 => render_system_tab(layout.body, frame.buffer_mut(), state, system_scroll, theme),
+        2 => render_trouble_tab(body, frame.buffer_mut(), state, trouble_scroll),
+        3 => render_system_tab(body, frame.buffer_mut(), state, system_scroll),
         _ => {}
     }
 
@@ -125,29 +113,54 @@ fn render_info_tab(
     state: &AppState,
     registry: &CommandRegistry,
     scroll: &mut ScrollableContentState,
-    theme: &Theme,
 ) {
     let Some(command) = state.selected_command(registry) else {
-        Paragraph::new("Select a task from the tree.").render(area, buf);
+        Paragraph::new(t("doc.empty")).render(area, buf);
         return;
     };
 
-    let mut lines = vec![
-        format!("What: {}", command.ui.description),
-        format!("Summary: {}", command.summary),
-        String::new(),
-        format!("How: {} {}", command.path_string(), command.args_summary),
-    ];
+    let width = area.width as usize;
+    let mut lines: Vec<String> = Vec::new();
+
+    // Title — CLI path (Learn-style primary heading).
+    let title = command.path_string();
+    lines.extend(text_wrap::wrap_line(&title, width));
+
+    // Lead — one-line summary.
+    lines.push(String::new());
+    lines.extend(text_wrap::wrap_line(command.summary, width));
+
+    // Description — fuller prose.
+    if !command.ui.description.is_empty() && command.ui.description != command.summary {
+        lines.push(String::new());
+        lines.extend(text_wrap::wrap_paragraphs(command.ui.description, width));
+    } else if !command.ui.description.is_empty() && command.summary.is_empty() {
+        lines.push(String::new());
+        lines.extend(text_wrap::wrap_paragraphs(command.ui.description, width));
+    }
+
+    // Syntax
+    lines.push(String::new());
+    lines.extend(text_wrap::wrap_line(t("doc.syntax"), width));
+    let syntax = if command.args_summary.is_empty() {
+        command.path_string()
+    } else {
+        format!("{} {}", command.path_string(), command.args_summary)
+    };
+    lines.extend(text_wrap::wrap_line(&format!("  {syntax}"), width));
+
+    // Options (when present)
     if !command.ui.fields.is_empty() {
         lines.push(String::new());
-        lines.push("Fields:".to_owned());
+        lines.extend(text_wrap::wrap_line(t("doc.options"), width));
         for field in &command.ui.fields {
-            lines.push(format!("  {} — {}", field.label, field.help));
+            let entry = format!("  {} — {}", field.label, field.help);
+            lines.extend(text_wrap::wrap_line(&entry, width));
         }
     }
 
     scroll.set_lines(lines);
-    scroll_body::render_scroll_body(area, scroll, theme, buf);
+    scroll_body::render_scroll_body(area, scroll, buf);
 }
 
 fn render_options_tab(
@@ -164,17 +177,16 @@ fn render_options_tab(
     option_field_clicks: &mut ClickRegionRegistry<usize>,
 ) {
     let Some(command) = state.selected_command(registry) else {
-        Paragraph::new("Select a task to edit options.").render(area, frame.buffer_mut());
+        Paragraph::new(t("options.empty")).render(area, frame.buffer_mut());
         return;
     };
     let Some(form) = state.forms.get(command.id) else {
-        Paragraph::new("Loading form…").render(area, frame.buffer_mut());
+        Paragraph::new(t("options.loading")).render(area, frame.buffer_mut());
         return;
     };
 
     if command.ui.fields.is_empty() {
-        Paragraph::new("No options for this task. Press Run or r.")
-            .render(area, frame.buffer_mut());
+        Paragraph::new(t("options.none")).render(area, frame.buffer_mut());
         return;
     }
 
@@ -255,25 +267,23 @@ fn render_trouble_tab(
     buf: &mut ratatui::buffer::Buffer,
     state: &AppState,
     scroll: &mut ScrollableContentState,
-    theme: &Theme,
 ) {
     if state.troubleshooting_lines.is_empty() {
-        Paragraph::new("Warnings and errors appear here during a run.").render(area, buf);
+        Paragraph::new(t("trouble.empty")).render(area, buf);
         return;
     }
-    let lines: Vec<String> = state
-        .troubleshooting_lines
-        .iter()
-        .map(|line| {
-            let prefix = match line.severity {
-                DiagnosticSeverity::Warn => "WARN",
-                DiagnosticSeverity::Error => "ERR ",
-            };
-            format!("[{prefix}] {}", line.text)
-        })
-        .collect();
+    let width = area.width as usize;
+    let mut lines: Vec<String> = Vec::new();
+    for line in &state.troubleshooting_lines {
+        let prefix = match line.severity {
+            DiagnosticSeverity::Warn => "WARN",
+            DiagnosticSeverity::Error => "ERR ",
+        };
+        let text = format!("[{prefix}] {}", line.text);
+        lines.extend(text_wrap::wrap_line(&text, width));
+    }
     scroll.set_lines(lines);
-    scroll_body::render_scroll_body(area, scroll, theme, buf);
+    scroll_body::render_scroll_body(area, scroll, buf);
 }
 
 fn render_system_tab(
@@ -281,14 +291,22 @@ fn render_system_tab(
     buf: &mut ratatui::buffer::Buffer,
     state: &AppState,
     scroll: &mut ScrollableContentState,
-    theme: &Theme,
 ) {
     let text = state
         .system_configs_text
         .as_deref()
-        .unwrap_or("Open this tab to load configuration.");
-    scroll.set_lines(text.lines().map(str::to_owned).collect());
-    scroll_body::render_scroll_body(area, scroll, theme, buf);
+        .unwrap_or(t("system.empty"));
+    let width = area.width as usize;
+    let mut lines: Vec<String> = Vec::new();
+    for line in text.lines() {
+        if line.is_empty() {
+            lines.push(String::new());
+        } else {
+            lines.extend(text_wrap::wrap_line(line, width));
+        }
+    }
+    scroll.set_lines(lines);
+    scroll_body::render_scroll_body(area, scroll, buf);
 }
 
 pub fn tab_from_index(index: usize) -> MainTab {

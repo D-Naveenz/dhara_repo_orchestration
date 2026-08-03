@@ -43,7 +43,7 @@ use crate::focus::{ShellFocus, TuiFocus, focus_panel_at_pointer, point_in_rect};
 use crate::screens::modals::{ModalHost, ModalOutcome};
 use crate::screens::{
     apply_option_widgets_to_form, cycle_form_field, render_center_panel,
-    sync_option_widgets_from_form, sync_state_from_tab_view, tab_index,
+    sync_option_widgets_from_form, sync_state_from_tab_view, sync_tab_view_from_state, tab_index,
 };
 use crate::theme::interact_theme;
 use crate::widgets::{action_panel, scrollable_tree, title_bar};
@@ -443,9 +443,7 @@ fn handle_global_keys(app: &mut DharaTui, code: KeyCode) -> Result<()> {
             }
         }
         KeyCode::Char('r') if app.state.active_run.is_none() => {
-            if let Some(context) = app.context.clone() {
-                app.state.run_selected(&app.registry, &context);
-            }
+            start_selected_run(app);
         }
         KeyCode::Char('c') if app.state.active_run.is_some() => {
             app.state.cancel_active();
@@ -868,14 +866,22 @@ fn load_system_configs(app: &mut DharaTui) {
     app.tab_view_state.select(tab_index(MainTab::SystemConfigs));
 }
 
+fn start_selected_run(app: &mut DharaTui) {
+    let Some(context) = app.context.clone() else {
+        return;
+    };
+    app.state.run_selected(&app.registry, &context);
+    if app.state.active_run.is_some() {
+        // Kernel sets main_tab; keep the tab strip in sync and show live diagnostics.
+        sync_tab_view_from_state(&mut app.tab_view_state, MainTab::Troubleshooting);
+        app.shell_focus.focus(TuiFocus::TabContent);
+    }
+}
+
 fn trigger_action_button(app: &mut DharaTui) {
     let running = app.state.active_run.is_some();
     match app.shell_focus.current() {
-        Some(TuiFocus::ActionRun) if !running => {
-            if let Some(context) = app.context.clone() {
-                app.state.run_selected(&app.registry, &context);
-            }
-        }
+        Some(TuiFocus::ActionRun) if !running => start_selected_run(app),
         Some(TuiFocus::ActionCancel) if running => app.state.cancel_active(),
         Some(TuiFocus::ActionReset) if !running => {
             if let Some(command) = app.state.selected_command(&app.registry).cloned() {

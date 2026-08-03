@@ -1,5 +1,7 @@
 use drot_kernel::{ArgBinding, CommandUi, FieldKind, FieldSpec};
 
+use super::strings::s;
+
 pub(crate) const VERSION_PARTS: &[&str] = &["major", "minor", "patch"];
 pub(crate) const CONFIGURATIONS: &[&str] = &["Release"];
 pub(crate) const DRY_RUN_OPTIONS: &[&str] = &["dry-run", "execute"];
@@ -10,20 +12,14 @@ pub(crate) fn ui_for_command(
     args_summary: &'static str,
 ) -> CommandUi {
     match id {
-        "config.show" => quick_command(
-            "Inspect the effective Dhara repository configuration and resolved environment.",
-            false,
-        ),
-        "config.env.init" => quick_command(
-            "Create .env.local from .env.example when the local file is missing.",
-            false,
-        ),
+        "config.show" => quick_command(s("cmd.config.show.description"), false),
+        "config.env.init" => quick_command(s("cmd.config.env.init.description"), false),
         "version.set" => CommandUi {
-            description: "Set the shared workspace version used by both Cargo and NuGet metadata.",
+            description: s("cmd.version.set.description"),
             fields: vec![FieldSpec {
                 key: "version",
-                label: "Version",
-                help: "Semantic version to write into dhara.config.toml and synchronized package metadata.",
+                label: s("cmd.version.set.field.version.label"),
+                help: s("cmd.version.set.field.version.help"),
                 kind: FieldKind::Text,
                 binding: ArgBinding::Positional,
                 required: true,
@@ -33,11 +29,11 @@ pub(crate) fn ui_for_command(
             supports_cancel: false,
         },
         "version.bump" => CommandUi {
-            description: "Bump the shared workspace version using semantic-version part semantics.",
+            description: s("cmd.version.bump.description"),
             fields: vec![FieldSpec {
                 key: "part",
-                label: "Part",
-                help: "Which portion of the shared workspace version should be incremented.",
+                label: s("cmd.version.bump.field.part.label"),
+                help: s("cmd.version.bump.field.part.help"),
                 kind: FieldKind::Select(VERSION_PARTS),
                 binding: ArgBinding::FlagValue("--part"),
                 required: true,
@@ -47,29 +43,29 @@ pub(crate) fn ui_for_command(
             supports_cancel: false,
         },
         "defs.pack" => CommandUi {
-            description: "Copy the runtime filedefs.dat from the repository embed path to an output file.",
+            description: s("cmd.defs.pack.description"),
             fields: vec![optional_path(
                 "output",
-                "Output",
-                "Optional output file path.",
+                s("cmd.defs.pack.field.output.label"),
+                s("cmd.defs.pack.field.output.help"),
                 "--output",
             )],
             quick_run: false,
             supports_cancel: false,
         },
         "defs.build-trid-xml" => CommandUi {
-            description: "Build a filedefs.dat package from TrID XML sources or archives.",
+            description: s("cmd.defs.build-trid-xml.description"),
             fields: vec![
                 optional_path(
                     "input",
-                    "Input",
-                    "Optional TrID XML input path or archive.",
+                    s("cmd.defs.build-trid-xml.field.input.label"),
+                    s("cmd.defs.build-trid-xml.field.input.help"),
                     "--input",
                 ),
                 optional_path(
                     "output",
-                    "Output",
-                    "Optional output package path.",
+                    s("cmd.defs.build-trid-xml.field.output.label"),
+                    s("cmd.defs.build-trid-xml.field.output.help"),
                     "--output",
                 ),
             ],
@@ -77,35 +73,40 @@ pub(crate) fn ui_for_command(
             supports_cancel: false,
         },
         "defs.inspect" => CommandUi {
-            description: "Inspect an encoded FlatBuffers package and summarize its metadata and counts.",
+            description: s("cmd.defs.inspect.description"),
             fields: vec![optional_path(
                 "input",
-                "Input",
-                "Optional package path to inspect.",
+                s("cmd.defs.inspect.field.input.label"),
+                s("cmd.defs.inspect.field.input.help"),
                 "--input",
             )],
             quick_run: false,
             supports_cancel: false,
         },
         "defs.inspect-trid-xml" => CommandUi {
-            description: "Preview TrID XML transformation results without writing an output package.",
+            description: s("cmd.defs.inspect-trid-xml.description"),
             fields: vec![optional_path(
                 "input",
-                "Input",
-                "Optional TrID XML source path.",
+                s("cmd.defs.inspect-trid-xml.field.input.label"),
+                s("cmd.defs.inspect-trid-xml.field.input.help"),
                 "--input",
             )],
             quick_run: false,
             supports_cancel: false,
         },
         "defs.normalize" => CommandUi {
-            description: "Normalize an existing FlatBuffers package into the canonical builder format.",
+            description: s("cmd.defs.normalize.description"),
             fields: vec![
-                optional_path("input", "Input", "Optional source package path.", "--input"),
+                optional_path(
+                    "input",
+                    s("cmd.defs.normalize.field.input.label"),
+                    s("cmd.defs.normalize.field.input.help"),
+                    "--input",
+                ),
                 optional_path(
                     "output",
-                    "Output",
-                    "Optional normalized output path.",
+                    s("cmd.defs.normalize.field.output.label"),
+                    s("cmd.defs.normalize.field.output.help"),
                     "--output",
                 ),
             ],
@@ -113,33 +114,43 @@ pub(crate) fn ui_for_command(
             supports_cancel: false,
         },
         "defs.verify" => CommandUi {
-            description: "Compare two FlatBuffers packages for semantic equivalence.",
+            description: s("cmd.defs.verify.description"),
             fields: vec![
-                required_path("left", "Left", "Left-hand package path.", "--left"),
-                required_path("right", "Right", "Right-hand package path.", "--right"),
+                required_path(
+                    "left",
+                    s("cmd.defs.verify.field.left.label"),
+                    s("cmd.defs.verify.field.left.help"),
+                    "--left",
+                ),
+                required_path(
+                    "right",
+                    s("cmd.defs.verify.field.right.label"),
+                    s("cmd.defs.verify.field.right.help"),
+                    "--right",
+                ),
             ],
             quick_run: false,
             supports_cancel: false,
         },
         "defs.sync-embedded" => CommandUi {
-            description: "Refresh the runtime filedefs.dat package in dhara_storage/resources from the builder source.",
+            description: s("cmd.defs.sync-embedded.description"),
             fields: vec![
                 optional_path(
                     "input",
-                    "Input",
-                    "Optional TrID XML archive or directory path.",
+                    s("cmd.defs.sync-embedded.field.input.label"),
+                    s("cmd.defs.sync-embedded.field.input.help"),
                     "--input",
                 ),
                 optional_path(
                     "output",
-                    "Output",
-                    "Optional embedded package output path.",
+                    s("cmd.defs.sync-embedded.field.output.label"),
+                    s("cmd.defs.sync-embedded.field.output.help"),
                     "--output",
                 ),
                 FieldSpec {
                     key: "check",
-                    label: "Check only",
-                    help: "Validate whether the embedded package is up to date without writing changes.",
+                    label: s("cmd.defs.sync-embedded.field.check.label"),
+                    help: s("cmd.defs.sync-embedded.field.check.help"),
                     kind: FieldKind::Boolean,
                     binding: ArgBinding::Switch("--check"),
                     required: false,
@@ -149,19 +160,15 @@ pub(crate) fn ui_for_command(
             quick_run: false,
             supports_cancel: false,
         },
-        "verify.package" => package_command(
-            "Pack and verify the Dhara.Storage NuGet package, including smoke-consumer validation.",
-        ),
-        "package.pack" => {
-            package_command("Pack the Dhara.Storage NuGet package with staged native assets.")
-        }
+        "verify.package" => package_command(s("cmd.verify.package.description")),
+        "package.pack" => package_command(s("cmd.package.pack.description")),
         "package.publish" => CommandUi {
-            description: "Verify and optionally publish the Dhara.Storage NuGet package.",
+            description: s("cmd.package.publish.description"),
             fields: vec![
                 FieldSpec {
                     key: "configuration",
-                    label: "Configuration",
-                    help: "Build configuration used during package verification and packing.",
+                    label: s("cmd.package.publish.field.configuration.label"),
+                    help: s("cmd.package.publish.field.configuration.help"),
                     kind: FieldKind::Select(CONFIGURATIONS),
                     binding: ArgBinding::FlagValue("--configuration"),
                     required: true,
@@ -169,8 +176,8 @@ pub(crate) fn ui_for_command(
                 },
                 FieldSpec {
                     key: "version",
-                    label: "Version override",
-                    help: "Optional package version override. Leave empty to use dhara.config.toml.",
+                    label: s("cmd.package.publish.field.version.label"),
+                    help: s("cmd.package.publish.field.version.help"),
                     kind: FieldKind::Text,
                     binding: ArgBinding::FlagValue("--version"),
                     required: false,
@@ -178,8 +185,8 @@ pub(crate) fn ui_for_command(
                 },
                 FieldSpec {
                     key: "source",
-                    label: "Source",
-                    help: "Optional NuGet source URL override.",
+                    label: s("cmd.package.publish.field.source.label"),
+                    help: s("cmd.package.publish.field.source.help"),
                     kind: FieldKind::Text,
                     binding: ArgBinding::FlagValue("--source"),
                     required: false,
@@ -187,8 +194,8 @@ pub(crate) fn ui_for_command(
                 },
                 FieldSpec {
                     key: "api_key_env",
-                    label: "API key env",
-                    help: "Optional environment-variable name containing the NuGet API key.",
+                    label: s("cmd.package.publish.field.api_key_env.label"),
+                    help: s("cmd.package.publish.field.api_key_env.help"),
                     kind: FieldKind::Text,
                     binding: ArgBinding::FlagValue("--api-key-env"),
                     required: false,
@@ -196,8 +203,8 @@ pub(crate) fn ui_for_command(
                 },
                 FieldSpec {
                     key: "mode",
-                    label: "Mode",
-                    help: "Choose whether to publish or perform a dry run only.",
+                    label: s("cmd.package.publish.field.mode.label"),
+                    help: s("cmd.package.publish.field.mode.help"),
                     kind: FieldKind::Select(DRY_RUN_OPTIONS),
                     binding: ArgBinding::FlagValue("__mode"),
                     required: true,
@@ -208,12 +215,12 @@ pub(crate) fn ui_for_command(
             supports_cancel: true,
         },
         "build.run" => CommandUi {
-            description: "Run the full local repository build: config sync, definitions, quality, native staging, and package verification.",
+            description: s("cmd.build.run.description"),
             fields: vec![
                 FieldSpec {
                     key: "skip_config",
-                    label: "Skip config",
-                    help: "Do not apply dhara.config.toml drift into manifests.",
+                    label: s("cmd.build.run.field.skip_config.label"),
+                    help: s("cmd.build.run.field.skip_config.help"),
                     kind: FieldKind::Boolean,
                     binding: ArgBinding::Switch("--skip-config"),
                     required: false,
@@ -221,8 +228,8 @@ pub(crate) fn ui_for_command(
                 },
                 FieldSpec {
                     key: "skip_defs",
-                    label: "Skip definitions",
-                    help: "Do not refresh core/dhara_storage/resources/filedefs.dat.",
+                    label: s("cmd.build.run.field.skip_defs.label"),
+                    help: s("cmd.build.run.field.skip_defs.help"),
                     kind: FieldKind::Boolean,
                     binding: ArgBinding::Switch("--skip-defs"),
                     required: false,
@@ -230,8 +237,8 @@ pub(crate) fn ui_for_command(
                 },
                 FieldSpec {
                     key: "skip_quality",
-                    label: "Skip quality",
-                    help: "Do not run fmt, clippy, doc, and tests.",
+                    label: s("cmd.build.run.field.skip_quality.label"),
+                    help: s("cmd.build.run.field.skip_quality.help"),
                     kind: FieldKind::Boolean,
                     binding: ArgBinding::Switch("--skip-quality"),
                     required: false,
@@ -239,8 +246,8 @@ pub(crate) fn ui_for_command(
                 },
                 FieldSpec {
                     key: "skip_docs",
-                    label: "Skip docs",
-                    help: "Skip cargo doc when quality checks run.",
+                    label: s("cmd.build.run.field.skip_docs.label"),
+                    help: s("cmd.build.run.field.skip_docs.help"),
                     kind: FieldKind::Boolean,
                     binding: ArgBinding::Switch("--skip-docs"),
                     required: false,
@@ -248,8 +255,8 @@ pub(crate) fn ui_for_command(
                 },
                 FieldSpec {
                     key: "skip_dotnet",
-                    label: "Skip .NET tests",
-                    help: "Skip dotnet test when quality checks run.",
+                    label: s("cmd.build.run.field.skip_dotnet.label"),
+                    help: s("cmd.build.run.field.skip_dotnet.help"),
                     kind: FieldKind::Boolean,
                     binding: ArgBinding::Switch("--skip-dotnet"),
                     required: false,
@@ -257,8 +264,8 @@ pub(crate) fn ui_for_command(
                 },
                 FieldSpec {
                     key: "skip_native",
-                    label: "Skip native staging",
-                    help: "Do not build and stage dhara-sd for host runtimes.",
+                    label: s("cmd.build.run.field.skip_native.label"),
+                    help: s("cmd.build.run.field.skip_native.help"),
                     kind: FieldKind::Boolean,
                     binding: ArgBinding::Switch("--skip-native"),
                     required: false,
@@ -266,8 +273,8 @@ pub(crate) fn ui_for_command(
                 },
                 FieldSpec {
                     key: "skip_verify",
-                    label: "Skip verify",
-                    help: "Do not pack and verify the NuGet package.",
+                    label: s("cmd.build.run.field.skip_verify.label"),
+                    help: s("cmd.build.run.field.skip_verify.help"),
                     kind: FieldKind::Boolean,
                     binding: ArgBinding::Switch("--skip-verify"),
                     required: false,
@@ -275,8 +282,8 @@ pub(crate) fn ui_for_command(
                 },
                 FieldSpec {
                     key: "configuration",
-                    label: "Configuration",
-                    help: "Build configuration used for native staging and package verification.",
+                    label: s("cmd.build.run.field.configuration.label"),
+                    help: s("cmd.build.run.field.configuration.help"),
                     kind: FieldKind::Select(CONFIGURATIONS),
                     binding: ArgBinding::FlagValue("--configuration"),
                     required: true,
@@ -287,12 +294,12 @@ pub(crate) fn ui_for_command(
             supports_cancel: true,
         },
         "release.run" => CommandUi {
-            description: "Run the Cargo-first release workflow, with optional NuGet publishing.",
+            description: s("cmd.release.run.description"),
             fields: vec![
                 FieldSpec {
                     key: "configuration",
-                    label: "Configuration",
-                    help: "Build configuration used when NuGet packaging is enabled.",
+                    label: s("cmd.release.run.field.configuration.label"),
+                    help: s("cmd.release.run.field.configuration.help"),
                     kind: FieldKind::Select(CONFIGURATIONS),
                     binding: ArgBinding::FlagValue("--configuration"),
                     required: true,
@@ -300,8 +307,8 @@ pub(crate) fn ui_for_command(
                 },
                 FieldSpec {
                     key: "source",
-                    label: "Source",
-                    help: "Optional NuGet source URL override.",
+                    label: s("cmd.release.run.field.source.label"),
+                    help: s("cmd.release.run.field.source.help"),
                     kind: FieldKind::Text,
                     binding: ArgBinding::FlagValue("--source"),
                     required: false,
@@ -309,8 +316,8 @@ pub(crate) fn ui_for_command(
                 },
                 FieldSpec {
                     key: "api_key_env",
-                    label: "API key env",
-                    help: "Optional environment-variable name containing the NuGet API key.",
+                    label: s("cmd.release.run.field.api_key_env.label"),
+                    help: s("cmd.release.run.field.api_key_env.help"),
                     kind: FieldKind::Text,
                     binding: ArgBinding::FlagValue("--api-key-env"),
                     required: false,
@@ -318,8 +325,8 @@ pub(crate) fn ui_for_command(
                 },
                 FieldSpec {
                     key: "dry_run",
-                    label: "Dry run",
-                    help: "Run Cargo and NuGet release validation without publishing.",
+                    label: s("cmd.release.run.field.dry_run.label"),
+                    help: s("cmd.release.run.field.dry_run.help"),
                     kind: FieldKind::Boolean,
                     binding: ArgBinding::Switch("--dry-run"),
                     required: false,
@@ -327,8 +334,8 @@ pub(crate) fn ui_for_command(
                 },
                 FieldSpec {
                     key: "skip_cargo",
-                    label: "Skip Cargo",
-                    help: "Skip the Cargo release phase when crates were already published.",
+                    label: s("cmd.release.run.field.skip_cargo.label"),
+                    help: s("cmd.release.run.field.skip_cargo.help"),
                     kind: FieldKind::Boolean,
                     binding: ArgBinding::Switch("--skip-cargo"),
                     required: false,
@@ -336,8 +343,8 @@ pub(crate) fn ui_for_command(
                 },
                 FieldSpec {
                     key: "skip_nuget",
-                    label: "Skip NuGet",
-                    help: "Publish or dry-run only the Cargo release.",
+                    label: s("cmd.release.run.field.skip_nuget.label"),
+                    help: s("cmd.release.run.field.skip_nuget.help"),
                     kind: FieldKind::Boolean,
                     binding: ArgBinding::Switch("--skip-nuget"),
                     required: false,
@@ -374,8 +381,8 @@ fn package_command(description: &'static str) -> CommandUi {
         fields: vec![
             FieldSpec {
                 key: "configuration",
-                label: "Configuration",
-                help: "Build configuration used for verification and packing.",
+                label: s("cmd.package.field.configuration.label"),
+                help: s("cmd.package.field.configuration.help"),
                 kind: FieldKind::Select(CONFIGURATIONS),
                 binding: ArgBinding::FlagValue("--configuration"),
                 required: true,
@@ -383,8 +390,8 @@ fn package_command(description: &'static str) -> CommandUi {
             },
             FieldSpec {
                 key: "version",
-                label: "Version override",
-                help: "Optional package version override. Leave empty to use dhara.config.toml.",
+                label: s("cmd.package.field.version.label"),
+                help: s("cmd.package.field.version.help"),
                 kind: FieldKind::Text,
                 binding: ArgBinding::FlagValue("--version"),
                 required: false,

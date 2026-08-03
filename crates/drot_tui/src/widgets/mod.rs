@@ -8,4 +8,5 @@ pub mod scroll_body;
 pub mod scrollable_tree;
 pub mod status_line;
 pub mod tab_table;
+pub mod text_wrap;
 pub mod title_bar;
