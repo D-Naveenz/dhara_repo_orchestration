@@ -78,5 +78,6 @@ Orchestration CI packs `drot` / `drot_tui` artifacts per OS. Hosts download by *
 
 - Keep DROT docs and `.cursor/rules` in **this** repository; hosts should link here.
 - Do not invent a second tool version in host `dhara.config.toml`.
+- Host package-specific NuGet/Cargo metadata stays in each csproj / `Cargo.toml`; config holds shared `[product]`, slim `[nuget].source`, and `[ci]` paths — see [docs/host-config.md](docs/host-config.md).
 - Breaking changes are acceptable pre-1.0; prefer clean cuts over parallel APIs.
 - Prefer Windows as the primary developer workstation for TUI verification.

@@ -80,7 +80,7 @@ pub fn initial_config_description_lines() -> Vec<Line<'static>> {
             Span::raw(" workspace."),
         ]),
         Line::from(Span::styled(
-            "Must contain dhara.config.toml",
+            "An existing directory without dhara.config.toml will be initialized automatically",
             Style::default().fg(MUTED),
         )),
     ]

@@ -68,7 +68,7 @@ pub fn commands() -> Vec<RegisteredCommand> {
             "package.publish",
             &["package", "publish"],
             "Verify and optionally publish the NuGet package",
-            "[--configuration <name>] [--version <semver>] [--source <url>] [--api-key-env <name>] [--dry-run|--execute]",
+            "[--configuration <name>] [--version <semver>] [--source <url>] [--dry-run|--execute]",
             "package",
             package_publish_command,
         ),

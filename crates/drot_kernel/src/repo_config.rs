@@ -7,7 +7,7 @@ use std::{
 use anyhow::{Context, Result, bail};
 use semver::Version;
 use serde::{Deserialize, Serialize};
-use toml_edit::{DocumentMut, value};
+use toml_edit::{Array, DocumentMut, value};
 use xmltree::{Element, XMLNode};
 
 pub const CONFIG_PATH: &str = "dhara.config.toml";
@@ -15,12 +15,19 @@ pub const ENV_EXAMPLE_PATH: &str = ".env.example";
 pub const ENV_LOCAL_PATH: &str = ".env.local";
 pub const ROOT_CARGO_TOML_PATH: &str = "Cargo.toml";
 
+/// Environment-variable name expected to hold the NuGet publish API key.
+pub const NUGET_API_KEY_ENV: &str = "NUGET_API_KEY";
+/// Environment-variable name expected to hold the crates.io publish token.
+pub const CARGO_REGISTRY_TOKEN_ENV: &str = "CARGO_REGISTRY_TOKEN";
+/// Scaffolded content written for a missing `.env.example` / `.env.local`.
+pub const DEFAULT_ENV_EXAMPLE_CONTENT: &str = "CARGO_REGISTRY_TOKEN=\nNUGET_API_KEY=\n";
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct DharaRepoConfig {
     pub versions: VersionConfig,
+    pub product: ProductConfig,
     pub nuget: NuGetConfig,
     pub ci: CiConfig,
-    pub publish: PublishConfig,
     pub targets: TargetsConfig,
 }
 
@@ -30,34 +37,33 @@ pub struct VersionConfig {
     pub workspace: String,
 }
 
+/// Shared product metadata synced into Cargo.toml and package project manifests.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct NuGetConfig {
-    pub package_id: String,
-    pub source: String,
+pub struct ProductConfig {
     pub authors: Vec<String>,
-    pub description: String,
-    pub tags: Vec<String>,
-    pub readme: String,
-    #[serde(default)]
-    pub icon: Option<String>,
     pub repository_url: String,
     pub project_url: String,
+    #[serde(default)]
+    pub license: Option<String>,
+}
+
+/// NuGet feed configuration; package-specific metadata lives in the package project files.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct NuGetConfig {
+    pub source: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct CiConfig {
     pub smoke_project: String,
     pub package_project: String,
+    /// Additional package projects synced alongside `package_project` (shared fields only).
+    #[serde(default)]
+    pub managed_package_projects: Vec<String>,
     pub tests_project: String,
     pub native_runtimes: Vec<String>,
     pub host_runtime_smoke: String,
     pub aot_runtime_smoke: String,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct PublishConfig {
-    pub environment: String,
-    pub api_key_env: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -76,6 +82,18 @@ pub enum VersionPart {
     Major,
     Minor,
     Patch,
+}
+
+/// Returns `package_project` followed by any distinct `managed_package_projects` entries.
+pub fn package_projects(config: &DharaRepoConfig) -> Vec<&str> {
+    let mut projects = vec![config.ci.package_project.as_str()];
+    for project in &config.ci.managed_package_projects {
+        let project = project.as_str();
+        if !projects.contains(&project) {
+            projects.push(project);
+        }
+    }
+    projects
 }
 
 pub fn load_config(repo_root: &Path) -> Result<DharaRepoConfig> {
@@ -104,15 +122,84 @@ pub fn show(repo_root: &Path) -> Result<String> {
     toml::to_string_pretty(&output).context("failed to serialize configuration")
 }
 
-pub fn init_env(repo_root: &Path) -> Result<bool> {
+/// Creates `dhara.config.toml`, `.env.example`, and `.env.local` when missing (config is truth).
+///
+/// Used when binding a directory that does not yet look like a Dhara repository, so that
+/// subsequent [`crate::paths::is_repo_root`] checks succeed once scaffolding completes.
+pub fn ensure_repo_scaffolding(repo_root: &Path) -> Result<()> {
+    fs::create_dir_all(repo_root).with_context(|| {
+        format!(
+            "failed to create repository directory '{}'",
+            repo_root.display()
+        )
+    })?;
+
+    let config_path = repo_root.join(CONFIG_PATH);
+    if !config_path.exists() {
+        let content =
+            toml::to_string_pretty(&skeleton_config()).context("failed to serialize skeleton configuration")?;
+        fs::write(&config_path, content)
+            .with_context(|| format!("failed to write {}", config_path.display()))?;
+    }
+
     let example_path = repo_root.join(ENV_EXAMPLE_PATH);
+    if !example_path.exists() {
+        fs::write(&example_path, DEFAULT_ENV_EXAMPLE_CONTENT)
+            .with_context(|| format!("failed to write {}", example_path.display()))?;
+    }
+
+    let local_path = repo_root.join(ENV_LOCAL_PATH);
+    if !local_path.exists() {
+        let content = fs::read_to_string(&example_path).unwrap_or_else(|_| DEFAULT_ENV_EXAMPLE_CONTENT.to_owned());
+        fs::write(&local_path, content)
+            .with_context(|| format!("failed to write {}", local_path.display()))?;
+    }
+
+    Ok(())
+}
+
+fn skeleton_config() -> DharaRepoConfig {
+    DharaRepoConfig {
+        versions: VersionConfig {
+            workspace: "0.1.0".to_owned(),
+        },
+        product: ProductConfig {
+            authors: Vec::new(),
+            repository_url: String::new(),
+            project_url: String::new(),
+            license: None,
+        },
+        nuget: NuGetConfig {
+            source: "https://api.nuget.org/v3/index.json".to_owned(),
+        },
+        ci: CiConfig {
+            smoke_project: String::new(),
+            package_project: String::new(),
+            managed_package_projects: Vec::new(),
+            tests_project: String::new(),
+            native_runtimes: Vec::new(),
+            host_runtime_smoke: String::new(),
+            aot_runtime_smoke: String::new(),
+        },
+        targets: TargetsConfig {
+            rust_targets: BTreeMap::new(),
+        },
+    }
+}
+
+pub fn init_env(repo_root: &Path) -> Result<bool> {
     let local_path = repo_root.join(ENV_LOCAL_PATH);
     if local_path.exists() {
         return Ok(false);
     }
 
-    let content = fs::read_to_string(&example_path)
-        .with_context(|| format!("failed to read {}", example_path.display()))?;
+    let example_path = repo_root.join(ENV_EXAMPLE_PATH);
+    let content = if example_path.exists() {
+        fs::read_to_string(&example_path)
+            .with_context(|| format!("failed to read {}", example_path.display()))?
+    } else {
+        DEFAULT_ENV_EXAMPLE_CONTENT.to_owned()
+    };
     fs::write(&local_path, content)
         .with_context(|| format!("failed to write {}", local_path.display()))?;
     Ok(true)
@@ -127,7 +214,7 @@ pub fn verify_release(repo_root: &Path) -> Result<()> {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum ConfigDriftKind {
     WorkspaceCargoToml,
-    NuGetCsproj,
+    PackageCsproj,
 }
 
 /// One detected drift item shown in activation prompts.
@@ -145,27 +232,26 @@ pub fn detect_config_drift(repo_root: &Path) -> Result<Vec<ConfigDriftItem>> {
     let cargo_path = repo_root.join(ROOT_CARGO_TOML_PATH);
     let cargo_content = fs::read_to_string(&cargo_path)
         .with_context(|| format!("failed to read {}", cargo_path.display()))?;
-    if cargo_toml_needs_sync(&cargo_content, &config.versions.workspace)? {
+    if cargo_toml_needs_sync(&cargo_content, &config)? {
         drifts.push(ConfigDriftItem {
             kind: ConfigDriftKind::WorkspaceCargoToml,
             summary: format!(
-                "{ROOT_CARGO_TOML_PATH} workspace version -> {}",
+                "{ROOT_CARGO_TOML_PATH} workspace metadata -> {}",
                 config.versions.workspace
             ),
         });
     }
 
-    let csproj_path = repo_root.join(&config.ci.package_project);
-    let csproj_content = fs::read_to_string(&csproj_path)
-        .with_context(|| format!("failed to read {}", csproj_path.display()))?;
-    if csproj_needs_sync(&csproj_content, &config)? {
-        drifts.push(ConfigDriftItem {
-            kind: ConfigDriftKind::NuGetCsproj,
-            summary: format!(
-                "dhara.config.toml NuGet metadata -> {}",
-                config.ci.package_project
-            ),
-        });
+    for path in package_projects(&config) {
+        let csproj_path = repo_root.join(path);
+        let csproj_content = fs::read_to_string(&csproj_path)
+            .with_context(|| format!("failed to read {}", csproj_path.display()))?;
+        if csproj_needs_sync(&csproj_content, &config)? {
+            drifts.push(ConfigDriftItem {
+                kind: ConfigDriftKind::PackageCsproj,
+                summary: format!("shared product/version -> {path}"),
+            });
+        }
     }
 
     Ok(drifts)
@@ -184,21 +270,23 @@ pub fn apply_config_drift(repo_root: &Path, items: &[ConfigDriftItem]) -> Result
         let path = repo_root.join(ROOT_CARGO_TOML_PATH);
         let content = fs::read_to_string(&path)
             .with_context(|| format!("failed to read {}", path.display()))?;
-        let updated = sync_cargo_toml(&content, &config.versions.workspace)?;
+        let updated = sync_cargo_toml(&content, &config)?;
         if updated != content {
             fs::write(&path, updated)
                 .with_context(|| format!("failed to write {}", path.display()))?;
         }
     }
 
-    if kinds.contains(&ConfigDriftKind::NuGetCsproj) {
-        let path = repo_root.join(&config.ci.package_project);
-        let content = fs::read_to_string(&path)
-            .with_context(|| format!("failed to read {}", path.display()))?;
-        let updated = sync_csproj(&content, &config)?;
-        if updated != content {
-            fs::write(&path, updated)
-                .with_context(|| format!("failed to write {}", path.display()))?;
+    if kinds.contains(&ConfigDriftKind::PackageCsproj) {
+        for relative_path in package_projects(&config) {
+            let path = repo_root.join(relative_path);
+            let content = fs::read_to_string(&path)
+                .with_context(|| format!("failed to read {}", path.display()))?;
+            let updated = sync_csproj(&content, &config)?;
+            if updated != content {
+                fs::write(&path, updated)
+                    .with_context(|| format!("failed to write {}", path.display()))?;
+            }
         }
     }
 
@@ -238,19 +326,50 @@ pub fn bump_version(repo_root: &Path, part: VersionPart) -> Result<String> {
     Ok(next)
 }
 
-pub fn sync_cargo_toml(content: &str, version: &str) -> Result<String> {
-    Version::parse(version)
-        .with_context(|| format!("invalid rust workspace version: {version}"))?;
-    if !cargo_toml_needs_sync(content, version)? {
+/// Workspace metadata fields owned by `dhara.config.toml` (semantic compare; not full-file text).
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct ManagedCargoSnapshot {
+    workspace_version: String,
+    dependency_versions: Vec<String>,
+    authors: Vec<String>,
+    repository: String,
+    homepage: String,
+    license: Option<String>,
+}
+
+pub fn sync_cargo_toml(content: &str, config: &DharaRepoConfig) -> Result<String> {
+    Version::parse(&config.versions.workspace)
+        .with_context(|| format!("invalid rust workspace version: {}", config.versions.workspace))?;
+    if !cargo_toml_needs_sync(content, config)? {
         return Ok(content.to_owned());
     }
     let mut document = content
         .parse::<DocumentMut>()
         .context("failed to parse Cargo.toml")?;
-    document["workspace"]["package"]["version"] = value(version);
+    document["workspace"]["package"]["version"] = value(config.versions.workspace.as_str());
     for dep in cargo_workspace_deps() {
-        document["workspace"]["dependencies"][*dep]["version"] = value(version);
+        document["workspace"]["dependencies"][*dep]["version"] = value(config.versions.workspace.as_str());
     }
+
+    let authors: Array = config.product.authors.iter().map(String::as_str).collect();
+    document["workspace"]["package"]["authors"] = value(authors);
+    document["workspace"]["package"]["repository"] = value(config.product.repository_url.as_str());
+    document["workspace"]["package"]["homepage"] = value(config.product.project_url.as_str());
+    match &config.product.license {
+        Some(license) => {
+            document["workspace"]["package"]["license"] = value(license.as_str());
+        }
+        None => {
+            if let Some(package) = document
+                .get_mut("workspace")
+                .and_then(|workspace| workspace.get_mut("package"))
+                .and_then(|package| package.as_table_like_mut())
+            {
+                package.remove("license");
+            }
+        }
+    }
+
     Ok(document.to_string())
 }
 
@@ -262,13 +381,6 @@ fn cargo_workspace_deps() -> &'static [&'static str] {
     crate::product::product_hooks()
         .map(|hooks| hooks.cargo_workspace_deps())
         .unwrap_or_else(default_cargo_workspace_deps)
-}
-
-/// Workspace version fields owned by `dhara.config.toml` (semantic compare; not full-file text).
-#[derive(Debug, Clone, PartialEq, Eq)]
-struct ManagedCargoSnapshot {
-    workspace_version: String,
-    dependency_versions: Vec<String>,
 }
 
 fn managed_cargo_snapshot_from_content(content: &str) -> Result<ManagedCargoSnapshot> {
@@ -286,21 +398,32 @@ fn managed_cargo_snapshot_from_content(content: &str) -> Result<ManagedCargoSnap
     Ok(ManagedCargoSnapshot {
         workspace_version,
         dependency_versions,
+        authors: workspace_package_authors(&document),
+        repository: workspace_package_string_field(&document, "repository").unwrap_or_default(),
+        homepage: workspace_package_string_field(&document, "homepage").unwrap_or_default(),
+        license: workspace_package_string_field(&document, "license"),
     })
 }
 
-fn managed_cargo_snapshot_for_version(version: &str) -> ManagedCargoSnapshot {
+fn managed_cargo_snapshot_for_config(config: &DharaRepoConfig) -> ManagedCargoSnapshot {
     let deps = cargo_workspace_deps();
     ManagedCargoSnapshot {
-        workspace_version: version.to_owned(),
-        dependency_versions: deps.iter().map(|_| version.to_owned()).collect(),
+        workspace_version: config.versions.workspace.clone(),
+        dependency_versions: deps
+            .iter()
+            .map(|_| config.versions.workspace.clone())
+            .collect(),
+        authors: config.product.authors.clone(),
+        repository: config.product.repository_url.clone(),
+        homepage: config.product.project_url.clone(),
+        license: config.product.license.clone(),
     }
 }
 
-pub fn cargo_toml_needs_sync(content: &str, version: &str) -> Result<bool> {
-    Version::parse(version)
-        .with_context(|| format!("invalid rust workspace version: {version}"))?;
-    let expected = managed_cargo_snapshot_for_version(version);
+pub fn cargo_toml_needs_sync(content: &str, config: &DharaRepoConfig) -> Result<bool> {
+    Version::parse(&config.versions.workspace)
+        .with_context(|| format!("invalid rust workspace version: {}", config.versions.workspace))?;
+    let expected = managed_cargo_snapshot_for_config(config);
     let current = match managed_cargo_snapshot_from_content(content) {
         Ok(current) => current,
         Err(_) => return Ok(true),
@@ -309,12 +432,31 @@ pub fn cargo_toml_needs_sync(content: &str, version: &str) -> Result<bool> {
 }
 
 fn workspace_package_version(document: &DocumentMut) -> Option<String> {
+    workspace_package_string_field(document, "version")
+}
+
+fn workspace_package_string_field(document: &DocumentMut, name: &str) -> Option<String> {
     document
         .get("workspace")
         .and_then(|workspace| workspace.get("package"))
-        .and_then(|package| package.get("version"))
-        .and_then(|version| version.as_str())
+        .and_then(|package| package.get(name))
+        .and_then(|value| value.as_str())
         .map(str::to_owned)
+}
+
+fn workspace_package_authors(document: &DocumentMut) -> Vec<String> {
+    document
+        .get("workspace")
+        .and_then(|workspace| workspace.get("package"))
+        .and_then(|package| package.get("authors"))
+        .and_then(|authors| authors.as_array())
+        .map(|array| {
+            array
+                .iter()
+                .filter_map(|item| item.as_str().map(str::to_owned))
+                .collect()
+        })
+        .unwrap_or_default()
 }
 
 fn workspace_dependency_version(document: &DocumentMut, name: &str) -> Option<String> {
@@ -327,148 +469,82 @@ fn workspace_dependency_version(document: &DocumentMut, name: &str) -> Option<St
         .map(str::to_owned)
 }
 
-/// NuGet fields owned by `dhara.config.toml` (semantic compare; not full-file text).
+/// Package project fields owned by `dhara.config.toml` (semantic compare; not full-file text).
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct ManagedCsprojSnapshot {
-    package_id: String,
     version: String,
-    description: String,
-    package_readme_file: String,
+    authors: String,
     repository_url: String,
     package_project_url: String,
-    authors: String,
-    package_tags: String,
-    package_icon: Option<String>,
-    readme_include: String,
-    icon_include: Option<String>,
+    package_license_expression: Option<String>,
 }
 
 pub fn csproj_needs_sync(content: &str, config: &DharaRepoConfig) -> Result<bool> {
-    Ok(managed_csproj_snapshot_from_content(content, config)?
-        != managed_csproj_snapshot_from_config(config)?)
+    Ok(managed_csproj_snapshot_from_content(content)? != managed_csproj_snapshot_from_config(config))
 }
 
 pub fn sync_csproj(content: &str, config: &DharaRepoConfig) -> Result<String> {
-    let expected = managed_csproj_snapshot_from_config(config)?;
-    let current = managed_csproj_snapshot_from_content(content, config)?;
+    let expected = managed_csproj_snapshot_from_config(config);
+    let current = managed_csproj_snapshot_from_content(content)?;
     if current == expected {
         return Ok(content.to_owned());
     }
 
     let mut updated = content.to_owned();
-    upsert_property_element(&mut updated, "PackageId", &expected.package_id)?;
     upsert_property_element(&mut updated, "Version", &expected.version)?;
-    upsert_property_element(&mut updated, "Description", &expected.description)?;
-    upsert_property_element(
-        &mut updated,
-        "PackageReadmeFile",
-        &expected.package_readme_file,
-    )?;
+    upsert_property_element(&mut updated, "Authors", &expected.authors)?;
     upsert_property_element(&mut updated, "RepositoryUrl", &expected.repository_url)?;
     upsert_property_element(
         &mut updated,
         "PackageProjectUrl",
         &expected.package_project_url,
     )?;
-    upsert_property_element(&mut updated, "Authors", &expected.authors)?;
-    upsert_property_element(&mut updated, "PackageTags", &expected.package_tags)?;
 
-    match (&expected.package_icon, current.package_icon.as_ref()) {
-        (Some(icon), _) => upsert_property_element(&mut updated, "PackageIcon", icon)?,
-        (None, Some(_)) => remove_property_element(&mut updated, "PackageIcon"),
+    match (
+        &expected.package_license_expression,
+        current.package_license_expression.as_ref(),
+    ) {
+        (Some(license), _) => {
+            upsert_property_element(&mut updated, "PackageLicenseExpression", license)?
+        }
+        (None, Some(_)) => remove_property_element(&mut updated, "PackageLicenseExpression"),
         (None, None) => {}
-    }
-
-    let readme_file = file_name(&config.nuget.readme)?;
-    patch_pack_none_include(
-        &mut updated,
-        &[config.nuget.readme.as_str(), readme_file],
-        &expected.readme_include,
-        current.readme_include.as_str(),
-    )?;
-
-    if let Some(icon_include) = &expected.icon_include {
-        let icon_file = file_name(config.nuget.icon.as_deref().unwrap_or(icon_include))?;
-        patch_pack_none_include(
-            &mut updated,
-            &[
-                config.nuget.icon.as_deref().unwrap_or(icon_include),
-                icon_file,
-            ],
-            icon_include,
-            current.icon_include.as_deref().unwrap_or(""),
-        )?;
     }
 
     Ok(updated)
 }
 
-fn managed_csproj_snapshot_from_config(config: &DharaRepoConfig) -> Result<ManagedCsprojSnapshot> {
-    let readme_file = file_name(&config.nuget.readme)?;
-    let readme_include =
-        project_relative_include(&config.nuget.readme, &config.ci.package_project)?;
-    let icon_include = config
-        .nuget
-        .icon
-        .as_deref()
-        .map(|icon| project_relative_include(icon, &config.ci.package_project))
-        .transpose()?;
-
-    Ok(ManagedCsprojSnapshot {
-        package_id: config.nuget.package_id.clone(),
+fn managed_csproj_snapshot_from_config(config: &DharaRepoConfig) -> ManagedCsprojSnapshot {
+    ManagedCsprojSnapshot {
         version: config.versions.workspace.clone(),
-        description: config.nuget.description.clone(),
-        package_readme_file: readme_file.to_owned(),
-        repository_url: config.nuget.repository_url.clone(),
-        package_project_url: config.nuget.project_url.clone(),
-        authors: config.nuget.authors.join(";"),
-        package_tags: config.nuget.tags.join(";"),
-        package_icon: config
-            .nuget
-            .icon
-            .as_deref()
-            .map(file_name)
-            .transpose()?
-            .map(str::to_owned),
-        readme_include,
-        icon_include,
-    })
+        authors: config.product.authors.join(";"),
+        repository_url: config.product.repository_url.clone(),
+        package_project_url: config.product.project_url.clone(),
+        package_license_expression: config.product.license.clone(),
+    }
 }
 
-fn managed_csproj_snapshot_from_content(
-    content: &str,
-    config: &DharaRepoConfig,
-) -> Result<ManagedCsprojSnapshot> {
-    let project =
-        Element::parse(content.as_bytes()).context("failed to parse Dhara.Storage.csproj")?;
-    let readme_file = file_name(&config.nuget.readme)?;
-    let readme_include =
-        find_pack_none_include(&project, &[config.nuget.readme.as_str(), readme_file])
-            .map(|path| normalize_include_path(&path))
-            .unwrap_or_default();
-    let icon_include = config.nuget.icon.as_deref().and_then(|icon| {
-        let icon_file = file_name(icon).ok()?;
-        find_pack_none_include(&project, &[icon, icon_file])
-            .map(|path| normalize_include_path(&path))
-    });
+fn managed_csproj_snapshot_from_content(content: &str) -> Result<ManagedCsprojSnapshot> {
+    let project = Element::parse(content.as_bytes()).context("failed to parse package csproj")?;
 
     Ok(ManagedCsprojSnapshot {
-        package_id: find_property_text(&project, "PackageId").unwrap_or_default(),
         version: find_property_text(&project, "Version").unwrap_or_default(),
-        description: find_property_text(&project, "Description").unwrap_or_default(),
-        package_readme_file: find_property_text(&project, "PackageReadmeFile").unwrap_or_default(),
+        authors: find_property_text(&project, "Authors").unwrap_or_default(),
         repository_url: find_property_text(&project, "RepositoryUrl").unwrap_or_default(),
         package_project_url: find_property_text(&project, "PackageProjectUrl").unwrap_or_default(),
-        authors: find_property_text(&project, "Authors").unwrap_or_default(),
-        package_tags: find_property_text(&project, "PackageTags").unwrap_or_default(),
-        package_icon: find_property_text(&project, "PackageIcon"),
-        readme_include,
-        icon_include,
+        package_license_expression: find_property_text(&project, "PackageLicenseExpression"),
     })
 }
 
-fn normalize_include_path(path: &str) -> String {
-    path.replace('/', "\\")
+/// Reads the `PackageId` MSBuild property from a package project (config no longer owns it).
+pub fn read_csproj_package_id(repo_root: &Path, relative_csproj: &str) -> Result<String> {
+    let path = repo_root.join(relative_csproj);
+    let content = fs::read_to_string(&path)
+        .with_context(|| format!("failed to read {}", path.display()))?;
+    let project =
+        Element::parse(content.as_bytes()).with_context(|| format!("failed to parse {}", path.display()))?;
+    find_property_text(&project, "PackageId")
+        .with_context(|| format!("PackageId property missing from {}", path.display()))
 }
 
 fn find_property_text(project: &Element, name: &str) -> Option<String> {
@@ -494,61 +570,6 @@ fn find_property_text(project: &Element, name: &str) -> Option<String> {
     }
 
     None
-}
-
-fn find_pack_none_include(project: &Element, aliases: &[&str]) -> Option<String> {
-    for child in &project.children {
-        let XMLNode::Element(group) = child else {
-            continue;
-        };
-        if group.name != "ItemGroup" {
-            continue;
-        }
-
-        for item in &group.children {
-            let XMLNode::Element(entry) = item else {
-                continue;
-            };
-            if entry.name != "None" || !none_pack_enabled(entry) {
-                continue;
-            }
-
-            let include = entry.attributes.get("Include")?;
-            if aliases.contains(&include.as_str()) {
-                return Some(include.clone());
-            }
-
-            let include_file_name = csproj_include_file_name(include)?;
-            if aliases
-                .iter()
-                .any(|alias| csproj_include_file_name(alias) == Some(include_file_name))
-            {
-                return Some(include.clone());
-            }
-        }
-    }
-
-    None
-}
-
-fn none_pack_enabled(entry: &Element) -> bool {
-    if entry
-        .attributes
-        .get("Pack")
-        .is_some_and(|value| value.eq_ignore_ascii_case("true"))
-    {
-        return true;
-    }
-
-    entry.children.iter().any(|child| {
-        let XMLNode::Element(element) = child else {
-            return false;
-        };
-        element.name == "Pack"
-            && element
-                .get_text()
-                .is_some_and(|value| value.eq_ignore_ascii_case("true"))
-    })
 }
 
 fn upsert_property_element(content: &mut String, name: &str, value: &str) -> Result<()> {
@@ -612,46 +633,6 @@ fn insert_property_in_first_group(content: &str, name: &str, value: &str) -> Res
     Ok(updated)
 }
 
-fn patch_pack_none_include(
-    content: &mut String,
-    _aliases: &[&str],
-    expected_include: &str,
-    current_include: &str,
-) -> Result<()> {
-    let expected_include = normalize_include_path(expected_include);
-    if !current_include.is_empty() && normalize_include_path(current_include) == expected_include {
-        return Ok(());
-    }
-
-    if !current_include.is_empty() {
-        for candidate in [
-            current_include.to_owned(),
-            normalize_include_path(current_include),
-        ] {
-            let quoted = format!(r#"Include="{candidate}""#);
-            if let Some(start) = content.find(&quoted) {
-                content.replace_range(
-                    start..start + quoted.len(),
-                    &format!(r#"Include="{expected_include}""#),
-                );
-                return Ok(());
-            }
-        }
-    }
-
-    append_pack_none_item(content, &expected_include);
-    Ok(())
-}
-
-fn append_pack_none_item(content: &mut String, include: &str) {
-    let item = format!(
-        "  <ItemGroup>\n    <None Include=\"{include}\" Pack=\"true\" PackagePath=\"\\\" />\n  </ItemGroup>\n"
-    );
-    if let Some(index) = content.rfind("</Project>") {
-        content.insert_str(index, &item);
-    }
-}
-
 pub fn parse_env_content(content: &str) -> Result<BTreeMap<String, String>> {
     let mut values = BTreeMap::new();
     for (line_number, raw_line) in content.lines().enumerate() {
@@ -693,23 +674,20 @@ pub fn validate_config(repo_root: &Path, config: &DharaRepoConfig) -> Result<()>
     Version::parse(&config.versions.workspace)
         .with_context(|| format!("invalid workspace version: {}", config.versions.workspace))?;
 
-    if config.nuget.package_id.trim().is_empty() {
-        bail!("nuget.package_id must not be empty");
+    if config.product.authors.is_empty() {
+        bail!("product.authors must not be empty");
     }
-    if config.nuget.authors.is_empty() {
-        bail!("nuget.authors must not be empty");
+    if config.product.repository_url.trim().is_empty() {
+        bail!("product.repository_url must not be empty");
     }
-    if config.nuget.tags.is_empty() {
-        bail!("nuget.tags must not be empty");
+    if config.product.project_url.trim().is_empty() {
+        bail!("product.project_url must not be empty");
+    }
+    if config.nuget.source.trim().is_empty() {
+        bail!("nuget.source must not be empty");
     }
     if config.ci.native_runtimes.is_empty() {
         bail!("ci.native_runtimes must not be empty");
-    }
-    if config.publish.environment.trim().is_empty() {
-        bail!("publish.environment must not be empty");
-    }
-    if config.publish.api_key_env.trim().is_empty() {
-        bail!("publish.api_key_env must not be empty");
     }
     for runtime in &config.ci.native_runtimes {
         if !config.targets.rust_targets.contains_key(runtime) {
@@ -739,66 +717,15 @@ pub fn validate_config(repo_root: &Path, config: &DharaRepoConfig) -> Result<()>
 
     require_exists(repo_root, CONFIG_PATH)?;
     require_exists(repo_root, ROOT_CARGO_TOML_PATH)?;
-    require_exists(repo_root, &config.ci.package_project)?;
+    for path in package_projects(config) {
+        require_exists(repo_root, path)?;
+    }
     require_exists(repo_root, &config.ci.tests_project)?;
     require_exists(repo_root, &config.ci.smoke_project)?;
-    require_exists(repo_root, &config.nuget.readme)?;
-    if let Some(icon) = &config.nuget.icon {
-        require_exists(repo_root, icon)?;
-    }
     require_exists(repo_root, ENV_EXAMPLE_PATH)?;
     require_exists(repo_root, crate::paths::runtime_defs_relative())?;
 
     Ok(())
-}
-
-fn file_name(path: &str) -> Result<&str> {
-    Path::new(path)
-        .file_name()
-        .and_then(|value| value.to_str())
-        .with_context(|| format!("path must end with a file name: {path}"))
-}
-
-fn project_relative_include(asset_path: &str, project_path: &str) -> Result<String> {
-    let asset = Path::new(asset_path);
-    if asset.is_absolute() {
-        bail!("repo-managed package assets must use repository-relative paths: {asset_path}");
-    }
-
-    let project_dir = Path::new(project_path)
-        .parent()
-        .with_context(|| format!("package project path must have a parent: {project_path}"))?;
-    let project_parts = path_parts(project_dir);
-    let asset_parts = path_parts(asset);
-
-    let common_len = project_parts
-        .iter()
-        .zip(asset_parts.iter())
-        .take_while(|(left, right)| left.eq_ignore_ascii_case(right))
-        .count();
-
-    let mut relative = Vec::new();
-    relative.extend(std::iter::repeat_n(
-        "..".to_owned(),
-        project_parts.len() - common_len,
-    ));
-    relative.extend(asset_parts[common_len..].iter().cloned());
-
-    if relative.is_empty() {
-        bail!("package asset path cannot point at the package project directory");
-    }
-
-    Ok(relative.join("\\"))
-}
-
-fn path_parts(path: &Path) -> Vec<String> {
-    path.components()
-        .filter_map(|component| match component {
-            std::path::Component::Normal(value) => Some(value.to_string_lossy().to_string()),
-            std::path::Component::ParentDir => Some("..".to_owned()),
-            _ => None,
-        })
-        .collect()
 }
 
 fn write_config(repo_root: &Path, config: &DharaRepoConfig) -> Result<()> {
@@ -815,13 +742,6 @@ fn require_exists(repo_root: &Path, relative_path: &str) -> Result<PathBuf> {
         bail!("required path does not exist: {}", path.display());
     }
     Ok(path)
-}
-
-fn csproj_include_file_name(include: &str) -> Option<&str> {
-    include
-        .rsplit(['\\', '/'])
-        .next()
-        .filter(|name| !name.is_empty())
 }
 
 #[cfg(test)]
@@ -851,23 +771,21 @@ mod tests {
             versions: VersionConfig {
                 workspace: "0.2.0".to_owned(),
             },
-            nuget: NuGetConfig {
-                package_id: "Dhara.Storage".to_owned(),
-                source: "https://api.nuget.org/v3/index.json".to_owned(),
+            product: ProductConfig {
                 authors: vec!["Naveen Dharmathunga".to_owned()],
-                description: "High-level .NET bindings for the native Dhara Storage Rust runtime."
-                    .to_owned(),
-                tags: vec!["storage".to_owned(), "ffi".to_owned()],
-                readme: "src/bindings/csharp/Dhara.Storage/README.md".to_owned(),
-                icon: Some("src/bindings/csharp/Dhara.Storage/icon-small.png".to_owned()),
                 repository_url: "https://github.com/D-Naveenz/rheo_storage".to_owned(),
                 project_url: "https://github.com/D-Naveenz/rheo_storage".to_owned(),
+                license: None,
+            },
+            nuget: NuGetConfig {
+                source: "https://api.nuget.org/v3/index.json".to_owned(),
             },
             ci: CiConfig {
                 smoke_project:
                     "src/bindings/csharp/Dhara.Storage.ConsumerSmoke/Dhara.Storage.ConsumerSmoke.csproj"
                         .to_owned(),
                 package_project: "src/bindings/csharp/Dhara.Storage/Dhara.Storage.csproj".to_owned(),
+                managed_package_projects: Vec::new(),
                 tests_project: "src/bindings/csharp/Dhara.Storage.Tests/Dhara.Storage.Tests.csproj"
                     .to_owned(),
                 native_runtimes: vec![
@@ -879,10 +797,6 @@ mod tests {
                 ],
                 host_runtime_smoke: "linux-x64".to_owned(),
                 aot_runtime_smoke: "linux-x64".to_owned(),
-            },
-            publish: PublishConfig {
-                environment: "nuget-production".to_owned(),
-                api_key_env: "NUGET_API_KEY".to_owned(),
             },
             targets: TargetsConfig {
                 rust_targets: targets,
@@ -896,11 +810,15 @@ mod tests {
         fs::create_dir_all(repo_root.join("src/bindings/csharp/Dhara.Storage.ConsumerSmoke"))
             .unwrap();
         fs::write(repo_root.join(CONFIG_PATH), "placeholder").unwrap();
-        fs::write(repo_root.join(ROOT_CARGO_TOML_PATH), "[workspace]\n").unwrap();
-        fs::write(repo_root.join(ENV_EXAMPLE_PATH), "NUGET_API_KEY=\n").unwrap();
+        fs::write(
+            repo_root.join(ROOT_CARGO_TOML_PATH),
+            "[workspace]\n[workspace.package]\nversion = \"0.2.0\"\nauthors = [\"Naveen Dharmathunga\"]\nrepository = \"https://github.com/D-Naveenz/rheo_storage\"\nhomepage = \"https://github.com/D-Naveenz/rheo_storage\"\n[workspace.dependencies]\ndhara_storage_core = { version = \"0.2.0\", path = \"src/core/dhara_storage_core\" }\ndhara_storage = { version = \"0.2.0\", path = \"src/core/dhara_storage\" }\n",
+        )
+        .unwrap();
+        fs::write(repo_root.join(ENV_EXAMPLE_PATH), DEFAULT_ENV_EXAMPLE_CONTENT).unwrap();
         fs::write(
             repo_root.join("src/bindings/csharp/Dhara.Storage/Dhara.Storage.csproj"),
-            "<Project />",
+            r#"<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><Version>0.2.0</Version><Authors>Naveen Dharmathunga</Authors><RepositoryUrl>https://github.com/D-Naveenz/rheo_storage</RepositoryUrl><PackageProjectUrl>https://github.com/D-Naveenz/rheo_storage</PackageProjectUrl></PropertyGroup></Project>"#,
         )
         .unwrap();
         fs::write(
@@ -913,16 +831,6 @@ mod tests {
                 "src/bindings/csharp/Dhara.Storage.ConsumerSmoke/Dhara.Storage.ConsumerSmoke.csproj",
             ),
             "<Project />",
-        )
-        .unwrap();
-        fs::write(
-            repo_root.join("src/bindings/csharp/Dhara.Storage/README.md"),
-            "# Dhara.Storage",
-        )
-        .unwrap();
-        fs::write(
-            repo_root.join("src/bindings/csharp/Dhara.Storage/icon-small.png"),
-            "png",
         )
         .unwrap();
         fs::create_dir_all(repo_root.join(crate::paths::embedded_defs_dir_relative())).unwrap();
@@ -971,10 +879,11 @@ mod tests {
     }
 
     #[test]
-    fn sync_cargo_toml_updates_workspace_version() {
+    fn sync_cargo_toml_updates_workspace_metadata() {
+        let config = sample_config();
         let updated = sync_cargo_toml(
             "[workspace]\n[workspace.package]\nversion = \"0.1.0\"\n[workspace.dependencies]\ndhara_storage_core = { version = \"0.1.0\", path = \"src/core/dhara_storage_core\" }\ndhara_storage = { version = \"0.1.0\", path = \"src/core/dhara_storage\" }\n",
-            "0.2.0",
+            &config,
         )
         .unwrap();
 
@@ -985,14 +894,18 @@ mod tests {
         assert!(updated.contains(
             "dhara_storage = { version = \"0.2.0\", path = \"src/core/dhara_storage\" }"
         ));
+        assert!(updated.contains("authors = [\"Naveen Dharmathunga\"]"));
+        assert!(updated.contains("repository = \"https://github.com/D-Naveenz/rheo_storage\""));
+        assert!(updated.contains("homepage = \"https://github.com/D-Naveenz/rheo_storage\""));
     }
 
     #[test]
-    fn cargo_toml_needs_sync_ignores_line_endings_when_versions_match() {
-        let formatted = "[workspace]\r\n[workspace.package]\r\nversion = \"0.2.0\"\r\n[workspace.dependencies]\r\ndhara_storage_core = { version = \"0.2.0\", path = \"src/core/dhara_storage_core\" }\r\ndhara_storage = { version = \"0.2.0\", path = \"src/core/dhara_storage\" }\r\n";
+    fn cargo_toml_needs_sync_ignores_line_endings_when_metadata_matches() {
+        let config = sample_config();
+        let formatted = "[workspace]\r\n[workspace.package]\r\nversion = \"0.2.0\"\r\nauthors = [\"Naveen Dharmathunga\"]\r\nrepository = \"https://github.com/D-Naveenz/rheo_storage\"\r\nhomepage = \"https://github.com/D-Naveenz/rheo_storage\"\r\n[workspace.dependencies]\r\ndhara_storage_core = { version = \"0.2.0\", path = \"src/core/dhara_storage_core\" }\r\ndhara_storage = { version = \"0.2.0\", path = \"src/core/dhara_storage\" }\r\n";
 
-        assert!(!cargo_toml_needs_sync(formatted, "0.2.0").unwrap());
-        assert_eq!(sync_cargo_toml(formatted, "0.2.0").unwrap(), formatted);
+        assert!(!cargo_toml_needs_sync(formatted, &config).unwrap());
+        assert_eq!(sync_cargo_toml(formatted, &config).unwrap(), formatted);
     }
 
     #[test]
@@ -1007,7 +920,7 @@ mod tests {
         .unwrap();
         fs::write(
             temp.path().join(ROOT_CARGO_TOML_PATH),
-            "[workspace]\r\n[workspace.package]\r\nversion = \"0.2.0\"\r\n[workspace.dependencies]\r\ndhara_storage_core = { version = \"0.2.0\", path = \"src/core/dhara_storage_core\" }\r\ndhara_storage = { version = \"0.2.0\", path = \"src/core/dhara_storage\" }\r\n",
+            "[workspace]\r\n[workspace.package]\r\nversion = \"0.2.0\"\r\nauthors = [\"Naveen Dharmathunga\"]\r\nrepository = \"https://github.com/D-Naveenz/rheo_storage\"\r\nhomepage = \"https://github.com/D-Naveenz/rheo_storage\"\r\n[workspace.dependencies]\r\ndhara_storage_core = { version = \"0.2.0\", path = \"src/core/dhara_storage_core\" }\r\ndhara_storage = { version = \"0.2.0\", path = \"src/core/dhara_storage\" }\r\n",
         )
         .unwrap();
 
@@ -1020,7 +933,7 @@ mod tests {
     }
 
     #[test]
-    fn sync_csproj_updates_package_metadata() {
+    fn sync_csproj_updates_shared_metadata() {
         let config = sample_config();
         let updated = sync_csproj(
             r#"<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><Version>1.0.0</Version></PropertyGroup></Project>"#,
@@ -1028,35 +941,29 @@ mod tests {
         )
         .unwrap();
 
-        assert!(updated.contains("<PackageId>Dhara.Storage</PackageId>"));
         assert!(updated.contains("<Version>0.2.0</Version>"));
-        assert!(updated.contains("<PackageTags>storage;ffi</PackageTags>"));
-        assert!(updated.contains("<PackageReadmeFile>README.md</PackageReadmeFile>"));
+        assert!(updated.contains("<Authors>Naveen Dharmathunga</Authors>"));
+        assert!(updated.contains(
+            "<RepositoryUrl>https://github.com/D-Naveenz/rheo_storage</RepositoryUrl>"
+        ));
+        assert!(updated.contains(
+            "<PackageProjectUrl>https://github.com/D-Naveenz/rheo_storage</PackageProjectUrl>"
+        ));
+        assert!(!updated.contains("PackageId"));
+        assert!(!updated.contains("PackageTags"));
     }
 
     #[test]
-    fn sync_csproj_uses_project_relative_package_assets() {
+    fn sync_csproj_syncs_license_when_configured() {
         let mut config = sample_config();
-        config.nuget.icon =
-            Some("src/bindings/csharp/Dhara.Storage/assets/dhara-logo-colored_sm.png".to_owned());
+        config.product.license = Some("MIT".to_owned());
         let updated = sync_csproj(
-            r#"<Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup>
-    <PackageIcon>old.png</PackageIcon>
-  </PropertyGroup>
-  <ItemGroup>
-    <None Include="..\..\..\..\..\Dhara.AI\assets\branding\dhara-logo-colored_sm.png">
-      <Pack>True</Pack>
-      <PackagePath>\</PackagePath>
-    </None>
-  </ItemGroup>
-</Project>"#,
+            r#"<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><Version>1.0.0</Version></PropertyGroup></Project>"#,
             &config,
         )
         .unwrap();
 
-        assert!(updated.contains(r"assets\dhara-logo-colored_sm.png"));
-        assert!(!updated.contains("Dhara.AI"));
+        assert!(updated.contains("<PackageLicenseExpression>MIT</PackageLicenseExpression>"));
     }
 
     #[test]
@@ -1065,26 +972,42 @@ mod tests {
         let formatted = r#"<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <StagedNativeRoot Condition="&apos;$(StagedNativeRoot)&apos; == &apos;&apos;" />
-    <PackageId>Dhara.Storage</PackageId>
     <Version>0.2.0</Version>
-    <Description>High-level .NET bindings for the native Dhara Storage Rust runtime.</Description>
-    <PackageReadmeFile>README.md</PackageReadmeFile>
     <RepositoryUrl>https://github.com/D-Naveenz/rheo_storage</RepositoryUrl>
     <PackageProjectUrl>https://github.com/D-Naveenz/rheo_storage</PackageProjectUrl>
     <Authors>Naveen Dharmathunga</Authors>
-    <PackageTags>storage;ffi</PackageTags>
-    <PackageIcon>icon-small.png</PackageIcon>
   </PropertyGroup>
-  <ItemGroup>
-    <None Pack="true" Include="README.md" PackagePath="\" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="icon-small.png" Pack="true" PackagePath="\" />
-  </ItemGroup>
 </Project>"#;
 
         assert!(!csproj_needs_sync(formatted, &config).unwrap());
         assert_eq!(sync_csproj(formatted, &config).unwrap(), formatted);
+    }
+
+    #[test]
+    fn package_projects_deduplicates_and_leads_with_primary() {
+        let mut config = sample_config();
+        config.ci.managed_package_projects = vec![
+            "src/bindings/csharp/Dhara.Storage.Extensions.Hosting/Dhara.Storage.Extensions.Hosting.csproj".to_owned(),
+            config.ci.package_project.clone(),
+        ];
+
+        let projects = package_projects(&config);
+        assert_eq!(projects.len(), 2);
+        assert_eq!(projects[0], config.ci.package_project.as_str());
+    }
+
+    #[test]
+    fn read_csproj_package_id_reads_property() {
+        let temp = tempdir().unwrap();
+        fs::create_dir_all(temp.path().join("pkg")).unwrap();
+        fs::write(
+            temp.path().join("pkg/Package.csproj"),
+            r#"<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><PackageId>Dhara.Storage</PackageId></PropertyGroup></Project>"#,
+        )
+        .unwrap();
+
+        let package_id = read_csproj_package_id(temp.path(), "pkg/Package.csproj").unwrap();
+        assert_eq!(package_id, "Dhara.Storage");
     }
 
     #[test]
@@ -1094,6 +1017,49 @@ mod tests {
         let config = sample_config();
 
         validate_config(temp.path(), &config).unwrap();
+    }
+
+    #[test]
+    fn validate_config_rejects_empty_authors() {
+        let temp = tempdir().unwrap();
+        write_required_files(temp.path());
+        let mut config = sample_config();
+        config.product.authors.clear();
+
+        let error = validate_config(temp.path(), &config).unwrap_err();
+        assert!(error.to_string().contains("product.authors"));
+    }
+
+    #[test]
+    fn ensure_repo_scaffolding_creates_missing_files() {
+        let temp = tempdir().unwrap();
+        let root = temp.path().join("repo");
+        fs::create_dir_all(&root).unwrap();
+
+        ensure_repo_scaffolding(&root).unwrap();
+
+        assert!(root.join(CONFIG_PATH).is_file());
+        assert!(root.join(ENV_EXAMPLE_PATH).is_file());
+        assert!(root.join(ENV_LOCAL_PATH).is_file());
+        let config = load_config(&root).unwrap();
+        assert_eq!(config.nuget.source, "https://api.nuget.org/v3/index.json");
+    }
+
+    #[test]
+    fn ensure_repo_scaffolding_preserves_existing_config() {
+        let temp = tempdir().unwrap();
+        write_required_files(temp.path());
+        let config = sample_config();
+        fs::write(
+            temp.path().join(CONFIG_PATH),
+            toml::to_string_pretty(&config).unwrap(),
+        )
+        .unwrap();
+
+        ensure_repo_scaffolding(temp.path()).unwrap();
+
+        let reloaded = load_config(temp.path()).unwrap();
+        assert_eq!(reloaded, config);
     }
 
     #[test]
@@ -1143,6 +1109,44 @@ mod tests {
                 .unwrap()
                 .iter()
                 .any(|item| item.kind == ConfigDriftKind::WorkspaceCargoToml)
+        );
+    }
+
+    #[test]
+    fn apply_config_drift_syncs_all_package_projects() {
+        let temp = tempdir().unwrap();
+        write_required_files(temp.path());
+        let mut config = sample_config();
+        let managed_relative =
+            "src/bindings/csharp/Dhara.Storage.Extensions.Hosting/Dhara.Storage.Extensions.Hosting.csproj";
+        config.ci.managed_package_projects = vec![managed_relative.to_owned()];
+        fs::write(
+            temp.path().join(CONFIG_PATH),
+            toml::to_string_pretty(&config).unwrap(),
+        )
+        .unwrap();
+        fs::create_dir_all(
+            temp.path()
+                .join("src/bindings/csharp/Dhara.Storage.Extensions.Hosting"),
+        )
+        .unwrap();
+        fs::write(
+            temp.path().join(managed_relative),
+            r#"<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><Version>0.0.1</Version></PropertyGroup></Project>"#,
+        )
+        .unwrap();
+
+        let drifts = detect_config_drift(temp.path()).unwrap();
+        assert!(drifts.iter().any(|item| item.summary.contains(managed_relative)));
+        apply_config_drift(temp.path(), &drifts).unwrap();
+
+        let managed_content = fs::read_to_string(temp.path().join(managed_relative)).unwrap();
+        assert!(managed_content.contains("<Version>0.2.0</Version>"));
+        assert!(
+            !detect_config_drift(temp.path())
+                .unwrap()
+                .iter()
+                .any(|item| item.kind == ConfigDriftKind::PackageCsproj)
         );
     }
 

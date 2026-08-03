@@ -4,7 +4,9 @@ use std::path::Path;
 use anyhow::{Context, Result, bail};
 
 use crate::context::RunMode;
-use crate::repo_config::{ConfigDriftItem, apply_config_drift, detect_config_drift};
+use crate::repo_config::{
+    ConfigDriftItem, apply_config_drift, detect_config_drift, ensure_repo_scaffolding,
+};
 
 /// Applies manifest drift immediately when `yes` is set.
 ///
@@ -14,6 +16,7 @@ pub fn run_activation(
     yes: bool,
     run_mode: RunMode,
 ) -> Result<Option<Vec<ConfigDriftItem>>> {
+    ensure_repo_scaffolding(repo_root)?;
     let drifts = detect_config_drift(repo_root)?;
     if drifts.is_empty() {
         return Ok(None);
@@ -85,7 +88,7 @@ mod tests {
     fn write_minimal_repo(repo_root: &std::path::Path) {
         fs::write(
             repo_root.join(CONFIG_PATH),
-            "[versions]\nworkspace = \"0.2.0\"\n\n[nuget]\npackage_id = \"Dhara.Storage\"\nsource = \"https://api.nuget.org/v3/index.json\"\nauthors = [\"Author\"]\ndescription = \"desc\"\ntags = [\"t\"]\nreadme = \"src/bindings/csharp/Dhara.Storage/README.md\"\nrepository_url = \"https://example.com\"\nproject_url = \"https://example.com\"\n\n[ci]\nsmoke_project = \"src/bindings/csharp/Dhara.Storage.ConsumerSmoke/Dhara.Storage.ConsumerSmoke.csproj\"\npackage_project = \"src/bindings/csharp/Dhara.Storage/Dhara.Storage.csproj\"\ntests_project = \"src/bindings/csharp/Dhara.Storage.Tests/Dhara.Storage.Tests.csproj\"\nnative_runtimes = [\"linux-x64\"]\nhost_runtime_smoke = \"linux-x64\"\naot_runtime_smoke = \"linux-x64\"\n\n[publish]\nenvironment = \"nuget-production\"\napi_key_env = \"NUGET_API_KEY\"\n\n[targets.rust_targets]\nlinux-x64 = \"x86_64-unknown-linux-gnu\"\n",
+            "[versions]\nworkspace = \"0.2.0\"\n\n[product]\nauthors = [\"Author\"]\nrepository_url = \"https://example.com\"\nproject_url = \"https://example.com\"\n\n[nuget]\nsource = \"https://api.nuget.org/v3/index.json\"\n\n[ci]\nsmoke_project = \"src/bindings/csharp/Dhara.Storage.ConsumerSmoke/Dhara.Storage.ConsumerSmoke.csproj\"\npackage_project = \"src/bindings/csharp/Dhara.Storage/Dhara.Storage.csproj\"\ntests_project = \"src/bindings/csharp/Dhara.Storage.Tests/Dhara.Storage.Tests.csproj\"\nnative_runtimes = [\"linux-x64\"]\nhost_runtime_smoke = \"linux-x64\"\naot_runtime_smoke = \"linux-x64\"\n\n[targets.rust_targets]\nlinux-x64 = \"x86_64-unknown-linux-gnu\"\n",
         )
         .unwrap();
         fs::create_dir_all(repo_root.join("src/bindings/csharp/Dhara.Storage")).unwrap();
@@ -96,13 +99,23 @@ mod tests {
         .unwrap();
         fs::write(
             repo_root.join(ROOT_CARGO_TOML_PATH),
-            "[workspace]\n[workspace.package]\nversion = \"0.1.0\"\n[workspace.dependencies]\ndhara_storage_core = { version = \"0.1.0\", path = \"src/core/dhara_storage_core\" }\ndhara_storage = { version = \"0.1.0\", path = \"src/core/dhara_storage\" }\n",
+            "[workspace]\n[workspace.package]\nversion = \"0.1.0\"\nauthors = [\"Author\"]\nrepository = \"https://example.com\"\nhomepage = \"https://example.com\"\n[workspace.dependencies]\ndhara_storage_core = { version = \"0.1.0\", path = \"src/core/dhara_storage_core\" }\ndhara_storage = { version = \"0.1.0\", path = \"src/core/dhara_storage\" }\n",
         )
         .unwrap();
         fs::write(repo_root.join(".env.example"), "NUGET_API_KEY=\n").unwrap();
+        fs::create_dir_all(repo_root.join("src/bindings/csharp/Dhara.Storage.Tests")).unwrap();
         fs::write(
-            repo_root.join("src/bindings/csharp/Dhara.Storage/README.md"),
-            "# pkg",
+            repo_root.join("src/bindings/csharp/Dhara.Storage.Tests/Dhara.Storage.Tests.csproj"),
+            "<Project />",
+        )
+        .unwrap();
+        fs::create_dir_all(repo_root.join("src/bindings/csharp/Dhara.Storage.ConsumerSmoke"))
+            .unwrap();
+        fs::write(
+            repo_root.join(
+                "src/bindings/csharp/Dhara.Storage.ConsumerSmoke/Dhara.Storage.ConsumerSmoke.csproj",
+            ),
+            "<Project />",
         )
         .unwrap();
         fs::create_dir_all(repo_root.join("src/core/dhara_storage/resources")).unwrap();

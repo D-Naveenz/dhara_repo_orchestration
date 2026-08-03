@@ -103,10 +103,6 @@ pub(crate) fn s(key: &str) -> &'static str {
         }
         "cmd.package.publish.field.source.label" => "Source",
         "cmd.package.publish.field.source.help" => "Optional NuGet source URL override.",
-        "cmd.package.publish.field.api_key_env.label" => "API key env",
-        "cmd.package.publish.field.api_key_env.help" => {
-            "Optional environment-variable name containing the NuGet API key."
-        }
         "cmd.package.publish.field.mode.label" => "Mode",
         "cmd.package.publish.field.mode.help" => {
             "Choose whether to publish or perform a dry run only."
@@ -151,10 +147,6 @@ pub(crate) fn s(key: &str) -> &'static str {
         }
         "cmd.release.run.field.source.label" => "Source",
         "cmd.release.run.field.source.help" => "Optional NuGet source URL override.",
-        "cmd.release.run.field.api_key_env.label" => "API key env",
-        "cmd.release.run.field.api_key_env.help" => {
-            "Optional environment-variable name containing the NuGet API key."
-        }
         "cmd.release.run.field.dry_run.label" => "Dry run",
         "cmd.release.run.field.dry_run.help" => {
             "Run Cargo and NuGet release validation without publishing."

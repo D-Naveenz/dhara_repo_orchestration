@@ -51,11 +51,12 @@ pub use output::{
 pub use paths::{is_repo_root, normalize_repository_input, resolve_exe_root};
 pub use product::{ProductHooks, product_hooks, require_product_hooks, set_product_hooks};
 pub use repo_config::{
-    CONFIG_PATH, CiConfig, ConfigDriftItem, ConfigDriftKind, DharaRepoConfig, ENV_EXAMPLE_PATH,
-    ENV_LOCAL_PATH, NuGetConfig, PublishConfig, ROOT_CARGO_TOML_PATH, ShowOutput, TargetsConfig,
-    VersionConfig, VersionPart, apply_config_drift, bump_version, detect_config_drift, init_env,
-    load_config, load_env, parse_env_content, set_version, show, sync_cargo_toml, sync_csproj,
-    validate_config, verify_release,
+    CARGO_REGISTRY_TOKEN_ENV, CONFIG_PATH, CiConfig, ConfigDriftItem, ConfigDriftKind,
+    DEFAULT_ENV_EXAMPLE_CONTENT, DharaRepoConfig, ENV_EXAMPLE_PATH, ENV_LOCAL_PATH, NUGET_API_KEY_ENV,
+    NuGetConfig, ProductConfig, ROOT_CARGO_TOML_PATH, ShowOutput, TargetsConfig, VersionConfig,
+    VersionPart, apply_config_drift, bump_version, detect_config_drift, ensure_repo_scaffolding,
+    init_env, load_config, load_env, package_projects, parse_env_content, read_csproj_package_id,
+    set_version, show, sync_cargo_toml, sync_csproj, validate_config, verify_release,
 };
 pub use runner::{RunCompletion, RunHandle, cancel_run, start_run};
 pub use runtime_cache::{

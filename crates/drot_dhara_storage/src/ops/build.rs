@@ -91,7 +91,6 @@ pub fn run(context: &ToolContext, options: &BuildRunOptions) -> Result<()> {
         configuration: options.configuration.clone(),
         version_override: None,
         source_override: None,
-        api_key_env_override: None,
         output_dir: context.output_dir.clone(),
         execute_publish: false,
         native_stage_override: None,
