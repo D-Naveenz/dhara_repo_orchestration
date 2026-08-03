@@ -10,7 +10,7 @@ use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, Clear, Paragraph, Widget, Wrap};
 use ratatui_interact::components::InputState;
 use ratatui_interact::components::{DialogConfig, DialogFocusTarget, DialogState, PopupDialog};
-use ratatui_interact::events::{get_char, is_backspace, is_delete};
+use ratatui_interact::events::{get_char, is_backspace, is_delete, is_left_click};
 use ratatui_interact::theme::Theme;
 use ratatui_interact::traits::{ClickRegionRegistry, ContainerAction, EventResult};
 
@@ -447,6 +447,12 @@ impl ModalHost {
         screen: Rect,
     ) -> Option<ContainerAction> {
         if !self.repo_state.visible {
+            return None;
+        }
+
+        // Click registries are position-only; ignore moves/scrolls so Cancel is not
+        // fired by Mouse Moved after EnableMouseCapture (which would quit the TUI).
+        if !is_left_click(&mouse) {
             return None;
         }
 

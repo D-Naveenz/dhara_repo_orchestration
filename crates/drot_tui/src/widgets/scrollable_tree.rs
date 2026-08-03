@@ -1,4 +1,4 @@
-use crossterm::event::{KeyModifiers, MouseEvent, MouseEventKind};
+use crossterm::event::{MouseEvent, MouseEventKind};
 use ratatui::layout::Rect;
 use ratatui::style::Style;
 use ratatui_interact::components::{TreeNode, TreeStyle, TreeView, TreeViewState};
@@ -6,6 +6,9 @@ use ratatui_interact::theme::Theme;
 use unicode_width::{UnicodeWidthChar, UnicodeWidthStr};
 
 use crate::theme as dhara_theme;
+
+/// Width of the expand/collapse chevron column (matches `"▶ "` / `"▼ "`).
+const CHEVRON_SPACER: &str = "  ";
 
 struct FlatNode<'a, T> {
     node: &'a TreeNode<T>,
@@ -49,12 +52,18 @@ fn flatten_nodes<'a, T>(
     }
 }
 
+/// Compact file-explorer style: 2-col indent, chevron icons, no box-drawing connectors.
 fn tree_style(theme: &Theme) -> TreeStyle {
-    let mut style = TreeStyle::from(theme);
+    let mut style = TreeStyle::minimal();
     style.selected_style = dhara_theme::tree_selected_style();
     style.normal_style = Style::default().fg(dhara_theme::TEXT);
+    style.connector_style = Style::default().fg(dhara_theme::MUTED);
+    style.icon_style = Style::default().fg(dhara_theme::ACCENT);
+    style.collapsed_icon = "▶ ";
+    style.expanded_icon = "▼ ";
     style.cursor_normal = "";
     style.cursor_selected = "";
+    let _ = theme;
     style
 }
 
@@ -91,27 +100,43 @@ fn build_prefix<T>(
             style.expanded_icon
         };
         prefix.push_str(icon);
+    } else {
+        // Reserve chevron width so leaf labels align under parents.
+        prefix.push_str(CHEVRON_SPACER);
     }
 
     (prefix, row_style)
 }
 
-fn clip_line(text: &str, max_width: usize, h_scroll: usize) -> String {
+/// Truncate on the right to `max_width` display columns, appending `…` when clipped.
+fn clip_right(text: &str, max_width: usize) -> String {
     if max_width == 0 {
         return String::new();
     }
-    let chars: Vec<char> = text.chars().collect();
-    let start = h_scroll.min(chars.len());
+
+    let full_width = text.width();
+    if full_width <= max_width {
+        return text.to_owned();
+    }
+
+    let ellipsis = '…';
+    let ellipsis_width = ellipsis.width().unwrap_or(1);
+    if max_width <= ellipsis_width {
+        return ellipsis.to_string();
+    }
+
+    let budget = max_width - ellipsis_width;
     let mut out = String::new();
     let mut width = 0usize;
-    for ch in chars.into_iter().skip(start) {
+    for ch in text.chars() {
         let w = ch.width().unwrap_or(0);
-        if width + w > max_width {
+        if width + w > budget {
             break;
         }
         out.push(ch);
         width += w;
     }
+    out.push(ellipsis);
     out
 }
 
@@ -123,7 +148,6 @@ pub fn render_clipped_tree<T: std::fmt::Debug>(
     area: Rect,
     nodes: &[TreeNode<T>],
     state: &TreeViewState,
-    h_scroll: u16,
     label: impl Fn(&TreeNode<T>) -> &str,
     theme: &Theme,
     buf: &mut ratatui::buffer::Buffer,
@@ -135,7 +159,6 @@ pub fn render_clipped_tree<T: std::fmt::Debug>(
     let style = tree_style(theme);
     let visible = flatten_visible(nodes, state);
     let scroll = state.scroll as usize;
-    let h_scroll = h_scroll as usize;
     let viewport_height = area.height as usize;
 
     for (view_idx, flat_node) in visible
@@ -170,8 +193,7 @@ pub fn render_clipped_tree<T: std::fmt::Debug>(
             continue;
         }
 
-        let label = label(flat_node.node);
-        let clipped = clip_line(label, label_width, h_scroll);
+        let clipped = clip_right(label(flat_node.node), label_width);
         buf.set_string(
             row_area.x + prefix_width as u16,
             row_area.y,
@@ -181,46 +203,11 @@ pub fn render_clipped_tree<T: std::fmt::Debug>(
     }
 }
 
-pub fn clamp_horizontal_scroll(h_scroll: &mut u16, max: u16) {
-    if *h_scroll > max {
-        *h_scroll = max;
-    }
-}
-
-pub fn auto_scroll_selection<T: std::fmt::Debug>(
-    nodes: &[TreeNode<T>],
-    state: &TreeViewState,
-    h_scroll: &mut u16,
-    viewport_width: u16,
-    label: impl Fn(&TreeNode<T>) -> &str,
-) {
-    let max = max_horizontal_scroll(nodes, state, viewport_width, &label);
-    clamp_horizontal_scroll(h_scroll, max);
-    let style = TreeStyle::default();
-    let visible = flatten_visible(nodes, state);
-    let Some(flat) = visible.get(state.selected_index) else {
-        return;
-    };
-    let (prefix, _) = build_prefix(&style, flat, state);
-    let label_start = prefix.width();
-    let label_end = label_start + label(flat.node).width();
-    let view = viewport_width as usize;
-    let start = *h_scroll as usize;
-    let end = start + view;
-    if label_end > end {
-        *h_scroll = (label_end.saturating_sub(view)) as u16;
-    } else if label_start < start {
-        *h_scroll = label_start as u16;
-    }
-    clamp_horizontal_scroll(h_scroll, max);
-}
-
 pub fn handle_tree_wheel<T: std::fmt::Debug>(
     widget: &mut TreeViewState,
     nodes: &[TreeNode<T>],
     inner: Rect,
     mouse: &MouseEvent,
-    h_scroll: &mut u16,
 ) -> bool {
     if inner.width == 0
         || inner.height == 0
@@ -238,14 +225,6 @@ pub fn handle_tree_wheel<T: std::fmt::Debug>(
     }
 
     match mouse.kind {
-        MouseEventKind::ScrollUp if mouse.modifiers.contains(KeyModifiers::SHIFT) => {
-            *h_scroll = h_scroll.saturating_sub(1);
-            true
-        }
-        MouseEventKind::ScrollDown if mouse.modifiers.contains(KeyModifiers::SHIFT) => {
-            *h_scroll = h_scroll.saturating_add(1);
-            true
-        }
         MouseEventKind::ScrollUp => {
             if widget.scroll > 0 {
                 widget.scroll -= 1;
@@ -267,21 +246,4 @@ pub fn handle_tree_wheel<T: std::fmt::Debug>(
         }
         _ => false,
     }
-}
-
-pub fn max_horizontal_scroll<T: std::fmt::Debug>(
-    nodes: &[TreeNode<T>],
-    state: &TreeViewState,
-    viewport_width: u16,
-    label: impl Fn(&TreeNode<T>) -> &str,
-) -> u16 {
-    let style = TreeStyle::default();
-    let visible = flatten_visible(nodes, state);
-    let view = viewport_width as usize;
-    let mut max_line = 0usize;
-    for flat in &visible {
-        let (prefix, _) = build_prefix(&style, flat, state);
-        max_line = max_line.max(prefix.width() + label(flat.node).width());
-    }
-    max_line.saturating_sub(view) as u16
 }

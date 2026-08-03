@@ -84,7 +84,6 @@ pub struct DharaTui {
     pub option_field_clicks: ClickRegionRegistry<usize>,
     pub task_tree_area: Rect,
     pub task_tree_inner: Rect,
-    pub task_tree_h_scroll: u16,
     pub center_panel_area: Rect,
     pub center_content_area: Rect,
     pub action_panel_area: Rect,
@@ -196,7 +195,6 @@ fn build_app(
         option_field_clicks: ClickRegionRegistry::new(),
         task_tree_area: Rect::default(),
         task_tree_inner: Rect::default(),
-        task_tree_h_scroll: 0,
         center_panel_area: Rect::default(),
         center_content_area: Rect::default(),
         action_panel_area: Rect::default(),
@@ -305,15 +303,8 @@ fn draw(frame: &mut ratatui::Frame<'_>, app: &mut DharaTui) {
         body[0],
         &app.task_tree_nodes,
         &app.task_tree_widget,
-        app.task_tree_h_scroll,
         &app.theme,
         tree_focused,
-    );
-    crate::adapters::task_tree::sync_tree_scroll(
-        &app.task_tree_nodes,
-        &app.task_tree_widget,
-        &mut app.task_tree_h_scroll,
-        app.task_tree_inner.width,
     );
 
     let center_clicks = render_center_panel(
@@ -415,11 +406,9 @@ fn handle_tree_keys(app: &mut DharaTui, code: KeyCode) -> Result<()> {
     match handle_tree_key(
         &mut app.task_tree_widget,
         &app.task_tree_nodes,
-        &mut app.task_tree_h_scroll,
-        app.task_tree_inner.width,
         code,
     ) {
-        TreeKeyAction::SelectionChanged | TreeKeyAction::Scrolled => {
+        TreeKeyAction::SelectionChanged => {
             app.task_row = task_row_from_widget(&app.task_tree_widget);
             sync_nav_from_widget(
                 &app.task_tree_widget,
@@ -434,21 +423,7 @@ fn handle_tree_keys(app: &mut DharaTui, code: KeyCode) -> Result<()> {
                 &app.task_tree_nodes,
             );
         }
-        TreeKeyAction::Activate => {
-            apply_tree_selection(
-                &mut app.state,
-                &app.registry,
-                &app.task_tree_nodes,
-                &app.task_tree_widget,
-            );
-            app.task_tree_nodes = build_tree_nodes(&app.state.nav_tree);
-            sync_widget_from_nav(
-                &mut app.task_tree_widget,
-                &app.state.tree_view,
-                &app.task_tree_nodes,
-                app.task_row,
-            );
-        }
+        TreeKeyAction::Activate => activate_task_tree(app),
         TreeKeyAction::None => {}
     }
     Ok(())
@@ -568,7 +543,6 @@ fn handle_mouse(app: &mut DharaTui, mouse: MouseEvent) {
             &app.task_tree_nodes,
             app.task_tree_inner,
             &mouse,
-            &mut app.task_tree_h_scroll,
         ) {
             app.shell_focus.focus(TuiFocus::TaskTree);
             app.task_row = task_row_from_widget(&app.task_tree_widget);
@@ -606,15 +580,11 @@ fn handle_mouse(app: &mut DharaTui, mouse: MouseEvent) {
             &app.task_tree_nodes,
             app.task_tree_inner,
             &mouse,
-            &mut app.task_tree_h_scroll,
         ) {
             app.shell_focus.focus(TuiFocus::TaskTree);
             app.task_row = task_row_from_widget(&app.task_tree_widget);
-            sync_nav_from_widget(
-                &app.task_tree_widget,
-                &mut app.state.tree_view,
-                &app.task_tree_nodes,
-            );
+            // Same as Enter: expand/collapse parents, select leaf commands.
+            activate_task_tree(app);
         }
 
         if let Some(&field_index) = app
@@ -776,23 +746,25 @@ fn cycle_option_select(app: &mut DharaTui, delta: isize) {
     }
 }
 
+fn activate_task_tree(app: &mut DharaTui) {
+    apply_tree_selection(
+        &mut app.state,
+        &app.registry,
+        &app.task_tree_nodes,
+        &app.task_tree_widget,
+    );
+    app.task_tree_nodes = build_tree_nodes(&app.state.nav_tree);
+    sync_widget_from_nav(
+        &mut app.task_tree_widget,
+        &app.state.tree_view,
+        &app.task_tree_nodes,
+        app.task_row,
+    );
+}
+
 fn activate_focused(app: &mut DharaTui) {
     match app.shell_focus.current() {
-        Some(TuiFocus::TaskTree) => {
-            apply_tree_selection(
-                &mut app.state,
-                &app.registry,
-                &app.task_tree_nodes,
-                &app.task_tree_widget,
-            );
-            app.task_tree_nodes = build_tree_nodes(&app.state.nav_tree);
-            sync_widget_from_nav(
-                &mut app.task_tree_widget,
-                &app.state.tree_view,
-                &app.task_tree_nodes,
-                app.task_row,
-            );
-        }
+        Some(TuiFocus::TaskTree) => activate_task_tree(app),
         Some(TuiFocus::TabContent) if app.state.main_tab == MainTab::SystemConfigs => {
             load_system_configs(app);
         }

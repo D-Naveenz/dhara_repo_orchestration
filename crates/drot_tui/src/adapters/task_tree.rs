@@ -105,7 +105,6 @@ pub fn render_task_tree(
     area: Rect,
     nodes: &[TreeNode<TaskTreeData>],
     widget: &WidgetTreeState,
-    h_scroll: u16,
     theme: &Theme,
     focused: bool,
 ) -> Rect {
@@ -126,7 +125,6 @@ pub fn render_task_tree(
         tree_area,
         nodes,
         widget,
-        h_scroll,
         |node| node.data.label.as_str(),
         theme,
         frame.buffer_mut(),
@@ -140,9 +138,8 @@ pub fn handle_tree_mouse(
     nodes: &[TreeNode<TaskTreeData>],
     inner: Rect,
     mouse: &MouseEvent,
-    h_scroll: &mut u16,
 ) -> bool {
-    if scrollable_tree::handle_tree_wheel(widget, nodes, inner, mouse, h_scroll) {
+    if scrollable_tree::handle_tree_wheel(widget, nodes, inner, mouse) {
         return true;
     }
 
@@ -165,9 +162,6 @@ pub fn handle_tree_mouse(
     let visible_idx = widget.scroll as usize + rel_row;
     widget.selected_index = visible_idx.min(count - 1);
     widget.ensure_visible(count);
-    scrollable_tree::auto_scroll_selection(nodes, widget, h_scroll, inner.width, |node| {
-        node.data.label.as_str()
-    });
     true
 }
 
@@ -208,12 +202,10 @@ fn find_node<'a>(
 pub fn handle_tree_key(
     widget: &mut WidgetTreeState,
     nodes: &[TreeNode<TaskTreeData>],
-    h_scroll: &mut u16,
-    viewport_width: u16,
     code: KeyCode,
 ) -> TreeKeyAction {
     let count = visible_count(nodes, widget);
-    let action = match code {
+    match code {
         KeyCode::Up => {
             widget.select_prev();
             widget.ensure_visible(count.max(1));
@@ -236,25 +228,16 @@ pub fn handle_tree_key(
             widget.ensure_visible(count.max(1));
             TreeKeyAction::SelectionChanged
         }
-        KeyCode::Left if *h_scroll > 0 => {
-            *h_scroll = h_scroll.saturating_sub(1);
-            TreeKeyAction::Scrolled
-        }
         KeyCode::Left => {
             if let Some(id) = get_selected_id(nodes, widget) {
                 widget.collapse(&id);
+                TreeKeyAction::Toggled
+            } else {
+                TreeKeyAction::None
             }
-            TreeKeyAction::Toggled
         }
         KeyCode::Right => {
-            let max =
-                scrollable_tree::max_horizontal_scroll(nodes, widget, viewport_width, |node| {
-                    node.data.label.as_str()
-                });
-            if *h_scroll < max {
-                *h_scroll = h_scroll.saturating_add(1);
-                TreeKeyAction::Scrolled
-            } else if let Some(id) = get_selected_id(nodes, widget) {
+            if let Some(id) = get_selected_id(nodes, widget) {
                 widget.expand(&id);
                 TreeKeyAction::Toggled
             } else {
@@ -263,17 +246,7 @@ pub fn handle_tree_key(
         }
         KeyCode::Enter | KeyCode::Char(' ') => TreeKeyAction::Activate,
         _ => TreeKeyAction::None,
-    };
-
-    if matches!(
-        action,
-        TreeKeyAction::SelectionChanged | TreeKeyAction::Toggled
-    ) {
-        scrollable_tree::auto_scroll_selection(nodes, widget, h_scroll, viewport_width, |node| {
-            node.data.label.as_str()
-        });
     }
-    action
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -281,21 +254,9 @@ pub enum TreeKeyAction {
     None,
     SelectionChanged,
     Toggled,
-    Scrolled,
     Activate,
 }
 
 pub fn task_row_from_widget(widget: &WidgetTreeState) -> usize {
     widget.selected_index
-}
-
-pub fn sync_tree_scroll(
-    nodes: &[TreeNode<TaskTreeData>],
-    widget: &WidgetTreeState,
-    h_scroll: &mut u16,
-    viewport_width: u16,
-) {
-    scrollable_tree::auto_scroll_selection(nodes, widget, h_scroll, viewport_width, |node| {
-        node.data.label.as_str()
-    });
 }

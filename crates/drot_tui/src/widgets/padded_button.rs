@@ -6,7 +6,7 @@ use ratatui_interact::theme::Theme;
 
 use crate::theme as dhara_theme;
 
-pub const BUTTON_SLOT_HEIGHT: u16 = 2;
+pub const BUTTON_SLOT_HEIGHT: u16 = 3;
 pub const BUTTON_MIN_WIDTH: u16 = 12;
 pub const BUTTON_GAP: u16 = 1;
 
