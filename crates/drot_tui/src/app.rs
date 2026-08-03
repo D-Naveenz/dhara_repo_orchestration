@@ -404,11 +404,7 @@ fn handle_key(app: &mut DharaTui, key: KeyEvent) -> Result<()> {
 }
 
 fn handle_tree_keys(app: &mut DharaTui, code: KeyCode) -> Result<()> {
-    match handle_tree_key(
-        &mut app.task_tree_widget,
-        &app.task_tree_nodes,
-        code,
-    ) {
+    match handle_tree_key(&mut app.task_tree_widget, &app.task_tree_nodes, code) {
         TreeKeyAction::SelectionChanged => {
             app.task_row = task_row_from_widget(&app.task_tree_widget);
             sync_nav_from_widget(

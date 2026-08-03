@@ -67,9 +67,7 @@ pub(crate) fn s(key: &str) -> &'static str {
             "Refresh the runtime filedefs.dat package in dhara_storage/resources from the builder source."
         }
         "cmd.defs.sync-embedded.field.input.label" => "Input",
-        "cmd.defs.sync-embedded.field.input.help" => {
-            "Optional TrID XML archive or directory path."
-        }
+        "cmd.defs.sync-embedded.field.input.help" => "Optional TrID XML archive or directory path.",
         "cmd.defs.sync-embedded.field.output.label" => "Output",
         "cmd.defs.sync-embedded.field.output.help" => "Optional embedded package output path.",
         "cmd.defs.sync-embedded.field.check.label" => "Check only",

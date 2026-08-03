@@ -204,13 +204,7 @@ fn render_options_tab(
         reset_w,
         1,
     );
-    padded_button::render_padded_button(
-        reset_area,
-        "Reset",
-        reset_btn,
-        theme,
-        frame.buffer_mut(),
-    );
+    padded_button::render_padded_button(reset_area, "Reset", reset_btn, theme, frame.buffer_mut());
     shell_clicks.register(reset_area, TuiFocus::OptionsReset);
 
     let Some(command) = state.selected_command(registry) else {

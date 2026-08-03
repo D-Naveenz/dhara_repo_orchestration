@@ -89,11 +89,7 @@ mod tests {
                 .join("runtimes/win-x64/native/dhara-sd.exe")
                 .is_file()
         );
-        assert!(
-            output
-                .join("runtimes/linux-x64/native/dhara-sd")
-                .is_file()
-        );
+        assert!(output.join("runtimes/linux-x64/native/dhara-sd").is_file());
     }
 
     #[test]

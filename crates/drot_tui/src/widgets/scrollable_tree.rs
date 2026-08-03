@@ -54,7 +54,13 @@ impl TreeLabelMarquee {
     }
 
     /// Advance ping-pong state for the selected label; returns the column offset to paint.
-    pub fn advance(&mut self, path_key: &str, label: &str, max_width: usize, now: Instant) -> usize {
+    pub fn advance(
+        &mut self,
+        path_key: &str,
+        label: &str,
+        max_width: usize,
+        now: Instant,
+    ) -> usize {
         let overflow = label.width().saturating_sub(max_width);
         if overflow == 0 {
             self.reset(path_key, now);

@@ -56,9 +56,7 @@ pub fn render_padded_button(
 
     // Clear only the button text span so leftover cells do not look like extra padding.
     for col in x..x + paint_width {
-        buf[(col, area.y)]
-            .set_char(' ')
-            .set_style(Style::default());
+        buf[(col, area.y)].set_char(' ').set_style(Style::default());
     }
 
     buf.set_string(x, area.y, &text, style);

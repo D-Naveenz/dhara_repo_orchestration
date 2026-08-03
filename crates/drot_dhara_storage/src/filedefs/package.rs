@@ -289,8 +289,7 @@ mod tests {
     };
 
     use dhara_storage_core::{
-        DEFINITION_PACKAGE_SIGNATURE, DefinitionPackage, PACKAGE_VERSION,
-        root_definition_package,
+        DEFINITION_PACKAGE_SIGNATURE, DefinitionPackage, PACKAGE_VERSION, root_definition_package,
     };
 
     fn fixture_package() -> DefinitionPackage {
