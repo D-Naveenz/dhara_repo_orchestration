@@ -64,7 +64,7 @@ cargo run -p drot -- -r <host-repo> --yes quality run
 cargo run -p drot_tui --profile dist
 ```
 
-When developed as a submodule under a host, hosts typically wrap builds with scripts that version-gate `target/dist/` against this `Cargo.toml`.
+When developed as a submodule under a host, hosts typically wrap builds with scripts that git-stamp `target/dist/` against this checkout’s `HEAD` (rebuild when dirty or when the stamp mismatches).
 
 ---
 

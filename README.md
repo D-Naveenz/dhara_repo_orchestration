@@ -54,7 +54,7 @@ Prefer this repo’s [AGENTS.md](AGENTS.md) and the host’s scripts for the exa
 
 Interactive three-panel shell (`drot_tui`): Tasks tree, tabbed center (Info / Options / Troubleshooting / System), Actions (progress + Run/Cancel).
 
-From a host such as dhara_storage, prefer the host’s `run-drot` script (version-gates against this workspace’s `Cargo.toml`). With no args it opens the TUI; pass `--cli` for the direct CLI.
+From a host such as dhara_storage, prefer the host’s `run-drot` script (git-stamps `target/dist/` against this checkout’s `HEAD`). With no args it opens the TUI; pass `--cli` for the direct CLI.
 
 From this repository root:
 
