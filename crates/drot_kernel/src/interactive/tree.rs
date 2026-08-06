@@ -19,6 +19,8 @@ pub struct TreeNode {
     pub label: String,
     pub path_key: String,
     pub command_id: Option<&'static str>,
+    /// When true, TUI renders the leaf with muted styling.
+    pub is_disabled: bool,
     pub children: Vec<TreeNode>,
 }
 
@@ -57,6 +59,7 @@ fn build_favorites_group(registry: &CommandRegistry) -> TreeNode {
                     label: command.summary.to_owned(),
                     path_key: format!("{FAVORITES_GROUP}/{}", command.id),
                     command_id: Some(command.id),
+                    is_disabled: command.is_effectively_disabled(),
                     children: Vec::new(),
                 })
         })
@@ -66,6 +69,7 @@ fn build_favorites_group(registry: &CommandRegistry) -> TreeNode {
         label: "Favorites".to_owned(),
         path_key: FAVORITES_GROUP.to_owned(),
         command_id: None,
+        is_disabled: false,
         children,
     }
 }
@@ -86,6 +90,7 @@ fn build_tasks_group(registry: &CommandRegistry) -> TreeNode {
         label: "Tasks".to_owned(),
         path_key: "tasks".to_owned(),
         command_id: None,
+        is_disabled: false,
         children,
     }
 }
@@ -94,15 +99,17 @@ struct BranchBuilder {
     label: String,
     path_key: String,
     command_id: Option<&'static str>,
+    is_disabled: bool,
     children: BTreeMap<String, BranchBuilder>,
 }
 
 impl BranchBuilder {
-    fn leaf(label: String, path_key: String, command_id: &'static str) -> Self {
+    fn leaf(label: String, path_key: String, command_id: &'static str, is_disabled: bool) -> Self {
         Self {
             label,
             path_key,
             command_id: Some(command_id),
+            is_disabled,
             children: BTreeMap::new(),
         }
     }
@@ -112,6 +119,7 @@ impl BranchBuilder {
             label,
             path_key,
             command_id: None,
+            is_disabled: false,
             children: BTreeMap::new(),
         }
     }
@@ -121,6 +129,7 @@ impl BranchBuilder {
             label: self.label,
             path_key: self.path_key,
             command_id: self.command_id,
+            is_disabled: self.is_disabled,
             children: self
                 .children
                 .into_values()
@@ -137,6 +146,7 @@ fn insert_command(branch_map: &mut BTreeMap<String, BranchBuilder>, command: &Co
 
     let mut current_map = branch_map;
     let mut path_parts = Vec::new();
+    let disabled = command.is_effectively_disabled();
 
     for (index, segment) in command.path.iter().enumerate() {
         let segment = *segment;
@@ -147,7 +157,7 @@ fn insert_command(branch_map: &mut BTreeMap<String, BranchBuilder>, command: &Co
         if is_leaf {
             current_map.insert(
                 segment.to_string(),
-                BranchBuilder::leaf(segment.to_string(), path_key, command.id),
+                BranchBuilder::leaf(segment.to_string(), path_key, command.id, disabled),
             );
         } else {
             current_map
@@ -246,7 +256,9 @@ mod tests {
             args_summary: "",
             section: "config",
             ui: CommandUi::empty("Show"),
-            handler: Arc::new(noop),
+            handler: Some(Arc::new(noop)),
+            is_disabled: false,
+            disabled_reason: None,
         });
         registry
     }

@@ -14,7 +14,7 @@ Host repositories such as [dhara_storage][dhara-storage] pin this project as a g
 ## Prerequisites
 
 - Rust **stable** toolchain
-- Access to the host workspace you are operating on (for storage product plugins)
+- Access to the host workspace you are operating on (for the storage product extension)
 
 ## Install / build
 
@@ -24,6 +24,8 @@ From this repository root:
 cargo build -p drot --profile dist
 cargo build -p drot_tui
 ```
+
+Hosts enable the default Cargo feature `extension-dhara-storage` (links `drot_dhara_storage`). Build with `--no-default-features` for a kernel-only binary (base commands disabled until an extension is linked).
 
 Run tests:
 
@@ -41,7 +43,7 @@ Typical invocations from a host (example: dhara_storage) use `-r` / `--repo` aft
 
 ### 2. Common operator flows
 
-Exact subcommands depend on the product plugin (for example `drot_dhara_storage`). Typical areas:
+Exact subcommands depend on the linked product extension (for example `drot_dhara_storage`). Typical areas:
 
 - Config activation and environment scaffolding
 - Native staging / package verify

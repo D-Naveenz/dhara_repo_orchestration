@@ -51,15 +51,18 @@ Logs are for **humans and agents**, not aggregators. Write plain sentences, one 
 
 | Layer | INFO | DEBUG |
 | ----- | ---- | ----- |
-| **Session bookends** | `drot started`; `drot exiting` | flags, log path, resolved paths |
+| **Session bookends** | `drot started` (includes `extension=`); `drot exiting` | flags, log path, resolved paths |
+| **Activation** | `activation started/complete` | drift item details |
 | **Command run** (`CommandRun`) | `building …`; `built … in {duration}` | command args when needed |
 | **Pipeline phase** | — | `phase {name} started/finished`; `TrID transform —` |
 
 ### Must do
 
+- Start operator logging at **activation** (not the first command); idle open→close still writes session bookends + `session end`.
 - Wrap every command execute in `CommandRun::begin` / `complete` — always emit close INFO with duration.
-- Session INFO: `drot {version} started — mode=…, workers=…` — **no log path on INFO**.
+- Session INFO: `drot {version} started — mode=…, workers=…, extension=…` — **no log path on INFO**.
 - Daily log: one `{date}_drot.log` append file + file-only `session end` record after `exiting`.
+- Disabled command execute: WARN with reason (CLI and TUI share the path).
 - Interactive: TUI `activity_label` + `elapsed_secs` after 4s; no INFO on console.
 - Reduce stage: **no** `(N/total) reduce in progress` lines at any level.
 - `--trace` reduce lines: `({current}/{total}) {file_type} — accepted|rejected: …`; stats once via `TrID transform —` at DEBUG.
@@ -75,4 +78,4 @@ Logs are for **humans and agents**, not aggregators. Write plain sentences, one 
 
 ### When diagnosing
 
-Read `{tool_root}/logs/{date}_drot.log` → `started` → `building…` / `built … in` → `exiting` → `session end` record. Use `phase ` / `TrID transform` at DEBUG for TrID depth.
+Read `{tool_root}/logs/{date}_drot.log` → `started` → activation lines → `building…` / `built … in` → `exiting` → `session end` record. Use `phase ` / `TrID transform` at DEBUG for TrID depth.

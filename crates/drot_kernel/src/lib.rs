@@ -1,5 +1,6 @@
 pub mod activation;
 pub mod args;
+pub mod base_commands;
 pub mod bootstrap;
 pub mod command;
 pub mod context;
@@ -19,10 +20,11 @@ pub mod workers;
 pub mod workspace;
 
 pub use args::{ParseMode, RootArgs, parse_root_args, try_early_repository};
-pub use bootstrap::register_plugins;
+pub use base_commands::register_base_commands;
+pub use bootstrap::register_extensions;
 pub use command::{
-    ArgBinding, CommandHandler, CommandRegistry, CommandSpec, CommandUi, FieldKind, FieldSpec,
-    SectionSpec, ToolCapability,
+    ArgBinding, CommandHandler, CommandRegistry, CommandSpec, CommandUi, Extension, FieldKind,
+    FieldSpec, SectionSpec,
 };
 pub use context::{CommandResult, ReportField, RunMode, StructuredReport, ToolContext};
 pub use forms::{CommandForm, FormValue};
@@ -32,10 +34,11 @@ pub use interactive::{
 };
 pub use logging::{
     ActivityLabel, CommandOutcome, CommandRun, ELAPSED_UI_THRESHOLD, LoggingOptions,
-    LoggingRuntime, command_labels, current_log_path, ensure_logging, format_command_args,
-    init_logging, log_file_path, log_module_step_debug, log_module_step_error,
-    log_module_step_warn, log_session_begin, log_session_end, summarize_command_result,
-    write_session_record,
+    LoggingRuntime, SessionGuard, begin_operator_session, command_labels, current_log_path,
+    ensure_logging, format_command_args, init_logging, linked_extension, log_activation_debug,
+    log_activation_info, log_file_path, log_module_step_debug, log_module_step_error,
+    log_module_step_warn, log_session_begin, log_session_end, set_linked_extension,
+    summarize_command_result, write_session_record,
 };
 pub use operation_progress::{
     OperationProgressGuard, ProgressSession, ProgressSnapshot, ProgressStep, RunPhase,

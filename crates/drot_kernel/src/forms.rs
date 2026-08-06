@@ -225,7 +225,9 @@ mod tests {
                 quick_run: true,
                 supports_cancel: true,
             },
-            handler: Arc::new(noop),
+            handler: Some(Arc::new(noop)),
+            is_disabled: false,
+            disabled_reason: None,
         }
     }
 

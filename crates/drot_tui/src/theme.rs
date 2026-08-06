@@ -60,6 +60,14 @@ pub fn tree_selected_style() -> Style {
         .add_modifier(Modifier::BOLD)
 }
 
+pub fn tree_disabled_style() -> Style {
+    Style::default().fg(MUTED)
+}
+
+pub fn tree_disabled_selected_style() -> Style {
+    Style::default().fg(MUTED).bg(SELECTED_BG)
+}
+
 pub fn validation_status_style(tone: ValidationTone) -> Style {
     let color = match tone {
         ValidationTone::Muted => MUTED,

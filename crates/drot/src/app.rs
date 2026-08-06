@@ -5,18 +5,31 @@ use std::path::PathBuf;
 use anyhow::{Context, Result, bail};
 
 use drot_kernel::{
-    CommandRegistry, ParseMode, RootArgs, RunMode, ToolContext, activation::run_activation,
-    ensure_workspace_state, log_session_end, parse_root_args, paths::resolve_exe_root,
-    register_plugins, resolve_and_persist_repository, try_early_repository, workers,
+    CommandRegistry, LoggingOptions, ParseMode, RootArgs, RunMode, ToolContext,
+    activation::run_activation, begin_operator_session, ensure_workspace_state, parse_root_args,
+    paths::resolve_exe_root, register_base_commands, register_extensions,
+    resolve_and_persist_repository, set_linked_extension, try_early_repository, workers,
 };
 
 pub fn run() -> Result<()> {
-    drot_dhara_storage::install_hooks();
+    #[cfg(feature = "extension-dhara-storage")]
+    {
+        drot_dhara_storage::install_hooks();
+        set_linked_extension(drot_dhara_storage::EXTENSION_ID);
+    }
+    #[cfg(not(feature = "extension-dhara-storage"))]
+    {
+        set_linked_extension("none");
+    }
 
     let cli = parse_root_args(env::args().skip(1).collect(), ParseMode::Direct)?;
 
     let mut registry = CommandRegistry::new();
-    register_plugins(&mut registry, drot_dhara_storage::plugins());
+    register_base_commands(&mut registry);
+    #[cfg(feature = "extension-dhara-storage")]
+    {
+        register_extensions(&mut registry, drot_dhara_storage::extension());
+    }
 
     if cli.show_version {
         println!("{}", env!("CARGO_PKG_VERSION"));
@@ -35,14 +48,17 @@ pub fn run() -> Result<()> {
     let effective_workers = workers::init_global_thread_pool(cli.workers)?;
 
     let repo_root = resolve_repository_for_direct(&exe_root, cli.repository.clone())?;
-    let _pending = run_activation(&repo_root, cli.yes, run_mode)?.unwrap_or_default();
     let context = build_context(
-        repo_root,
+        repo_root.clone(),
         exe_root.clone(),
         run_mode,
         &cli,
         effective_workers,
     );
+
+    let session = begin_operator_session(LoggingOptions::from_context(&context))
+        .context("failed to initialize operator logging")?;
+    let _pending = run_activation(&repo_root, cli.yes, run_mode)?.unwrap_or_default();
     ensure_workspace_state(&context);
 
     let command_id = registry
@@ -51,11 +67,11 @@ pub fn run() -> Result<()> {
         .unwrap_or("unknown");
     let result = match registry.execute(&context, &cli.command) {
         Ok(result) => {
-            log_session_end(result.exit_code, Some(command_id), None);
+            session.finish(result.exit_code, Some(command_id), None);
             result
         }
         Err(error) => {
-            log_session_end(1, Some(command_id), Some(&error.to_string()));
+            session.finish(1, Some(command_id), Some(&error.to_string()));
             return Err(error);
         }
     };

@@ -16,6 +16,7 @@ pub struct TaskTreeData {
     pub path_key: String,
     pub command_id: Option<&'static str>,
     pub has_children: bool,
+    pub is_disabled: bool,
 }
 
 pub fn build_tree_nodes(nav: &NavTree) -> Vec<TreeNode<TaskTreeData>> {
@@ -32,6 +33,7 @@ fn convert_nav_node(node: &NavNode) -> TreeNode<TaskTreeData> {
             path_key: node.path_key.clone(),
             command_id: node.command_id,
             has_children,
+            is_disabled: node.is_disabled,
         },
     )
     .with_children(children)
@@ -128,6 +130,7 @@ pub fn render_task_tree(
         widget,
         |node| node.data.label.as_str(),
         |node| node.data.path_key.as_str(),
+        |node| node.data.is_disabled,
         marquee,
         theme,
         frame.buffer_mut(),

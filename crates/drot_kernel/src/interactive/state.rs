@@ -343,7 +343,9 @@ mod tests {
             args_summary: "",
             section: "config",
             ui: CommandUi::empty("Show"),
-            handler: Arc::new(noop),
+            handler: Some(Arc::new(noop)),
+            is_disabled: false,
+            disabled_reason: None,
         });
         registry
     }
