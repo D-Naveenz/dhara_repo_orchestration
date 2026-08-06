@@ -72,6 +72,8 @@ When developed as a submodule under a host, hosts typically wrap builds with scr
 
 Orchestration CI packs `drot` / `drot_tui` artifacts per OS. Hosts download by **submodule SHA** (not by guessing tool version alone).
 
+Branch flow: **feature → `development` → `main`**. Dependabot version updates target `development` (grouped Cargo + Actions, weekly Monday 06:00 UTC) with squash auto-merge for patch/minor; Pipeline is skipped for Dependabot PRs into `development`. Never auto-merge into `main`. `ensure-development` creates `development` from `main` if missing. No CodeQL workflow yet.
+
 ---
 
 ## Guardrails
