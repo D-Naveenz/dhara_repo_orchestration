@@ -332,9 +332,7 @@ pub fn render_clipped_tree<T: std::fmt::Debug>(
                 dhara_theme::WARNING
             };
             for x in row_area.x..row_area.x + row_area.width {
-                buf[(x, row_y)]
-                    .set_bg(dhara_theme::SELECTED_BG)
-                    .set_fg(fg);
+                buf[(x, row_y)].set_bg(dhara_theme::SELECTED_BG).set_fg(fg);
             }
         }
 

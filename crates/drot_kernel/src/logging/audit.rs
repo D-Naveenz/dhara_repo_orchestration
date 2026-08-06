@@ -19,8 +19,7 @@ use crate::paths::{resolve_defs_output_dir, resolve_logs_dir, resolve_output_dir
 
 static LOGGING: OnceLock<LoggingRuntime> = OnceLock::new();
 static LINKED_EXTENSION: OnceLock<&'static str> = OnceLock::new();
-static SESSION_ENDED: std::sync::atomic::AtomicBool =
-    std::sync::atomic::AtomicBool::new(false);
+static SESSION_ENDED: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
 
 const LOG_FILE_STEM: &str = "drot";
 pub(crate) const AUDIT_TARGET: &str = "drot::audit";

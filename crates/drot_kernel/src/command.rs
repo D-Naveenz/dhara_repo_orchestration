@@ -448,13 +448,7 @@ mod tests {
 
     #[test]
     fn missing_handler_is_effectively_disabled() {
-        let command = spec(
-            "version.set",
-            &["version", "set"],
-            "version",
-            "Set",
-            None,
-        );
+        let command = spec("version.set", &["version", "set"], "version", "Set", None);
         assert!(command.is_effectively_disabled());
         assert_eq!(
             command.disable_message(),
