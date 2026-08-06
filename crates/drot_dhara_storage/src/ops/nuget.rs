@@ -11,7 +11,9 @@ use drot_kernel::{
     ProgressSession, has_committed_progress_plan,
     logging::log_module_step_debug,
     paths::{default_artifacts_dir, resolve_output_dir},
-    repo_config::{DharaRepoConfig, NUGET_API_KEY_ENV, load_env, read_csproj_package_id, verify_release},
+    repo_config::{
+        DharaRepoConfig, NUGET_API_KEY_ENV, load_env, read_csproj_package_id, verify_release,
+    },
     subprocess::{
         inspect_package_entries, run_command, run_command_expect_failure,
         run_command_with_env_redacted, write_nuget_config,
@@ -407,12 +409,16 @@ fn collect_publishable_packages(nuget_dir: &Path) -> Result<Vec<PathBuf>> {
     let entries = fs::read_dir(nuget_dir)
         .with_context(|| format!("failed to read {}", nuget_dir.display()))?;
     for entry in entries {
-        let entry = entry.with_context(|| format!("failed to read entry in {}", nuget_dir.display()))?;
+        let entry =
+            entry.with_context(|| format!("failed to read entry in {}", nuget_dir.display()))?;
         let path = entry.path();
         if path.extension().and_then(|ext| ext.to_str()) != Some("nupkg") {
             continue;
         }
-        let file_name = path.file_name().and_then(|name| name.to_str()).unwrap_or_default();
+        let file_name = path
+            .file_name()
+            .and_then(|name| name.to_str())
+            .unwrap_or_default();
         if file_name.ends_with(".symbols.nupkg") {
             continue;
         }
@@ -425,7 +431,12 @@ fn collect_publishable_packages(nuget_dir: &Path) -> Result<Vec<PathBuf>> {
     Ok(packages)
 }
 
-fn push_packages(repo_root: &Path, packages: &[PathBuf], source: &str, api_key: &str) -> Result<()> {
+fn push_packages(
+    repo_root: &Path,
+    packages: &[PathBuf],
+    source: &str,
+    api_key: &str,
+) -> Result<()> {
     for package_path in packages {
         run_command_with_env_redacted(
             "dotnet",
@@ -588,7 +599,8 @@ fn inspect_package_contents(
     if !entries.iter().any(|entry| entry == "README.md") {
         bail!("README.md missing from package");
     }
-    if let Some(icon) = read_csproj_property(repo_root, &config.ci.package_project, "PackageIcon")? {
+    if let Some(icon) = read_csproj_property(repo_root, &config.ci.package_project, "PackageIcon")?
+    {
         let icon_name = Path::new(&icon)
             .file_name()
             .and_then(|value| value.to_str())
@@ -607,10 +619,14 @@ fn inspect_package_contents(
 }
 
 /// Reads an optional MSBuild `PropertyGroup` property from a package project.
-fn read_csproj_property(repo_root: &Path, relative_csproj: &str, name: &str) -> Result<Option<String>> {
+fn read_csproj_property(
+    repo_root: &Path,
+    relative_csproj: &str,
+    name: &str,
+) -> Result<Option<String>> {
     let path = repo_root.join(relative_csproj);
-    let content = fs::read_to_string(&path)
-        .with_context(|| format!("failed to read {}", path.display()))?;
+    let content =
+        fs::read_to_string(&path).with_context(|| format!("failed to read {}", path.display()))?;
     let project = Element::parse(content.as_bytes())
         .with_context(|| format!("failed to parse {}", path.display()))?;
     for child in &project.children {

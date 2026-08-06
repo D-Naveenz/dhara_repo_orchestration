@@ -136,8 +136,8 @@ pub fn ensure_repo_scaffolding(repo_root: &Path) -> Result<()> {
 
     let config_path = repo_root.join(CONFIG_PATH);
     if !config_path.exists() {
-        let content =
-            toml::to_string_pretty(&skeleton_config()).context("failed to serialize skeleton configuration")?;
+        let content = toml::to_string_pretty(&skeleton_config())
+            .context("failed to serialize skeleton configuration")?;
         fs::write(&config_path, content)
             .with_context(|| format!("failed to write {}", config_path.display()))?;
     }
@@ -150,7 +150,8 @@ pub fn ensure_repo_scaffolding(repo_root: &Path) -> Result<()> {
 
     let local_path = repo_root.join(ENV_LOCAL_PATH);
     if !local_path.exists() {
-        let content = fs::read_to_string(&example_path).unwrap_or_else(|_| DEFAULT_ENV_EXAMPLE_CONTENT.to_owned());
+        let content = fs::read_to_string(&example_path)
+            .unwrap_or_else(|_| DEFAULT_ENV_EXAMPLE_CONTENT.to_owned());
         fs::write(&local_path, content)
             .with_context(|| format!("failed to write {}", local_path.display()))?;
     }
@@ -338,8 +339,12 @@ struct ManagedCargoSnapshot {
 }
 
 pub fn sync_cargo_toml(content: &str, config: &DharaRepoConfig) -> Result<String> {
-    Version::parse(&config.versions.workspace)
-        .with_context(|| format!("invalid rust workspace version: {}", config.versions.workspace))?;
+    Version::parse(&config.versions.workspace).with_context(|| {
+        format!(
+            "invalid rust workspace version: {}",
+            config.versions.workspace
+        )
+    })?;
     if !cargo_toml_needs_sync(content, config)? {
         return Ok(content.to_owned());
     }
@@ -348,7 +353,8 @@ pub fn sync_cargo_toml(content: &str, config: &DharaRepoConfig) -> Result<String
         .context("failed to parse Cargo.toml")?;
     document["workspace"]["package"]["version"] = value(config.versions.workspace.as_str());
     for dep in cargo_workspace_deps() {
-        document["workspace"]["dependencies"][*dep]["version"] = value(config.versions.workspace.as_str());
+        document["workspace"]["dependencies"][*dep]["version"] =
+            value(config.versions.workspace.as_str());
     }
 
     let authors: Array = config.product.authors.iter().map(String::as_str).collect();
@@ -421,8 +427,12 @@ fn managed_cargo_snapshot_for_config(config: &DharaRepoConfig) -> ManagedCargoSn
 }
 
 pub fn cargo_toml_needs_sync(content: &str, config: &DharaRepoConfig) -> Result<bool> {
-    Version::parse(&config.versions.workspace)
-        .with_context(|| format!("invalid rust workspace version: {}", config.versions.workspace))?;
+    Version::parse(&config.versions.workspace).with_context(|| {
+        format!(
+            "invalid rust workspace version: {}",
+            config.versions.workspace
+        )
+    })?;
     let expected = managed_cargo_snapshot_for_config(config);
     let current = match managed_cargo_snapshot_from_content(content) {
         Ok(current) => current,
@@ -480,7 +490,8 @@ struct ManagedCsprojSnapshot {
 }
 
 pub fn csproj_needs_sync(content: &str, config: &DharaRepoConfig) -> Result<bool> {
-    Ok(managed_csproj_snapshot_from_content(content)? != managed_csproj_snapshot_from_config(config))
+    Ok(managed_csproj_snapshot_from_content(content)?
+        != managed_csproj_snapshot_from_config(config))
 }
 
 pub fn sync_csproj(content: &str, config: &DharaRepoConfig) -> Result<String> {
@@ -539,10 +550,10 @@ fn managed_csproj_snapshot_from_content(content: &str) -> Result<ManagedCsprojSn
 /// Reads the `PackageId` MSBuild property from a package project (config no longer owns it).
 pub fn read_csproj_package_id(repo_root: &Path, relative_csproj: &str) -> Result<String> {
     let path = repo_root.join(relative_csproj);
-    let content = fs::read_to_string(&path)
-        .with_context(|| format!("failed to read {}", path.display()))?;
-    let project =
-        Element::parse(content.as_bytes()).with_context(|| format!("failed to parse {}", path.display()))?;
+    let content =
+        fs::read_to_string(&path).with_context(|| format!("failed to read {}", path.display()))?;
+    let project = Element::parse(content.as_bytes())
+        .with_context(|| format!("failed to parse {}", path.display()))?;
     find_property_text(&project, "PackageId")
         .with_context(|| format!("PackageId property missing from {}", path.display()))
 }
@@ -815,7 +826,11 @@ mod tests {
             "[workspace]\n[workspace.package]\nversion = \"0.2.0\"\nauthors = [\"Naveen Dharmathunga\"]\nrepository = \"https://github.com/D-Naveenz/rheo_storage\"\nhomepage = \"https://github.com/D-Naveenz/rheo_storage\"\n[workspace.dependencies]\ndhara_storage_core = { version = \"0.2.0\", path = \"src/core/dhara_storage_core\" }\ndhara_storage = { version = \"0.2.0\", path = \"src/core/dhara_storage\" }\n",
         )
         .unwrap();
-        fs::write(repo_root.join(ENV_EXAMPLE_PATH), DEFAULT_ENV_EXAMPLE_CONTENT).unwrap();
+        fs::write(
+            repo_root.join(ENV_EXAMPLE_PATH),
+            DEFAULT_ENV_EXAMPLE_CONTENT,
+        )
+        .unwrap();
         fs::write(
             repo_root.join("src/bindings/csharp/Dhara.Storage/Dhara.Storage.csproj"),
             r#"<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><Version>0.2.0</Version><Authors>Naveen Dharmathunga</Authors><RepositoryUrl>https://github.com/D-Naveenz/rheo_storage</RepositoryUrl><PackageProjectUrl>https://github.com/D-Naveenz/rheo_storage</PackageProjectUrl></PropertyGroup></Project>"#,
@@ -943,9 +958,11 @@ mod tests {
 
         assert!(updated.contains("<Version>0.2.0</Version>"));
         assert!(updated.contains("<Authors>Naveen Dharmathunga</Authors>"));
-        assert!(updated.contains(
-            "<RepositoryUrl>https://github.com/D-Naveenz/rheo_storage</RepositoryUrl>"
-        ));
+        assert!(
+            updated.contains(
+                "<RepositoryUrl>https://github.com/D-Naveenz/rheo_storage</RepositoryUrl>"
+            )
+        );
         assert!(updated.contains(
             "<PackageProjectUrl>https://github.com/D-Naveenz/rheo_storage</PackageProjectUrl>"
         ));
@@ -1117,8 +1134,7 @@ mod tests {
         let temp = tempdir().unwrap();
         write_required_files(temp.path());
         let mut config = sample_config();
-        let managed_relative =
-            "src/bindings/csharp/Dhara.Storage.Extensions.Hosting/Dhara.Storage.Extensions.Hosting.csproj";
+        let managed_relative = "src/bindings/csharp/Dhara.Storage.Extensions.Hosting/Dhara.Storage.Extensions.Hosting.csproj";
         config.ci.managed_package_projects = vec![managed_relative.to_owned()];
         fs::write(
             temp.path().join(CONFIG_PATH),
@@ -1137,7 +1153,11 @@ mod tests {
         .unwrap();
 
         let drifts = detect_config_drift(temp.path()).unwrap();
-        assert!(drifts.iter().any(|item| item.summary.contains(managed_relative)));
+        assert!(
+            drifts
+                .iter()
+                .any(|item| item.summary.contains(managed_relative))
+        );
         apply_config_drift(temp.path(), &drifts).unwrap();
 
         let managed_content = fs::read_to_string(temp.path().join(managed_relative)).unwrap();

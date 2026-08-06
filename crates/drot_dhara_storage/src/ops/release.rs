@@ -240,9 +240,8 @@ fn validate_versions_synced(repo_root: &Path, config: &DharaRepoConfig) -> Resul
             .with_context(|| format!("failed to read {}", csproj_path.display()))?;
         let project = Element::parse(csproj_content.as_bytes())
             .with_context(|| format!("failed to parse {}", csproj_path.display()))?;
-        let actual_csproj_version = find_property(&project, "Version").with_context(|| {
-            format!("Version property missing from {}", csproj_path.display())
-        })?;
+        let actual_csproj_version = find_property(&project, "Version")
+            .with_context(|| format!("Version property missing from {}", csproj_path.display()))?;
         if actual_csproj_version.trim() != expected {
             bail!(
                 "package csproj Version is {} ({}), expected {}",
@@ -306,7 +305,9 @@ mod tests {
     use tempfile::tempdir;
 
     use super::*;
-    use drot_kernel::{CiConfig, DharaRepoConfig, NuGetConfig, ProductConfig, TargetsConfig, VersionConfig};
+    use drot_kernel::{
+        CiConfig, DharaRepoConfig, NuGetConfig, ProductConfig, TargetsConfig, VersionConfig,
+    };
 
     fn sample_config() -> DharaRepoConfig {
         DharaRepoConfig {
