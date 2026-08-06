@@ -100,7 +100,7 @@ flowchart TD
 ### Session open (INFO)
 
 ```
-drot 0.9.14 started — mode=direct, workers=4, extension=dhara_storage
+drot 0.9.15 started — mode=direct, workers=4, extension=dhara_storage
 ```
 
 Do **not** include the log file path on INFO.
@@ -110,7 +110,7 @@ Do **not** include the log file path on INFO.
 Open TUI (or CLI after activation) and quit without running a command:
 
 ```
-INFO  drot 0.9.14 started — mode=interactive, workers=4, extension=dhara_storage
+INFO  drot 0.9.15 started — mode=interactive, workers=4, extension=dhara_storage
 INFO  activation started — repo=...
 INFO  activation complete — no configuration drift
 INFO  drot exiting 0 at …
@@ -161,7 +161,7 @@ flowchart LR
 Example slice (defs build in direct mode):
 
 ```
-INFO  drot 0.9.14 started — mode=direct, workers=4, extension=dhara_storage
+INFO  drot 0.9.15 started — mode=direct, workers=4, extension=dhara_storage
 INFO  building definitions package…
 DEBUG phase extract started
 DEBUG phase extract finished in 15.4s — extracted archive
