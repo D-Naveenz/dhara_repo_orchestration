@@ -26,8 +26,8 @@ Cross-product **operator** CLI and TUI for Dhara workspaces: config activation, 
 
 - One tool version authority (`[workspace.package].version` in this repo)
 - Direct CLI for CI/agents; TUI for developers
-- Kernel framework + product plugin (`drot_dhara_storage`) so hosts stay thin
-- Progress and audit logging that work in both modes
+- Kernel framework + one compile-time **product extension** (default: `drot_dhara_storage`) so hosts stay thin
+- Progress and audit logging that work in both modes (session starts at activation)
 
 ### Host vs this repo
 
@@ -43,11 +43,13 @@ Cross-product **operator** CLI and TUI for Dhara workspaces: config activation, 
 
 | Path | Role |
 |------|------|
-| `crates/drot_kernel` | Framework — commands, forms, runner, interactive, logging, progress |
-| `crates/drot_dhara_storage` | Storage product plugin — registry, ops, filedefs |
-| `crates/drot` | Direct CLI host |
-| `crates/drot_tui` | Interactive TUI host |
+| `crates/drot_kernel` | Framework — base commands, registry, forms, runner, interactive, logging, progress |
+| `crates/drot_dhara_storage` | Storage product **extension** — upserts handlers, ops, filedefs |
+| `crates/drot` | Direct CLI host (`extension-dhara-storage` feature, default on) |
+| `crates/drot_tui` | Interactive TUI host (same feature) |
 | `docs/**` | Deep reference (logging, TUI progress, architecture) |
+
+Hosts link **exactly one** extension via Cargo features at compile time. Kernel registers base command stubs; the extension adds product commands and fills handlers. Commands without a handler or with `is_disabled` are listed but warn on execute.
 
 Deep reference: [docs/README.md](docs/README.md).
 
@@ -55,7 +57,7 @@ Deep reference: [docs/README.md](docs/README.md).
 
 ## Local commands
 
-From this repository root:
+From this repository root (standalone checkout):
 
 ```bash
 cargo build -p drot -p drot_tui --profile dist
@@ -64,7 +66,19 @@ cargo run -p drot -- -r <host-repo> --yes quality run
 cargo run -p drot_tui --profile dist
 ```
 
-When developed as a submodule under a host, hosts typically wrap builds with scripts that version-gate `target/dist/` against this `Cargo.toml`.
+Binaries land in **this** repo’s `target/dist/` (`drot`, `drot_tui`).
+
+### Host submodule layout (agents)
+
+When this repo is pinned under a host (e.g. `dhara_storage/tooling/drot`):
+
+| Concern | Path |
+|---------|------|
+| **Source** (edit here) | `tooling/drot/` (this checkout) |
+| **Run / rebuild** | Host scripts such as `./tooling/scripts/run-drot.ps1` / `ensure-drot-dist` |
+| **Binaries + git stamp** | Host `<repo>/target/dist/{drot,drot_tui}` and `.drot-git-rev` — **not** under the submodule |
+
+Host wrappers set `CARGO_TARGET_DIR=<host>/target` and build `--manifest-path tooling/drot/Cargo.toml --profile dist`. Do **not** search the submodule tree for `drot.exe`. When spawning subagents for DROT work, pass both the source root (`tooling/drot`) and the host artifact path (`target/dist`).
 
 ---
 
@@ -72,11 +86,14 @@ When developed as a submodule under a host, hosts typically wrap builds with scr
 
 Orchestration CI packs `drot` / `drot_tui` artifacts per OS. Hosts download by **submodule SHA** (not by guessing tool version alone).
 
+Branch flow: **feature → `development` → `main`**. Dependabot version updates target `development` (grouped Cargo + Actions, weekly Monday 06:00 UTC) with squash auto-merge for patch/minor; Pipeline is skipped for Dependabot PRs into `development`. Never auto-merge into `main`. `ensure-development` creates `development` from `main` if missing. No CodeQL workflow yet.
+
 ---
 
 ## Guardrails
 
 - Keep DROT docs and `.cursor/rules` in **this** repository; hosts should link here.
 - Do not invent a second tool version in host `dhara.config.toml`.
+- Host package-specific NuGet/Cargo metadata stays in each csproj / `Cargo.toml`; config holds shared `[product]`, slim `[nuget].source`, and `[ci]` paths — see [docs/host-config.md](docs/host-config.md).
 - Breaking changes are acceptable pre-1.0; prefer clean cuts over parallel APIs.
 - Prefer Windows as the primary developer workstation for TUI verification.

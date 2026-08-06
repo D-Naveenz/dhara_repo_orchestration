@@ -12,10 +12,14 @@ publish = false
 name = "drot_tui"
 path = "src/main.rs"
 
+[features]
+default = ["extension-dhara-storage"]
+extension-dhara-storage = ["dep:drot_dhara_storage"]
+
 [dependencies]
 anyhow = "1.0"
 crossterm = "0.29"
-drot_dhara_storage = { path = "../drot_dhara_storage" }
+drot_dhara_storage = { path = "../drot_dhara_storage", optional = true }
 drot_kernel = { path = "../drot_kernel" }
 ratatui = "0.30"
 ratatui-crossterm = "0.1"

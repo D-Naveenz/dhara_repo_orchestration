@@ -147,6 +147,14 @@ fn render_info_tab(
         lines.extend(text_wrap::wrap_paragraphs(command.ui.description, width));
     }
 
+    if command.is_effectively_disabled() {
+        lines.push(String::new());
+        lines.extend(text_wrap::wrap_line(
+            &format!("Disabled — {}", command.disable_message()),
+            width,
+        ));
+    }
+
     // Syntax
     lines.push(String::new());
     lines.extend(text_wrap::wrap_line(t("doc.syntax"), width));

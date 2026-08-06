@@ -1,3 +1,5 @@
+//! Dhara Storage product extension for DROT.
+
 mod build;
 mod config;
 mod defs;
@@ -12,7 +14,7 @@ use std::sync::Arc;
 use anyhow::Result;
 
 use drot_kernel::{
-    CommandRegistry, CommandResult, CommandSpec, SectionSpec, ToolCapability, ToolContext,
+    CommandRegistry, CommandResult, CommandSpec, Extension, SectionSpec, ToolContext,
 };
 
 pub(crate) struct RegisteredCommand {
@@ -24,9 +26,10 @@ pub(crate) struct RegisteredCommand {
     handler: fn(&ToolContext, &[String]) -> Result<CommandResult>,
 }
 
-pub struct DharaStorageCapability;
+/// Storage product extension — upserts handlers onto kernel base commands and adds product commands.
+pub struct DharaStorageExtension;
 
-impl ToolCapability for DharaStorageCapability {
+impl Extension for DharaStorageExtension {
     fn register(&self, registry: &mut CommandRegistry) {
         for section in self.sections() {
             registry.add_section(section);
@@ -34,20 +37,22 @@ impl ToolCapability for DharaStorageCapability {
 
         for command in self.commands() {
             let handler = command.handler;
-            registry.add_command(CommandSpec {
+            registry.upsert_command(CommandSpec {
                 id: command.id,
                 path: command.path,
                 summary: command.summary,
                 args_summary: command.args_summary,
                 section: command.section,
                 ui: ui::ui_for_command(command.id, command.summary, command.args_summary),
-                handler: Arc::new(handler),
+                handler: Some(Arc::new(handler)),
+                is_disabled: false,
+                disabled_reason: None,
             });
         }
     }
 }
 
-impl DharaStorageCapability {
+impl DharaStorageExtension {
     fn sections(&self) -> Vec<SectionSpec> {
         vec![
             build::section(),
@@ -94,14 +99,15 @@ pub(crate) fn command(
 
 #[cfg(test)]
 mod tests {
-    use drot_kernel::{CommandRegistry, ToolCapability};
+    use drot_kernel::{CommandRegistry, Extension, register_base_commands};
 
-    use super::DharaStorageCapability;
+    use super::DharaStorageExtension;
 
     #[test]
     fn registration_adds_expected_sections_and_commands() {
         let mut registry = CommandRegistry::new();
-        DharaStorageCapability.register(&mut registry);
+        register_base_commands(&mut registry);
+        DharaStorageExtension.register(&mut registry);
 
         let sections = registry
             .sections()
@@ -128,6 +134,12 @@ mod tests {
             registry
                 .commands()
                 .all(|command| !command.ui.description.trim().is_empty())
+        );
+        assert!(
+            registry
+                .commands()
+                .find(|c| c.id == "version.bump")
+                .is_some_and(|c| !c.is_effectively_disabled())
         );
     }
 }

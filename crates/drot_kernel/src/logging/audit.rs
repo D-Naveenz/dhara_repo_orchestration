@@ -18,9 +18,21 @@ use crate::output::{emit_stderr_line, emit_warn_line};
 use crate::paths::{resolve_defs_output_dir, resolve_logs_dir, resolve_output_dir};
 
 static LOGGING: OnceLock<LoggingRuntime> = OnceLock::new();
+static LINKED_EXTENSION: OnceLock<&'static str> = OnceLock::new();
+static SESSION_ENDED: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
 
 const LOG_FILE_STEM: &str = "drot";
 pub(crate) const AUDIT_TARGET: &str = "drot::audit";
+
+/// Records which compile-time extension is linked for this process (call once at host boot).
+pub fn set_linked_extension(id: &'static str) {
+    let _ = LINKED_EXTENSION.set(id);
+}
+
+/// Extension id for session bookends (`none` when no extension feature is enabled).
+pub fn linked_extension() -> &'static str {
+    LINKED_EXTENSION.get().copied().unwrap_or("none")
+}
 
 #[derive(Debug, Clone)]
 pub struct LoggingOptions {
@@ -204,10 +216,11 @@ pub fn log_session_begin(log_path: &Path, options: &LoggingOptions) {
     let version = env!("CARGO_PKG_VERSION");
     let mode = options.run_mode.as_str();
     let workers = options.context.workers;
+    let extension = linked_extension();
 
     info!(
         target: AUDIT_TARGET,
-        "drot {version} started — mode={mode}, workers={workers}"
+        "drot {version} started — mode={mode}, workers={workers}, extension={extension}"
     );
 
     let min = if options.min { "yes" } else { "no" };
@@ -256,6 +269,9 @@ pub fn log_session_begin(log_path: &Path, options: &LoggingOptions) {
 }
 
 pub fn log_session_end(exit_code: i32, module_id: Option<&str>, error: Option<&str>) {
+    if SESSION_ENDED.swap(true, std::sync::atomic::Ordering::SeqCst) {
+        return;
+    }
     let timestamp = Local::now().format("%Y-%m-%dT%H:%M:%S%.3fZ");
     match (exit_code, module_id, error) {
         (0, Some(module), None) => info!(
@@ -280,6 +296,49 @@ pub fn log_session_end(exit_code: i32, module_id: Option<&str>, error: Option<&s
         ),
     }
     write_session_record(exit_code, module_id, error);
+}
+
+/// RAII guard that writes session end on drop if not closed explicitly.
+pub struct SessionGuard {
+    closed: bool,
+}
+
+impl SessionGuard {
+    /// Ends the session with an explicit exit summary (skips Drop write).
+    pub fn finish(mut self, exit_code: i32, module_id: Option<&str>, error: Option<&str>) {
+        self.closed = true;
+        log_session_end(exit_code, module_id, error);
+    }
+}
+
+impl Drop for SessionGuard {
+    fn drop(&mut self) {
+        if !self.closed && current_log_path().is_some() {
+            log_session_end(0, None, None);
+        }
+    }
+}
+
+/// Initializes operator logging for this process and returns a session-end guard.
+pub fn begin_operator_session(options: LoggingOptions) -> Result<SessionGuard, std::io::Error> {
+    ensure_logging(options)?;
+    Ok(SessionGuard { closed: false })
+}
+
+/// Logs a successful activation milestone (INFO).
+pub fn log_activation_info(message: &str) {
+    if current_log_path().is_none() {
+        return;
+    }
+    info!(target: AUDIT_TARGET, "{message}");
+}
+
+/// Logs activation detail (DEBUG).
+pub fn log_activation_debug(message: &str) {
+    if current_log_path().is_none() {
+        return;
+    }
+    debug!(target: AUDIT_TARGET, "{message}");
 }
 
 /// File-only separator between process invocations in the daily log.

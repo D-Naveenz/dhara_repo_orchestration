@@ -101,7 +101,9 @@ mod tests {
             args_summary: "",
             section: "config",
             ui: CommandUi::empty("Show"),
-            handler: Arc::new(report_handler),
+            handler: Some(Arc::new(report_handler)),
+            is_disabled: false,
+            disabled_reason: None,
         });
 
         let context = ToolContext {

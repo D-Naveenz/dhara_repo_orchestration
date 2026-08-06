@@ -1,4 +1,4 @@
-//! Dhara Storage product plugin for DROT.
+//! Dhara Storage product extension for DROT.
 
 pub mod commands;
 pub mod filedefs;
@@ -7,15 +7,18 @@ pub mod registry;
 
 use std::path::Path;
 
-use drot_kernel::ToolCapability;
+use drot_kernel::Extension;
 use drot_kernel::product::{ProductHooks, set_product_hooks};
 use drot_kernel::workspace::{DefsPackageStatus, WorkspaceSnapshot};
 
-pub use registry::DharaStorageCapability;
+pub use registry::DharaStorageExtension;
 
-/// Product plugins contributed by this crate.
-pub fn plugins() -> Vec<Box<dyn ToolCapability>> {
-    vec![Box::new(DharaStorageCapability)]
+/// Stable id logged in session bookends for this extension.
+pub const EXTENSION_ID: &str = "dhara_storage";
+
+/// Product extensions contributed by this crate (exactly one for hosts that enable it).
+pub fn extension() -> Vec<Box<dyn Extension>> {
+    vec![Box::new(DharaStorageExtension)]
 }
 
 /// Dhara Storage [`ProductHooks`] implementation.

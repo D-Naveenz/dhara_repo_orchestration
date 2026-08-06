@@ -4,7 +4,7 @@ use std::io;
 use std::path::{Path, PathBuf};
 
 fn main() {
-    // Build input: plugin `package/` is copied beside the binary; runtime reads `{tool_root}/package/`.
+    // Build input: extension `package/` is copied beside the binary; runtime reads `{tool_root}/package/`.
     println!("cargo:rerun-if-changed=../drot_dhara_storage/package");
 
     let manifest_dir = PathBuf::from(env::var_os("CARGO_MANIFEST_DIR").expect("manifest dir"));

@@ -23,7 +23,7 @@ Parallel TrID parse/reduce uses a global Rayon pool initialized once at startup:
 
 Effective threads = `min(available_parallelism - 1, configured cap)` (minimum 1). `RAYON_NUM_THREADS` is **ignored**.
 
-Session INFO includes `workers={effective}`.
+Session INFO includes `workers={effective}` and `extension={id}` (e.g. `dhara_storage` or `none`).
 
 ## Log files
 
@@ -64,9 +64,11 @@ Operator events are organized in three scopes:
 ```mermaid
 flowchart TB
   session[Session bookends process]
+  activation[Activation milestones under session]
   commandRun[CommandRun one command execution]
   phase[Pipeline phases DEBUG only]
 
+  session --> activation
   session --> commandRun
   commandRun --> phase
 ```
@@ -74,6 +76,7 @@ flowchart TB
 | Layer | Scope | INFO examples |
 |-------|-------|---------------|
 | **Session bookends** | Whole `drot` process | `drot … started`; `drot exiting …` |
+| **Activation** | Repo scaffolding / drift under the session | `activation started`; `activation complete — …` |
 | **Command run** | One registered command (`CommandRun` RAII) | `building definitions package…`; `built definitions package in 43.7s` |
 | **Pipeline phase** | TrID sub-stages inside a long command | DEBUG only — `phase extract started` |
 
@@ -81,23 +84,40 @@ Timed duration on close belongs to the **command run**, not the session bookend.
 
 ## Session lifecycle
 
+Logging starts with the **activation sequence** (once `tool_root` / context exist), not the first command. Idle open → activate → close still produces session bookends.
+
 ```mermaid
 flowchart TD
-  start[Process start] --> init[Initialize logging]
-  init --> sessionOpen["INFO: drot VERSION started — mode=..., workers=..."]
-  sessionOpen --> debugFlags["DEBUG: flags, log path, resolved paths"]
-  debugFlags --> command[CommandRun execute]
-  command --> sessionClose["INFO: drot exiting CODE — summary"]
+  start[Process start] --> activate[Activation]
+  activate --> init[ensure_logging / session begin]
+  init --> sessionOpen["INFO: drot VERSION started — mode=..., workers=..., extension=..."]
+  sessionOpen --> actSteps[Activation INFO/DEBUG milestones]
+  actSteps --> ready[Idle or CommandRun]
+  ready --> sessionClose["INFO: drot exiting CODE"]
   sessionClose --> record[File-only session record separator]
 ```
 
 ### Session open (INFO)
 
 ```
-drot 0.9.0 started — mode=direct, workers=4
+drot 0.9.15 started — mode=direct, workers=4, extension=dhara_storage
 ```
 
 Do **not** include the log file path on INFO.
+
+### Idle session example
+
+Open TUI (or CLI after activation) and quit without running a command:
+
+```
+INFO  drot 0.9.15 started — mode=interactive, workers=4, extension=dhara_storage
+INFO  activation started — repo=...
+INFO  activation complete — no configuration drift
+INFO  drot exiting 0 at …
+================================================================================
+session end  exit=0  module=—
+================================================================================
+```
 
 ### Session close (INFO)
 
@@ -114,6 +134,8 @@ Immediately after the close INFO line:
 session end  exit=0  module=defs.build-trid-xml
 ================================================================================
 ```
+
+Disabled command execute emits WARN (shared by CLI and TUI): `command {id} is disabled — {reason}`.
 
 ## Command run lifecycle
 
@@ -139,7 +161,7 @@ flowchart LR
 Example slice (defs build in direct mode):
 
 ```
-INFO  drot 0.9.0 started — mode=direct, workers=4
+INFO  drot 0.9.15 started — mode=direct, workers=4, extension=dhara_storage
 INFO  building definitions package…
 DEBUG phase extract started
 DEBUG phase extract finished in 15.4s — extracted archive

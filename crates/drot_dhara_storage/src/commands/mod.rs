@@ -128,8 +128,6 @@ pub(crate) struct PublishArgs {
     pub version: Option<String>,
     #[arg(long)]
     pub source: Option<String>,
-    #[arg(long)]
-    pub api_key_env: Option<String>,
     #[arg(long, action = ArgAction::SetTrue)]
     pub dry_run: bool,
     #[arg(long, action = ArgAction::SetTrue)]
@@ -142,8 +140,6 @@ pub(crate) struct ReleaseRunArgs {
     pub configuration: String,
     #[arg(long)]
     pub source: Option<String>,
-    #[arg(long)]
-    pub api_key_env: Option<String>,
     #[arg(long, action = ArgAction::SetTrue)]
     pub dry_run: bool,
     #[arg(long, action = ArgAction::SetTrue)]
@@ -218,7 +214,6 @@ pub(crate) fn package_options(args: PackageArgs, context: &ToolContext) -> Packa
         configuration: args.configuration,
         version_override: args.version,
         source_override: None,
-        api_key_env_override: None,
         output_dir: context.output_dir.clone(),
         execute_publish: false,
         native_stage_override: args.native_stage,
@@ -235,7 +230,6 @@ pub(crate) fn publish_options(args: PublishArgs, context: &ToolContext) -> Resul
         configuration: args.configuration,
         version_override: args.version,
         source_override: args.source,
-        api_key_env_override: args.api_key_env,
         output_dir: context.output_dir.clone(),
         execute_publish: args.execute && !args.dry_run,
         native_stage_override: None,
@@ -250,7 +244,6 @@ pub(crate) fn release_options(
     crate::ops::ReleaseOptions {
         configuration: args.configuration,
         source_override: args.source,
-        api_key_env_override: args.api_key_env,
         output_dir: context.output_dir.clone(),
         dry_run: args.dry_run,
         publish_cargo: !args.skip_cargo,

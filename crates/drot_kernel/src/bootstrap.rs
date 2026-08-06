@@ -1,10 +1,11 @@
-use crate::command::{CommandRegistry, ToolCapability};
+use crate::command::{CommandRegistry, Extension};
 
-pub fn register_plugins(
+/// Registers compile-time product extensions into the command registry.
+pub fn register_extensions(
     registry: &mut CommandRegistry,
-    plugins: impl IntoIterator<Item = Box<dyn ToolCapability>>,
+    extensions: impl IntoIterator<Item = Box<dyn Extension>>,
 ) {
-    for plugin in plugins {
-        plugin.register(registry);
+    for extension in extensions {
+        extension.register(registry);
     }
 }

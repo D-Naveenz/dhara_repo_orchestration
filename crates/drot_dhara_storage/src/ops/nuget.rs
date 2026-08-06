@@ -4,12 +4,16 @@ use std::path::{Path, PathBuf};
 use anyhow::{Context, Result, bail};
 use tracing::debug;
 
+use xmltree::{Element, XMLNode};
+
 use drot_kernel::CommandResult;
 use drot_kernel::{
     ProgressSession, has_committed_progress_plan,
     logging::log_module_step_debug,
     paths::{default_artifacts_dir, resolve_output_dir},
-    repo_config::{DharaRepoConfig, load_env, verify_release},
+    repo_config::{
+        DharaRepoConfig, NUGET_API_KEY_ENV, load_env, read_csproj_package_id, verify_release,
+    },
     subprocess::{
         inspect_package_entries, run_command, run_command_expect_failure,
         run_command_with_env_redacted, write_nuget_config,
@@ -26,7 +30,6 @@ pub struct PackageOptions {
     pub configuration: String,
     pub version_override: Option<String>,
     pub source_override: Option<String>,
-    pub api_key_env_override: Option<String>,
     pub output_dir: Option<PathBuf>,
     pub execute_publish: bool,
     pub native_stage_override: Option<PathBuf>,
@@ -71,12 +74,12 @@ pub fn pack(
 
     validate_staged_native_assets(&native_stage_root, config)?;
 
-    let pack_command = || {
+    let pack_project = |project: &str| {
         run_command(
             "dotnet",
             &[
                 "pack".to_owned(),
-                config.ci.package_project.clone(),
+                project.to_owned(),
                 "--configuration".to_owned(),
                 options.configuration.clone(),
                 "--include-symbols".to_owned(),
@@ -93,27 +96,48 @@ pub fn pack(
     };
 
     if nested {
-        pack_command()?;
+        pack_project(&config.ci.package_project)?;
     } else {
         run_planned_step(
             "dotnet-pack",
             "Packing NuGet package",
             "Running dotnet pack",
-            pack_command,
+            || pack_project(&config.ci.package_project),
         )?;
     }
 
-    let package_path = nuget_output.join(format!("{}.{}.nupkg", config.nuget.package_id, version));
+    let package_id = read_csproj_package_id(repo_root, &config.ci.package_project)?;
+    let package_path = nuget_output.join(format!("{package_id}.{version}.nupkg"));
     if nested {
-        inspect_package_contents(&package_path, config)?;
+        inspect_package_contents(repo_root, &package_path, config)?;
     } else {
         run_planned_step(
             "inspect",
             "Inspecting package",
             "Inspecting package contents",
-            || inspect_package_contents(&package_path, config),
+            || inspect_package_contents(repo_root, &package_path, config),
         )?;
     }
+
+    if !config.ci.managed_package_projects.is_empty() {
+        let pack_managed = || {
+            for project in &config.ci.managed_package_projects {
+                pack_project(project)?;
+            }
+            Ok(())
+        };
+        if nested {
+            pack_managed()?;
+        } else {
+            run_planned_step(
+                "pack-managed",
+                "Packing managed NuGet packages",
+                "Packing managed NuGet packages",
+                pack_managed,
+            )?;
+        }
+    }
+
     log_module_step_debug(&format!(
         "packed NuGet package at {}",
         package_path.display()
@@ -145,6 +169,9 @@ fn setup_pack_plan(config: &DharaRepoConfig, options: &PackageOptions) -> Result
     }
     plan_unit_step(&session, "dotnet-pack", "Packing NuGet package");
     plan_unit_step(&session, "inspect", "Inspecting package");
+    if !config.ci.managed_package_projects.is_empty() {
+        plan_unit_step(&session, "pack-managed", "Packing managed NuGet packages");
+    }
     session.commit();
     Ok(())
 }
@@ -193,9 +220,10 @@ pub fn verify(
     let version = effective_version(config, &options.version_override);
     let artifacts_root = artifacts_root(tool_root)?;
     let output_root = output_root(tool_root, options.output_dir.as_ref())?;
+    let package_id = read_csproj_package_id(repo_root, &config.ci.package_project)?;
     let package_path = output_root
         .join("nuget")
-        .join(format!("{}.{}.nupkg", config.nuget.package_id, version));
+        .join(format!("{package_id}.{version}.nupkg"));
     let local_config = artifacts_root.join("local-package.nuget.config");
     let dependency_source = effective_source(repo_root, config, options)?;
     write_nuget_config(
@@ -311,37 +339,13 @@ pub fn publish(
         ));
     }
 
-    let version = effective_version(config, &options.version_override);
     let source = effective_source(repo_root, config, options)?;
-    let api_key_env = options
-        .api_key_env_override
-        .clone()
-        .unwrap_or_else(|| config.publish.api_key_env.clone());
-    let api_key = secret_from_env(repo_root, &api_key_env)?;
+    let api_key = secret_from_env(repo_root, NUGET_API_KEY_ENV)?;
 
     let output_root = output_root(tool_root, options.output_dir.as_ref())?;
-    let package_path = output_root
-        .join("nuget")
-        .join(format!("{}.{}.nupkg", config.nuget.package_id, version));
+    let packages = collect_publishable_packages(&output_root.join("nuget"))?;
 
-    let push = || {
-        run_command_with_env_redacted(
-            "dotnet",
-            &[
-                "nuget".to_owned(),
-                "push".to_owned(),
-                package_path.display().to_string(),
-                "--api-key".to_owned(),
-                api_key.clone(),
-                "--source".to_owned(),
-                source.clone(),
-                "--skip-duplicate".to_owned(),
-            ],
-            repo_root,
-            &[],
-            &[api_key.as_str()],
-        )
-    };
+    let push = || push_packages(repo_root, &packages, &source, &api_key);
 
     if nested {
         push()?;
@@ -355,8 +359,8 @@ pub fn publish(
     }
 
     log_module_step_debug(&format!(
-        "published NuGet package to {} via {}",
-        package_path.display(),
+        "published {} NuGet package(s) via {}",
+        packages.len(),
         source
     ));
 
@@ -373,52 +377,85 @@ pub fn publish_packed(
 ) -> Result<CommandResult> {
     log_module_step_debug("publishing pre-packed NuGet package");
 
-    let version = effective_version(config, &options.version_override);
     let source = effective_source(repo_root, config, options)?;
-    let api_key_env = options
-        .api_key_env_override
-        .clone()
-        .unwrap_or_else(|| config.publish.api_key_env.clone());
-    let api_key = secret_from_env(repo_root, &api_key_env)?;
+    let api_key = secret_from_env(repo_root, NUGET_API_KEY_ENV)?;
 
     let output_root = output_root(tool_root, options.output_dir.as_ref())?;
-    let package_path = if let Some(path) = options.prepacked_nuget_override.as_ref() {
-        path.clone()
+    let packages = if let Some(path) = options.prepacked_nuget_override.as_ref() {
+        if !path.exists() {
+            bail!("NuGet package does not exist: {}", path.display());
+        }
+        vec![path.clone()]
     } else {
-        output_root
-            .join("nuget")
-            .join(format!("{}.{}.nupkg", config.nuget.package_id, version))
+        collect_publishable_packages(&output_root.join("nuget"))?
     };
-    if !package_path.exists() {
-        bail!("NuGet package does not exist: {}", package_path.display());
-    }
 
-    run_command_with_env_redacted(
-        "dotnet",
-        &[
-            "nuget".to_owned(),
-            "push".to_owned(),
-            package_path.display().to_string(),
-            "--api-key".to_owned(),
-            api_key.clone(),
-            "--source".to_owned(),
-            source.clone(),
-            "--skip-duplicate".to_owned(),
-        ],
-        repo_root,
-        &[],
-        &[api_key.as_str()],
-    )?;
+    push_packages(repo_root, &packages, &source, &api_key)?;
 
     log_module_step_debug(&format!(
-        "published pre-packed NuGet package to {} via {}",
-        package_path.display(),
+        "published {} pre-packed NuGet package(s) via {}",
+        packages.len(),
         source
     ));
 
     Ok(CommandResult::with_message(
         "Published package successfully.",
     ))
+}
+
+/// Non-symbols `*.nupkg` files under `nuget_dir`, sorted for deterministic publish order.
+fn collect_publishable_packages(nuget_dir: &Path) -> Result<Vec<PathBuf>> {
+    let mut packages = Vec::new();
+    let entries = fs::read_dir(nuget_dir)
+        .with_context(|| format!("failed to read {}", nuget_dir.display()))?;
+    for entry in entries {
+        let entry =
+            entry.with_context(|| format!("failed to read entry in {}", nuget_dir.display()))?;
+        let path = entry.path();
+        if path.extension().and_then(|ext| ext.to_str()) != Some("nupkg") {
+            continue;
+        }
+        let file_name = path
+            .file_name()
+            .and_then(|name| name.to_str())
+            .unwrap_or_default();
+        if file_name.ends_with(".symbols.nupkg") {
+            continue;
+        }
+        packages.push(path);
+    }
+    packages.sort();
+    if packages.is_empty() {
+        bail!("no NuGet packages found in {}", nuget_dir.display());
+    }
+    Ok(packages)
+}
+
+fn push_packages(
+    repo_root: &Path,
+    packages: &[PathBuf],
+    source: &str,
+    api_key: &str,
+) -> Result<()> {
+    for package_path in packages {
+        run_command_with_env_redacted(
+            "dotnet",
+            &[
+                "nuget".to_owned(),
+                "push".to_owned(),
+                package_path.display().to_string(),
+                "--api-key".to_owned(),
+                api_key.to_owned(),
+                "--source".to_owned(),
+                source.to_owned(),
+                "--skip-duplicate".to_owned(),
+            ],
+            repo_root,
+            &[],
+            &[api_key],
+        )?;
+    }
+    Ok(())
 }
 
 fn stage_native_assets(
@@ -534,7 +571,11 @@ pub fn stage_native_for_host(
     )))
 }
 
-fn inspect_package_contents(package_path: &Path, config: &DharaRepoConfig) -> Result<()> {
+fn inspect_package_contents(
+    repo_root: &Path,
+    package_path: &Path,
+    config: &DharaRepoConfig,
+) -> Result<()> {
     let entries = inspect_package_entries(package_path)?;
     debug!(
         target: "drot::package_flow",
@@ -558,11 +599,12 @@ fn inspect_package_contents(package_path: &Path, config: &DharaRepoConfig) -> Re
     if !entries.iter().any(|entry| entry == "README.md") {
         bail!("README.md missing from package");
     }
-    if let Some(icon) = &config.nuget.icon {
-        let icon_name = Path::new(icon)
+    if let Some(icon) = read_csproj_property(repo_root, &config.ci.package_project, "PackageIcon")?
+    {
+        let icon_name = Path::new(&icon)
             .file_name()
             .and_then(|value| value.to_str())
-            .with_context(|| format!("package icon path must end with a file name: {icon}"))?;
+            .with_context(|| format!("PackageIcon path must end with a file name: {icon}"))?;
         if !entries.iter().any(|entry| entry == icon_name) {
             bail!("package icon missing from package: {icon_name}");
         }
@@ -574,6 +616,39 @@ fn inspect_package_contents(package_path: &Path, config: &DharaRepoConfig) -> Re
         bail!("build/Dhara.Storage.targets missing from package");
     }
     Ok(())
+}
+
+/// Reads an optional MSBuild `PropertyGroup` property from a package project.
+fn read_csproj_property(
+    repo_root: &Path,
+    relative_csproj: &str,
+    name: &str,
+) -> Result<Option<String>> {
+    let path = repo_root.join(relative_csproj);
+    let content =
+        fs::read_to_string(&path).with_context(|| format!("failed to read {}", path.display()))?;
+    let project = Element::parse(content.as_bytes())
+        .with_context(|| format!("failed to parse {}", path.display()))?;
+    for child in &project.children {
+        let XMLNode::Element(group) = child else {
+            continue;
+        };
+        if group.name != "PropertyGroup" {
+            continue;
+        }
+        for item in &group.children {
+            let XMLNode::Element(property) = item else {
+                continue;
+            };
+            if property.name == name {
+                return Ok(property
+                    .get_text()
+                    .map(|value| value.trim().to_owned())
+                    .filter(|value| !value.is_empty()));
+            }
+        }
+    }
+    Ok(None)
 }
 
 fn restore_smoke_consumer(
@@ -589,7 +664,8 @@ fn restore_smoke_consumer(
         config.ci.smoke_project,
         runtime.unwrap_or("default")
     ));
-    remove_package_cache(repo_root, &config.nuget.package_id, version)?;
+    let package_id = read_csproj_package_id(repo_root, &config.ci.package_project)?;
+    remove_package_cache(repo_root, &package_id, version)?;
     reset_smoke_consumer_outputs(repo_root, config)?;
     let mut args = vec![
         "restore".to_owned(),
@@ -639,7 +715,8 @@ fn verify_unsupported_runtime_rejected(
         "verifying unsupported runtime rejection for {} (win-x86)",
         config.ci.smoke_project
     ));
-    remove_package_cache(repo_root, &config.nuget.package_id, version)?;
+    let package_id = read_csproj_package_id(repo_root, &config.ci.package_project)?;
+    remove_package_cache(repo_root, &package_id, version)?;
     run_command_expect_failure(
         "dotnet",
         &[

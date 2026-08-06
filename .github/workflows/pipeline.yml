@@ -13,6 +13,13 @@ permissions:
 jobs:
   quality:
     name: quality
+    # Skip Dependabot version-update PRs into development (land via auto-merge; full pack on development → main).
+    if: >
+      (github.event_name == 'workflow_dispatch'
+      || github.event_name == 'push'
+      || (github.event_name == 'pull_request'
+          && !(github.event.pull_request.user.login == 'dependabot[bot]'
+               && github.base_ref == 'development')))
     runs-on: ubuntu-latest
     steps:
       - name: Checkout

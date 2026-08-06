@@ -2,7 +2,7 @@ use std::path::{Path, PathBuf};
 
 use anyhow::{Context, Result, bail};
 
-use crate::repo_config::CONFIG_PATH;
+use crate::repo_config::{CONFIG_PATH, ensure_repo_scaffolding};
 
 const OUTPUT: &str = "output";
 const ARTIFACTS: &str = "artifacts";
@@ -79,10 +79,17 @@ pub fn normalize_repository_input(path: PathBuf) -> Result<PathBuf> {
 
     let root = canonicalize_path(&path);
     if !is_repo_root(&root) {
-        bail!(
-            "'{}' is not a repository root (expected {CONFIG_PATH})",
-            root.display()
-        );
+        // An existing directory can be adopted as a fresh repository root: scaffold the
+        // skeleton config/env files so it becomes a valid repository root in place.
+        if root.is_dir() {
+            ensure_repo_scaffolding(&root)?;
+        }
+        if !is_repo_root(&root) {
+            bail!(
+                "'{}' is not a repository root (expected {CONFIG_PATH})",
+                root.display()
+            );
+        }
     }
     Ok(root)
 }
@@ -256,10 +263,21 @@ mod tests {
     }
 
     #[test]
-    fn normalize_rejects_missing_config() {
+    fn normalize_scaffolds_existing_directory_missing_config() {
         let temp = tempfile::tempdir().unwrap();
         let root = temp.path().join("repo");
         std::fs::create_dir_all(&root).unwrap();
+
+        let resolved = normalize_repository_input(root.clone()).unwrap();
+
+        assert!(is_repo_root(&resolved));
+        assert!(root.join(CONFIG_PATH).is_file());
+    }
+
+    #[test]
+    fn normalize_rejects_nonexistent_path() {
+        let temp = tempfile::tempdir().unwrap();
+        let root = temp.path().join("does-not-exist");
         assert!(normalize_repository_input(root).is_err());
     }
 }

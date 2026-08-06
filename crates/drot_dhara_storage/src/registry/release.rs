@@ -16,7 +16,7 @@ pub fn commands() -> Vec<RegisteredCommand> {
         "release.run",
         &["release", "run"],
         "Run the Cargo-first release workflow",
-        "[--configuration <name>] [--source <url>] [--api-key-env <name>] [--dry-run] [--skip-cargo] [--skip-nuget] [--native-stage <path>] [--prepacked-nuget <path>] [--verify-package]",
+        "[--configuration <name>] [--source <url>] [--dry-run] [--skip-cargo] [--skip-nuget] [--native-stage <path>] [--prepacked-nuget <path>] [--verify-package]",
         "release",
         release_run_command,
     )]

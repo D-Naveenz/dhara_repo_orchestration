@@ -17,8 +17,8 @@ use drot_kernel::{CommandRegistry, FieldKind, RunMode, ToolContext};
 use drot_kernel::{
     ProgressSnapshot,
     activation::run_activation,
-    ensure_workspace_state, load_runtime_cache,
-    logging::init_progress_settings,
+    ensure_logging, ensure_workspace_state, load_runtime_cache, log_session_end,
+    logging::{LoggingOptions, init_progress_settings},
     register_interactive_progress_sender,
     repo_config::{ConfigDriftItem, show},
     resolve_and_persist_repository, unregister_interactive_progress_sender,
@@ -150,6 +150,13 @@ pub fn run_tui(
     let result = run_loop(&mut terminal, &mut app);
     unregister_interactive_progress_sender();
     restore_terminal(&mut terminal)?;
+    // Session may have started at host activation or late repository pick.
+    if drot_kernel::current_log_path().is_some() {
+        match &result {
+            Ok(()) => log_session_end(0, None, None),
+            Err(error) => log_session_end(1, None, Some(&error.to_string())),
+        }
+    }
     result
 }
 
@@ -784,6 +791,8 @@ fn activate_focused(app: &mut DharaTui) {
 
 fn finish_repository_setup(app: &mut DharaTui, repo_root: PathBuf) -> Result<()> {
     let context = build_context(&app.exe_root, &app.boot, repo_root.clone());
+    ensure_logging(LoggingOptions::from_context(&context))
+        .context("failed to initialize operator logging")?;
     init_progress_settings(&context);
     let pending =
         run_activation(&repo_root, app.boot.yes, RunMode::Interactive)?.unwrap_or_default();

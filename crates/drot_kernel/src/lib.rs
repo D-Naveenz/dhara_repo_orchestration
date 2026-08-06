@@ -1,5 +1,6 @@
 pub mod activation;
 pub mod args;
+pub mod base_commands;
 pub mod bootstrap;
 pub mod command;
 pub mod context;
@@ -19,10 +20,11 @@ pub mod workers;
 pub mod workspace;
 
 pub use args::{ParseMode, RootArgs, parse_root_args, try_early_repository};
-pub use bootstrap::register_plugins;
+pub use base_commands::register_base_commands;
+pub use bootstrap::register_extensions;
 pub use command::{
-    ArgBinding, CommandHandler, CommandRegistry, CommandSpec, CommandUi, FieldKind, FieldSpec,
-    SectionSpec, ToolCapability,
+    ArgBinding, CommandHandler, CommandRegistry, CommandSpec, CommandUi, Extension, FieldKind,
+    FieldSpec, SectionSpec,
 };
 pub use context::{CommandResult, ReportField, RunMode, StructuredReport, ToolContext};
 pub use forms::{CommandForm, FormValue};
@@ -32,10 +34,11 @@ pub use interactive::{
 };
 pub use logging::{
     ActivityLabel, CommandOutcome, CommandRun, ELAPSED_UI_THRESHOLD, LoggingOptions,
-    LoggingRuntime, command_labels, current_log_path, ensure_logging, format_command_args,
-    init_logging, log_file_path, log_module_step_debug, log_module_step_error,
-    log_module_step_warn, log_session_begin, log_session_end, summarize_command_result,
-    write_session_record,
+    LoggingRuntime, SessionGuard, begin_operator_session, command_labels, current_log_path,
+    ensure_logging, format_command_args, init_logging, linked_extension, log_activation_debug,
+    log_activation_info, log_file_path, log_module_step_debug, log_module_step_error,
+    log_module_step_warn, log_session_begin, log_session_end, set_linked_extension,
+    summarize_command_result, write_session_record,
 };
 pub use operation_progress::{
     OperationProgressGuard, ProgressSession, ProgressSnapshot, ProgressStep, RunPhase,
@@ -51,11 +54,13 @@ pub use output::{
 pub use paths::{is_repo_root, normalize_repository_input, resolve_exe_root};
 pub use product::{ProductHooks, product_hooks, require_product_hooks, set_product_hooks};
 pub use repo_config::{
-    CONFIG_PATH, CiConfig, ConfigDriftItem, ConfigDriftKind, DharaRepoConfig, ENV_EXAMPLE_PATH,
-    ENV_LOCAL_PATH, NuGetConfig, PublishConfig, ROOT_CARGO_TOML_PATH, ShowOutput, TargetsConfig,
-    VersionConfig, VersionPart, apply_config_drift, bump_version, detect_config_drift, init_env,
-    load_config, load_env, parse_env_content, set_version, show, sync_cargo_toml, sync_csproj,
-    validate_config, verify_release,
+    CARGO_REGISTRY_TOKEN_ENV, CONFIG_PATH, CiConfig, ConfigDriftItem, ConfigDriftKind,
+    DEFAULT_ENV_EXAMPLE_CONTENT, DharaRepoConfig, ENV_EXAMPLE_PATH, ENV_LOCAL_PATH,
+    NUGET_API_KEY_ENV, NuGetConfig, ProductConfig, ROOT_CARGO_TOML_PATH, ShowOutput, TargetsConfig,
+    VersionConfig, VersionPart, apply_config_drift, bump_version, detect_config_drift,
+    ensure_repo_scaffolding, init_env, load_config, load_env, package_projects, parse_env_content,
+    read_csproj_package_id, set_version, show, sync_cargo_toml, sync_csproj, validate_config,
+    verify_release,
 };
 pub use runner::{RunCompletion, RunHandle, cancel_run, start_run};
 pub use runtime_cache::{

@@ -9,7 +9,10 @@ use drot_kernel::CommandResult;
 use drot_kernel::{
     ProgressSession,
     logging::log_module_step_debug,
-    repo_config::{DharaRepoConfig, load_env, verify_release},
+    repo_config::{
+        CARGO_REGISTRY_TOKEN_ENV, DharaRepoConfig, NUGET_API_KEY_ENV, load_env, package_projects,
+        verify_release,
+    },
     subprocess::run_command,
 };
 
@@ -18,13 +21,10 @@ use crate::ops::{
     workflow_progress::{begin_workflow, plan_unit_step, run_planned_step},
 };
 
-const CARGO_REGISTRY_TOKEN_ENV: &str = "CARGO_REGISTRY_TOKEN";
-
 #[derive(Debug, Clone)]
 pub struct ReleaseOptions {
     pub configuration: String,
     pub source_override: Option<String>,
-    pub api_key_env_override: Option<String>,
     pub output_dir: Option<PathBuf>,
     pub dry_run: bool,
     pub publish_cargo: bool,
@@ -63,7 +63,7 @@ pub fn run(
         || {
             verify_release(repo_root)?;
             validate_versions_synced(repo_root, config)?;
-            ensure_release_secrets(repo_root, config, options)
+            ensure_release_secrets(repo_root, options)
         },
     )?;
 
@@ -94,7 +94,6 @@ pub fn run(
         configuration: options.configuration.clone(),
         version_override: None,
         source_override: options.source_override.clone(),
-        api_key_env_override: options.api_key_env_override.clone(),
         output_dir: options.output_dir.clone(),
         execute_publish: false,
         native_stage_override: options.native_stage_override.clone(),
@@ -179,11 +178,7 @@ fn cargo_release_args(dry_run: bool) -> Vec<String> {
     args
 }
 
-fn ensure_release_secrets(
-    repo_root: &Path,
-    config: &DharaRepoConfig,
-    options: &ReleaseOptions,
-) -> Result<()> {
+fn ensure_release_secrets(repo_root: &Path, options: &ReleaseOptions) -> Result<()> {
     if options.dry_run {
         return Ok(());
     }
@@ -192,11 +187,7 @@ fn ensure_release_secrets(
         ensure_secret(repo_root, CARGO_REGISTRY_TOKEN_ENV)?;
     }
     if options.publish_nuget {
-        let nuget_key = options
-            .api_key_env_override
-            .as_deref()
-            .unwrap_or(&config.publish.api_key_env);
-        ensure_secret(repo_root, nuget_key)?;
+        ensure_secret(repo_root, NUGET_API_KEY_ENV)?;
     }
     Ok(())
 }
@@ -243,19 +234,22 @@ fn validate_versions_synced(repo_root: &Path, config: &DharaRepoConfig) -> Resul
         )?;
     }
 
-    let csproj_path = repo_root.join(&config.ci.package_project);
-    let csproj_content = fs::read_to_string(&csproj_path)
-        .with_context(|| format!("failed to read {}", csproj_path.display()))?;
-    let project =
-        Element::parse(csproj_content.as_bytes()).context("failed to parse package csproj")?;
-    let actual_csproj_version = find_property(&project, "Version")
-        .with_context(|| format!("Version property missing from {}", csproj_path.display()))?;
-    if actual_csproj_version.trim() != expected {
-        bail!(
-            "package csproj Version is {}, expected {}",
-            actual_csproj_version,
-            expected
-        );
+    for relative_path in package_projects(config) {
+        let csproj_path = repo_root.join(relative_path);
+        let csproj_content = fs::read_to_string(&csproj_path)
+            .with_context(|| format!("failed to read {}", csproj_path.display()))?;
+        let project = Element::parse(csproj_content.as_bytes())
+            .with_context(|| format!("failed to parse {}", csproj_path.display()))?;
+        let actual_csproj_version = find_property(&project, "Version")
+            .with_context(|| format!("Version property missing from {}", csproj_path.display()))?;
+        if actual_csproj_version.trim() != expected {
+            bail!(
+                "package csproj Version is {} ({}), expected {}",
+                actual_csproj_version,
+                relative_path,
+                expected
+            );
+        }
     }
 
     Ok(())
@@ -312,7 +306,7 @@ mod tests {
 
     use super::*;
     use drot_kernel::{
-        CiConfig, DharaRepoConfig, NuGetConfig, PublishConfig, TargetsConfig, VersionConfig,
+        CiConfig, DharaRepoConfig, NuGetConfig, ProductConfig, TargetsConfig, VersionConfig,
     };
 
     fn sample_config() -> DharaRepoConfig {
@@ -320,31 +314,26 @@ mod tests {
             versions: VersionConfig {
                 workspace: "0.5.0".to_owned(),
             },
-            nuget: NuGetConfig {
-                package_id: "Dhara.Storage".to_owned(),
-                source: "https://api.nuget.org/v3/index.json".to_owned(),
+            product: ProductConfig {
                 authors: vec!["Naveen Dharmathunga".to_owned()],
-                description: "Dhara Storage".to_owned(),
-                tags: vec!["storage".to_owned()],
-                readme: "src/bindings/csharp/Dhara.Storage/README.md".to_owned(),
-                icon: None,
                 repository_url: "https://github.com/D-Naveenz/dhara_storage".to_owned(),
                 project_url: "https://github.com/D-Naveenz/dhara_storage".to_owned(),
+                license: None,
+            },
+            nuget: NuGetConfig {
+                source: "https://api.nuget.org/v3/index.json".to_owned(),
             },
             ci: CiConfig {
                 smoke_project:
                     "src/bindings/csharp/Dhara.Storage.ConsumerSmoke/Dhara.Storage.ConsumerSmoke.csproj"
                         .to_owned(),
                 package_project: "src/bindings/csharp/Dhara.Storage/Dhara.Storage.csproj".to_owned(),
+                managed_package_projects: Vec::new(),
                 tests_project: "src/bindings/csharp/Dhara.Storage.Tests/Dhara.Storage.Tests.csproj"
                     .to_owned(),
                 native_runtimes: vec!["linux-x64".to_owned()],
                 host_runtime_smoke: "linux-x64".to_owned(),
                 aot_runtime_smoke: "linux-x64".to_owned(),
-            },
-            publish: PublishConfig {
-                environment: "nuget-production".to_owned(),
-                api_key_env: "NUGET_API_KEY".to_owned(),
             },
             targets: TargetsConfig {
                 rust_targets: [("linux-x64".to_owned(), "x86_64-unknown-linux-gnu".to_owned())]
@@ -401,16 +390,11 @@ dhara_storage = {{ version = "{cargo_version}", path = "src/core/dhara_storage" 
     #[test]
     fn execute_requires_publish_secret() {
         let temp = tempdir().unwrap();
-        let mut config = sample_config();
-        config.publish.api_key_env = "DHARA_TOOL_TEST_MISSING_NUGET_KEY".to_owned();
+        let missing_key = "DHARA_TOOL_TEST_MISSING_NUGET_KEY";
 
-        let error = ensure_secret(temp.path(), &config.publish.api_key_env).unwrap_err();
+        let error = ensure_secret(temp.path(), missing_key).unwrap_err();
 
-        assert!(
-            error
-                .to_string()
-                .contains("DHARA_TOOL_TEST_MISSING_NUGET_KEY")
-        );
+        assert!(error.to_string().contains(missing_key));
     }
 
     #[test]

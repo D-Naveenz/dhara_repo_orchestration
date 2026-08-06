@@ -14,7 +14,7 @@ Host repositories such as [dhara_storage][dhara-storage] pin this project as a g
 ## Prerequisites
 
 - Rust **stable** toolchain
-- Access to the host workspace you are operating on (for storage product plugins)
+- Access to the host workspace you are operating on (for the storage product extension)
 
 ## Install / build
 
@@ -24,6 +24,8 @@ From this repository root:
 cargo build -p drot --profile dist
 cargo build -p drot_tui
 ```
+
+Hosts enable the default Cargo feature `extension-dhara-storage` (links `drot_dhara_storage`). Build with `--no-default-features` for a kernel-only binary (base commands disabled until an extension is linked).
 
 Run tests:
 
@@ -41,7 +43,7 @@ Typical invocations from a host (example: dhara_storage) use `-r` / `--repo` aft
 
 ### 2. Common operator flows
 
-Exact subcommands depend on the product plugin (for example `drot_dhara_storage`). Typical areas:
+Exact subcommands depend on the linked product extension (for example `drot_dhara_storage`). Typical areas:
 
 - Config activation and environment scaffolding
 - Native staging / package verify
@@ -54,7 +56,7 @@ Prefer this repo’s [AGENTS.md](AGENTS.md) and the host’s scripts for the exa
 
 Interactive three-panel shell (`drot_tui`): Tasks tree, tabbed center (Info / Options / Troubleshooting / System), Actions (progress + Run/Cancel).
 
-From a host such as dhara_storage, prefer the host’s `run-drot` script (version-gates against this workspace’s `Cargo.toml`). With no args it opens the TUI; pass `--cli` for the direct CLI.
+From a host such as dhara_storage, prefer the host’s `run-drot` script (git-stamps `target/dist/` against this checkout’s `HEAD`). With no args it opens the TUI; pass `--cli` for the direct CLI.
 
 From this repository root:
 

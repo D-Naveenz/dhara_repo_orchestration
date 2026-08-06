@@ -60,6 +60,14 @@ pub fn tree_selected_style() -> Style {
         .add_modifier(Modifier::BOLD)
 }
 
+pub fn tree_disabled_style() -> Style {
+    Style::default().fg(MUTED)
+}
+
+pub fn tree_disabled_selected_style() -> Style {
+    Style::default().fg(MUTED).bg(SELECTED_BG)
+}
+
 pub fn validation_status_style(tone: ValidationTone) -> Style {
     let color = match tone {
         ValidationTone::Muted => MUTED,
@@ -80,7 +88,7 @@ pub fn initial_config_description_lines() -> Vec<Line<'static>> {
             Span::raw(" workspace."),
         ]),
         Line::from(Span::styled(
-            "Must contain dhara.config.toml",
+            "An existing directory without dhara.config.toml will be initialized automatically",
             Style::default().fg(MUTED),
         )),
     ]

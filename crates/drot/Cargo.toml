@@ -12,9 +12,13 @@ keywords = ["tooling", "release", "nuget", "verification", "defs"]
 categories = ["command-line-utilities", "development-tools"]
 publish = false
 
+[features]
+default = ["extension-dhara-storage"]
+extension-dhara-storage = ["dep:drot_dhara_storage"]
+
 [dependencies]
 anyhow = "1.0"
-drot_dhara_storage = { path = "../drot_dhara_storage" }
+drot_dhara_storage = { path = "../drot_dhara_storage", optional = true }
 drot_kernel = { path = "../drot_kernel" }
 
 [dev-dependencies]

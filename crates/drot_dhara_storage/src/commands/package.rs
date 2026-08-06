@@ -85,7 +85,6 @@ pub(crate) fn package_stage_native_command(
             configuration: args.configuration,
             version_override: None,
             source_override: None,
-            api_key_env_override: None,
             output_dir: context.output_dir.clone(),
             execute_publish: false,
             native_stage_override: None,

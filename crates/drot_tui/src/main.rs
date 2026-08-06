@@ -4,8 +4,9 @@ use std::path::PathBuf;
 use anyhow::{Context, Result, bail};
 
 use drot_kernel::{
-    CommandRegistry, ParseMode, RootArgs, RunMode, ToolContext, activation::run_activation,
-    ensure_workspace_state, parse_root_args, paths::resolve_exe_root, register_plugins,
+    CommandRegistry, LoggingOptions, ParseMode, RootArgs, RunMode, ToolContext,
+    activation::run_activation, begin_operator_session, ensure_workspace_state, parse_root_args,
+    paths::resolve_exe_root, register_base_commands, register_extensions, set_linked_extension,
     stale_cached_repository, try_early_repository, workers,
 };
 use drot_tui::{TuiBootParams, can_launch_tui, run_tui};
@@ -15,12 +16,24 @@ fn main() -> Result<()> {
         bail!("drot_tui requires an interactive terminal (stdin and stdout must be TTYs)");
     }
 
-    drot_dhara_storage::install_hooks();
+    #[cfg(feature = "extension-dhara-storage")]
+    {
+        drot_dhara_storage::install_hooks();
+        set_linked_extension(drot_dhara_storage::EXTENSION_ID);
+    }
+    #[cfg(not(feature = "extension-dhara-storage"))]
+    {
+        set_linked_extension("none");
+    }
 
     let cli = parse_root_args(env::args().skip(1).collect(), ParseMode::Interactive)?;
 
     let mut registry = CommandRegistry::new();
-    register_plugins(&mut registry, drot_dhara_storage::plugins());
+    register_base_commands(&mut registry);
+    #[cfg(feature = "extension-dhara-storage")]
+    {
+        register_extensions(&mut registry, drot_dhara_storage::extension());
+    }
 
     if cli.show_version {
         println!("{}", env!("CARGO_PKG_VERSION"));
@@ -55,25 +68,35 @@ fn main() -> Result<()> {
     };
 
     if let Some(repo_root) = try_early_repository(&exe_root, cli.repository.clone())? {
-        let pending_activation = run_activation(&repo_root, cli.yes, run_mode)?.unwrap_or_default();
         let context = build_context(
-            repo_root,
+            repo_root.clone(),
             exe_root.clone(),
             run_mode,
             &cli,
             effective_workers,
         );
+        let session = begin_operator_session(LoggingOptions::from_context(&context))
+            .context("failed to initialize operator logging")?;
+        let pending_activation = run_activation(&repo_root, cli.yes, run_mode)?.unwrap_or_default();
         ensure_workspace_state(&context);
-        run_tui(
+        let result = run_tui(
             &registry,
             exe_root,
             boot,
             Some(context),
             pending_activation,
             None,
-        )?;
+        );
+        match result {
+            Ok(()) => session.finish(0, None, None),
+            Err(error) => {
+                session.finish(1, None, Some(&error.to_string()));
+                return Err(error);
+            }
+        }
     } else {
         let stale_hint = stale_cached_repository(&exe_root);
+        // Logging starts when the TUI activates a repository (see run_tui / activation path).
         run_tui(&registry, exe_root, boot, None, Vec::new(), stale_hint)?;
     }
 

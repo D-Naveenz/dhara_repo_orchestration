@@ -288,6 +288,7 @@ pub fn render_clipped_tree<T: std::fmt::Debug>(
     state: &TreeViewState,
     label: impl Fn(&TreeNode<T>) -> &str,
     path_key: impl Fn(&TreeNode<T>) -> &str,
+    is_disabled: impl Fn(&TreeNode<T>) -> bool,
     marquee: &mut TreeLabelMarquee,
     theme: &Theme,
     buf: &mut ratatui::buffer::Buffer,
@@ -309,25 +310,40 @@ pub fn render_clipped_tree<T: std::fmt::Debug>(
         .take(viewport_height)
     {
         let is_selected = view_idx == state.selected_index;
+        let disabled = is_disabled(flat_node.node);
         let row_y = area.y + (view_idx - scroll) as u16;
         let row_area = Rect::new(area.x, row_y, area.width, 1);
         let row_style = if is_selected {
-            style.selected_style
+            if disabled {
+                dhara_theme::tree_disabled_selected_style()
+            } else {
+                style.selected_style
+            }
+        } else if disabled {
+            dhara_theme::tree_disabled_style()
         } else {
             style.normal_style
         };
 
         if is_selected {
+            let fg = if disabled {
+                dhara_theme::MUTED
+            } else {
+                dhara_theme::WARNING
+            };
             for x in row_area.x..row_area.x + row_area.width {
-                buf[(x, row_y)]
-                    .set_bg(dhara_theme::SELECTED_BG)
-                    .set_fg(dhara_theme::WARNING);
+                buf[(x, row_y)].set_bg(dhara_theme::SELECTED_BG).set_fg(fg);
             }
         }
 
         let (prefix, prefix_style) = build_prefix(&style, flat_node, state);
+        let prefix_paint = if disabled {
+            dhara_theme::tree_disabled_style()
+        } else {
+            prefix_style
+        };
         let prefix_width = prefix.width();
-        buf.set_string(row_area.x, row_area.y, &prefix, prefix_style);
+        buf.set_string(row_area.x, row_area.y, &prefix, prefix_paint);
 
         let label_width = row_area.width.saturating_sub(prefix_width as u16) as usize;
         if label_width == 0 {

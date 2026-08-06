@@ -2,8 +2,10 @@ use std::collections::BTreeMap;
 use std::sync::Arc;
 
 use anyhow::{Result, bail};
+use tracing::warn;
 
 use crate::logging::{CommandOutcome, CommandRun, LoggingOptions, ensure_logging};
+use crate::output::emit_warn_line;
 
 pub use crate::context::{CommandResult, ReportField, RunMode, StructuredReport, ToolContext};
 
@@ -52,6 +54,7 @@ pub struct CommandUi {
     pub supports_cancel: bool,
 }
 
+/// Unified command specification shared by CLI help and the TUI.
 #[derive(Clone)]
 pub struct CommandSpec {
     pub id: &'static str,
@@ -60,10 +63,16 @@ pub struct CommandSpec {
     pub args_summary: &'static str,
     pub section: &'static str,
     pub ui: CommandUi,
-    pub handler: CommandHandler,
+    /// Instruction set; [`None`] means the command has no action yet.
+    pub handler: Option<CommandHandler>,
+    /// Explicit disable even when a handler is present.
+    pub is_disabled: bool,
+    /// Operator-facing reason when disabled; preferred over default messages.
+    pub disabled_reason: Option<&'static str>,
 }
 
-pub trait ToolCapability {
+/// Compile-time product extension that registers or upserts commands into the registry.
+pub trait Extension {
     fn register(&self, registry: &mut CommandRegistry);
 }
 
@@ -82,8 +91,18 @@ impl CommandRegistry {
         self.sections.insert(section.name, section);
     }
 
+    /// Appends a command. Prefer [`Self::upsert_command`] when an extension may replace a base stub.
     pub fn add_command(&mut self, command: CommandSpec) {
-        self.commands.push(command);
+        self.upsert_command(command);
+    }
+
+    /// Inserts or replaces a command by [`CommandSpec::id`] (later registration wins).
+    pub fn upsert_command(&mut self, command: CommandSpec) {
+        if let Some(existing) = self.commands.iter_mut().find(|c| c.id == command.id) {
+            *existing = command;
+        } else {
+            self.commands.push(command);
+        }
     }
 
     pub fn sections(&self) -> impl Iterator<Item = &SectionSpec> {
@@ -125,8 +144,25 @@ impl CommandRegistry {
 
         ensure_logging(LoggingOptions::from_context(context))?;
 
+        if command.is_effectively_disabled() {
+            let reason = command.disable_message();
+            let warning = format!("command {} is disabled — {reason}", command.id);
+            warn!(target: "drot::audit", "{warning}");
+            emit_warn_line(&warning);
+            return Ok(CommandResult {
+                exit_code: 1,
+                report: None,
+                message: Some(warning),
+            });
+        }
+
+        let handler = command
+            .handler
+            .as_ref()
+            .expect("enabled command must have a handler");
+
         let run = CommandRun::begin(command.id);
-        let result = (command.handler)(context, rest);
+        let result = handler(context, rest);
         run.complete(CommandOutcome::from_execute(command.id, &result));
 
         result
@@ -138,13 +174,19 @@ impl CommandRegistry {
             output.push_str(&format!("\n{}:\n", section.name));
             for command in self.commands_for_section(section.name) {
                 let path = command.path.join(" ");
+                let mut summary = command.summary.to_owned();
+                if command.is_effectively_disabled() {
+                    summary.push_str(" (disabled)");
+                    let reason = command.disable_message();
+                    summary.push_str(" — ");
+                    summary.push_str(reason);
+                }
                 if command.args_summary.is_empty() {
-                    output.push_str(&format!("  {path:<28} {}\n", command.summary));
+                    output.push_str(&format!("  {path:<28} {summary}\n"));
                 } else {
                     output.push_str(&format!(
-                        "  {:<28} {}\n",
+                        "  {:<28} {summary}\n",
                         format!("{path} {}", command.args_summary),
-                        command.summary
                     ));
                 }
             }
@@ -156,6 +198,22 @@ impl CommandRegistry {
 impl CommandSpec {
     pub fn path_string(&self) -> String {
         self.path.join(" ")
+    }
+
+    /// True when manually disabled or when no instruction set is registered.
+    pub fn is_effectively_disabled(&self) -> bool {
+        self.is_disabled || self.handler.is_none()
+    }
+
+    /// Human-readable disable reason for help, Info, and execute warnings.
+    pub fn disable_message(&self) -> &'static str {
+        if let Some(reason) = self.disabled_reason {
+            return reason;
+        }
+        if self.handler.is_none() {
+            return "not implemented by this extension";
+        }
+        "disabled by the developers"
     }
 }
 
@@ -207,6 +265,26 @@ mod tests {
         }
     }
 
+    fn spec(
+        id: &'static str,
+        path: &'static [&'static str],
+        section: &'static str,
+        summary: &'static str,
+        handler: Option<CommandHandler>,
+    ) -> CommandSpec {
+        CommandSpec {
+            id,
+            path,
+            summary,
+            args_summary: "",
+            section,
+            ui: CommandUi::empty(summary),
+            handler,
+            is_disabled: false,
+            disabled_reason: None,
+        }
+    }
+
     #[test]
     fn resolves_longest_matching_path() {
         let mut registry = CommandRegistry::new();
@@ -215,24 +293,20 @@ mod tests {
             prompt: "cfg> ",
             summary: "Config commands",
         });
-        registry.add_command(CommandSpec {
-            id: "config",
-            path: &["config"],
-            summary: "Config root",
-            args_summary: "",
-            section: "config",
-            ui: CommandUi::empty("Config root"),
-            handler: Arc::new(noop),
-        });
-        registry.add_command(CommandSpec {
-            id: "config.show",
-            path: &["config", "show"],
-            summary: "Show config",
-            args_summary: "",
-            section: "config",
-            ui: CommandUi::empty("Show config"),
-            handler: Arc::new(noop),
-        });
+        registry.add_command(spec(
+            "config",
+            &["config"],
+            "config",
+            "Config root",
+            Some(Arc::new(noop)),
+        ));
+        registry.add_command(spec(
+            "config.show",
+            &["config", "show"],
+            "config",
+            "Show config",
+            Some(Arc::new(noop)),
+        ));
 
         let args = vec!["config".to_owned(), "show".to_owned(), "--x".to_owned()];
         let (command, rest) = registry.resolve(&args).expect("command should resolve");
@@ -255,7 +329,9 @@ mod tests {
             args_summary: "[--configuration <name>]",
             section: "verify",
             ui: CommandUi::empty("Verify package"),
-            handler: Arc::new(report_handler),
+            handler: Some(Arc::new(report_handler)),
+            is_disabled: false,
+            disabled_reason: None,
         });
 
         let result = registry
@@ -284,20 +360,119 @@ mod tests {
             prompt: "cfg> ",
             summary: "Config commands",
         });
-        registry.add_command(CommandSpec {
-            id: "config.show",
-            path: &["config", "show"],
-            summary: "Show config",
-            args_summary: "",
-            section: "config",
-            ui: CommandUi::empty("Show config"),
-            handler: Arc::new(noop),
-        });
+        registry.add_command(spec(
+            "config.show",
+            &["config", "show"],
+            "config",
+            "Show config",
+            Some(Arc::new(noop)),
+        ));
 
         let help = registry.help_text();
         assert!(help.contains("Dhara tool commands:"));
         assert!(help.contains("config:"));
         assert!(help.contains("config show"));
         assert!(help.contains("Show config"));
+    }
+
+    #[test]
+    fn upsert_replaces_handler_and_disable_flags() {
+        let mut registry = CommandRegistry::new();
+        registry.add_section(SectionSpec {
+            name: "version",
+            prompt: "v> ",
+            summary: "Version",
+        });
+        registry.upsert_command(spec(
+            "version.bump",
+            &["version", "bump"],
+            "version",
+            "Bump",
+            None,
+        ));
+        registry.upsert_command(CommandSpec {
+            id: "version.bump",
+            path: &["version", "bump"],
+            summary: "Bump version",
+            args_summary: "--part <major|minor|patch>",
+            section: "version",
+            ui: CommandUi::empty("Bump"),
+            handler: Some(Arc::new(noop)),
+            is_disabled: false,
+            disabled_reason: None,
+        });
+
+        let command = registry
+            .commands()
+            .find(|c| c.id == "version.bump")
+            .expect("upserted");
+        assert!(!command.is_effectively_disabled());
+        assert!(command.handler.is_some());
+        assert_eq!(command.summary, "Bump version");
+    }
+
+    #[test]
+    fn disabled_command_does_not_invoke_handler() {
+        let mut registry = CommandRegistry::new();
+        registry.add_section(SectionSpec {
+            name: "version",
+            prompt: "v> ",
+            summary: "Version",
+        });
+        registry.add_command(CommandSpec {
+            id: "version.bump",
+            path: &["version", "bump"],
+            summary: "Bump",
+            args_summary: "",
+            section: "version",
+            ui: CommandUi::empty("Bump"),
+            handler: Some(Arc::new(|_, _| {
+                panic!("handler must not run when disabled");
+            })),
+            is_disabled: true,
+            disabled_reason: Some("disabled by the developers"),
+        });
+
+        let result = registry
+            .execute(&context(), &["version".to_owned(), "bump".to_owned()])
+            .expect("disabled execute returns a result");
+        assert_eq!(result.exit_code, 1);
+        assert!(
+            result
+                .message
+                .as_deref()
+                .unwrap_or("")
+                .contains("disabled by the developers")
+        );
+    }
+
+    #[test]
+    fn missing_handler_is_effectively_disabled() {
+        let command = spec("version.set", &["version", "set"], "version", "Set", None);
+        assert!(command.is_effectively_disabled());
+        assert_eq!(
+            command.disable_message(),
+            "not implemented by this extension"
+        );
+    }
+
+    #[test]
+    fn help_marks_disabled_commands() {
+        let mut registry = CommandRegistry::new();
+        registry.add_section(SectionSpec {
+            name: "version",
+            prompt: "v> ",
+            summary: "Version",
+        });
+        registry.add_command(spec(
+            "version.set",
+            &["version", "set"],
+            "version",
+            "Set version",
+            None,
+        ));
+        let help = registry.help_text();
+        assert!(help.contains("(disabled)"));
+        assert!(help.contains("not implemented by this extension"));
     }
 }
