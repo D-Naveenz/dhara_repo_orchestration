@@ -84,7 +84,7 @@ Host wrappers set `CARGO_TARGET_DIR=<host>/target` and build `--manifest-path to
 
 ## CI / pack
 
-Orchestration CI packs `drot` / `drot_tui` artifacts per OS. Hosts download by **submodule SHA** (not by guessing tool version alone). Branch flow and Dependabot live in this repo’s GitHub workflows (`feature` → `development` → `main`; never auto-merge into `main`).
+Orchestration CI splits **Quality** (`quality.yml` on PRs; skips Dependabot → `development`) from **Package Pipeline** (`package-pipeline.yml` on `push` to `main` + `workflow_dispatch` with optional `checkout_sha`). Hosts download `drot-*-x64` artifacts by **submodule SHA**. Hosts may run `ensure-drot-artifacts` when the pin has no successful pack. Branch flow: `feature` → `development` → `main` (never auto-merge into `main`).
 
 ---
 

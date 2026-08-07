@@ -1,54 +1,31 @@
-name: Pipeline
+name: Package Pipeline
 
 on:
-  pull_request:
   push:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      checkout_sha:
+        description: Optional commit SHA to pack (submodule pin). Empty = push/dispatch tip.
+        required: false
+        type: string
+        default: ""
 
 permissions:
   contents: read
   actions: write
 
 jobs:
-  quality:
-    name: quality
-    # Skip Dependabot version-update PRs into development (land via auto-merge; full pack on development → main).
-    if: >
-      (github.event_name == 'workflow_dispatch'
-      || github.event_name == 'push'
-      || (github.event_name == 'pull_request'
-          && !(github.event.pull_request.user.login == 'dependabot[bot]'
-               && github.base_ref == 'development')))
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          components: rustfmt, clippy
-
-      - name: Cargo fmt
-        run: cargo fmt --all -- --check
-
-      - name: Cargo clippy (CLI path)
-        run: cargo clippy -p drot -p drot_dhara_storage -p drot_kernel --all-targets -- -D warnings
-
-      - name: Cargo test (CLI path)
-        run: cargo test -p drot -p drot_dhara_storage -p drot_kernel
-
-      - name: Cargo clippy (TUI)
-        run: cargo clippy -p drot_tui --all-targets
-
   pack-windows:
     name: pack (windows-x64)
-    needs: quality
     runs-on: windows-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+        with:
+          # Prefer dispatch ref (host should --ref <submodule SHA>). Optional
+          # checkout_sha overrides when dispatching from another branch tip.
+          ref: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.checkout_sha != '' && github.event.inputs.checkout_sha || github.sha }}
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
@@ -77,11 +54,12 @@ jobs:
 
   pack-linux:
     name: pack (linux-x64)
-    needs: quality
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.checkout_sha != '' && github.event.inputs.checkout_sha || github.sha }}
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
