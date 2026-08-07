@@ -1,0 +1,44 @@
+---
+description: Clean-cut breaking changes; decide in plan, follow plan, or ask when unclear
+alwaysApply: false
+---
+
+# Breaking changes
+
+Prefer the better design. Happy to break and rebuild. One canonical surface per concern — no parallel Old/New APIs, no indefinite `#[deprecated]` shims, no soft half-migrations. Git history is the safety net (revert), not compatibility wrappers.
+
+## Decision procedure
+
+| Mode | Behavior |
+|------|----------|
+| Planning | Choose a clean break in the plan **or** ask when blast radius / product intent is unclear |
+| Development **with** an approved plan | Follow the plan; do not re-litigate breakage mid-implementation |
+| Development **without** a plan | Clear local tradeoff → clean cut; unclear / high blast radius → ask |
+
+## No legacy surface (this repo)
+
+Do **not** add or retain:
+
+- Parallel **V1 / V2** (or `Old` / `New`) command shapes, types, or config keys side by side
+- Indefinite deprecation shims or “compat” code paths after call sites are updated
+- Version suffixes on the **current** canonical shape once the old path is gone
+
+Keep old code **only** when it contains reusable logic not yet ported — then move that logic and **delete** the old entry point.
+
+## Examples (tool)
+
+```text
+# ✅ GOOD — one command shape
+Rename/replace a CLI flag or TUI form field in one change; update help and tests.
+
+# ✅ GOOD — clean extension API
+Replace an upsert/handler contract; update kernel + extension together.
+
+# ❌ BAD — parallel versions
+Old and new host-config keys both accepted indefinitely “for migration.”
+
+# ❌ BAD — soft break
+Deprecated alias that forwards forever.
+```
+
+After breaking work: update in-repo call sites, host-config docs when contracts change, and README when operator behavior changes.

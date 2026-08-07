@@ -20,7 +20,7 @@ This repository owns **all DROT-specific** documentation and Cursor rules:
 | Deep reference | [`docs/`](../../docs/) |
 | Project README | [`README.md`](../../README.md) |
 
-Host products (e.g. dhara_storage) must **not** duplicate TUI/logging/architecture essays — they link to this submodule / orchestration repo.
+Hosts link here; do not duplicate TUI/logging/architecture essays in the host. When pinned under a host, follow the host AGENTS/`docs/` for product CI — do not paste them here. Tool version: `[workspace.package].version` in this `Cargo.toml` (not host `dhara.config.toml`).
 
 ## Publish / human surfaces
 

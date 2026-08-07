@@ -2,7 +2,7 @@
 
 Read this file before large changes in the DROT (Dhara Repository Orchestration Tool) repository. It is the durable product note and AI/dev router for this workspace.
 
-Host products (for example [dhara_storage](https://github.com/D-Naveenz/dhara_storage)) pin this repo as a **git submodule**. Do **not** keep DROT-deep docs, rules, or architecture essays in the host — they belong here.
+Host products (for example [dhara_storage](https://github.com/D-Naveenz/dhara_storage)) pin this repo as a **git submodule**. Do **not** keep DROT-deep docs, rules, or architecture essays in the host — they belong here. When pinned under a host, also consider the host `AGENTS.md` and host `docs/` for product CI and runtime — do not paste host essays here.
 
 ## Human vs AI docs
 
@@ -24,7 +24,7 @@ Cross-product **operator** CLI and TUI for Dhara workspaces: config activation, 
 
 ### Goals
 
-- One tool version authority (`[workspace.package].version` in this repo)
+- One tool version authority (`[workspace.package].version` in this repo’s `Cargo.toml`)
 - Direct CLI for CI/agents; TUI for developers
 - Kernel framework + one compile-time **product extension** (default: `drot_dhara_storage`) so hosts stay thin
 - Progress and audit logging that work in both modes (session starts at activation)
@@ -84,16 +84,14 @@ Host wrappers set `CARGO_TARGET_DIR=<host>/target` and build `--manifest-path to
 
 ## CI / pack
 
-Orchestration CI packs `drot` / `drot_tui` artifacts per OS. Hosts download by **submodule SHA** (not by guessing tool version alone).
-
-Branch flow: **feature → `development` → `main`**. Dependabot version updates target `development` (grouped Cargo + Actions, weekly Monday 06:00 UTC) with squash auto-merge for patch/minor; Pipeline is skipped for Dependabot PRs into `development`. Never auto-merge into `main`. `ensure-development` creates `development` from `main` if missing. No CodeQL workflow yet.
+Orchestration CI packs `drot` / `drot_tui` artifacts per OS. Hosts download by **submodule SHA** (not by guessing tool version alone). Branch flow and Dependabot live in this repo’s GitHub workflows (`feature` → `development` → `main`; never auto-merge into `main`).
 
 ---
 
 ## Guardrails
 
 - Keep DROT docs and `.cursor/rules` in **this** repository; hosts should link here.
-- Do not invent a second tool version in host `dhara.config.toml`.
+- Do not invent a second tool version in host `dhara.config.toml` — tool version is `[workspace.package].version` in this `Cargo.toml`.
 - Host package-specific NuGet/Cargo metadata stays in each csproj / `Cargo.toml`; config holds shared `[product]`, slim `[nuget].source`, and `[ci]` paths — see [docs/host-config.md](docs/host-config.md).
-- Breaking changes are acceptable pre-1.0; prefer clean cuts over parallel APIs.
+- Prefer clean-cut breaking changes; decide in plan / follow plan / ask when unclear — see [`.cursor/rules/breaking-changes.mdc`](.cursor/rules/breaking-changes.mdc).
 - Prefer Windows as the primary developer workstation for TUI verification.
