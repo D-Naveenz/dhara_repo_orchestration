@@ -533,7 +533,7 @@ dependencies = [
 
 [[package]]
 name = "drot"
-version = "0.9.15"
+version = "0.10.0"
 dependencies = [
  "anyhow",
  "drot_dhara_storage",
@@ -544,7 +544,7 @@ dependencies = [
 
 [[package]]
 name = "drot_dhara_storage"
-version = "0.9.15"
+version = "0.10.0"
 dependencies = [
  "anyhow",
  "chrono",
@@ -566,7 +566,7 @@ dependencies = [
 
 [[package]]
 name = "drot_kernel"
-version = "0.9.15"
+version = "0.10.0"
 dependencies = [
  "anyhow",
  "chrono",
@@ -586,7 +586,7 @@ dependencies = [
 
 [[package]]
 name = "drot_tui"
-version = "0.9.15"
+version = "0.10.0"
 dependencies = [
  "anyhow",
  "crossterm",
