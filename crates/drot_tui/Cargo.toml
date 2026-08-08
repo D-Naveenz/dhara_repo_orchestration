@@ -5,21 +5,12 @@ edition.workspace = true
 license.workspace = true
 repository.workspace = true
 homepage.workspace = true
-description = "Interactive TUI for the Dhara Repository Orchestration Tool."
+description = "Interactive TUI library for the Dhara Repository Orchestration Tool."
 publish = false
-
-[[bin]]
-name = "drot_tui"
-path = "src/main.rs"
-
-[features]
-default = ["extension-dhara-storage"]
-extension-dhara-storage = ["dep:drot_dhara_storage"]
 
 [dependencies]
 anyhow = "1.0"
 crossterm = "0.29"
-drot_dhara_storage = { path = "../drot_dhara_storage", optional = true }
 drot_kernel = { path = "../drot_kernel" }
 ratatui = "0.30"
 ratatui-crossterm = "0.1"

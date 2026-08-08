@@ -239,9 +239,9 @@ dependencies = [
 
 [[package]]
 name = "clap"
-version = "4.6.4"
+version = "4.6.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d91e0c145792ef73a6ad36d27c75ac09f1832222a3c209689d90f534685ee5b7"
+checksum = "301b56658598e48f3648647ac6fc887be7e7108eddfa4e9b63fcf3ec58c0cadf"
 dependencies = [
  "clap_builder",
  "clap_derive",
@@ -249,9 +249,9 @@ dependencies = [
 
 [[package]]
 name = "clap_builder"
-version = "4.6.2"
+version = "4.6.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f09628afdcc538b57f3c6341e9c8e9970f18e4a481690a64974d7023bd33548b"
+checksum = "94a65403d1a1bd28f7dc68eb8506e8874808ee5eecb59298de588e2e1407a078"
 dependencies = [
  "anstream",
  "anstyle",
@@ -502,9 +502,9 @@ dependencies = [
 
 [[package]]
 name = "dhara_storage_core"
-version = "0.9.6"
+version = "0.9.22"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b17bb5b706b42e638c8896ce7e8b79f4c199f438d2bbb5e3b2879db3aee48bac"
+checksum = "d8155d928e5685cfa5f3738342a570e9836d52189774ed0459ea82eb8b67fa9d"
 dependencies = [
  "flatbuffers",
  "quick-xml",
@@ -533,17 +533,18 @@ dependencies = [
 
 [[package]]
 name = "drot"
-version = "0.9.15"
+version = "0.10.0"
 dependencies = [
  "anyhow",
  "drot_dhara_storage",
  "drot_kernel",
+ "drot_tui",
  "tempfile",
 ]
 
 [[package]]
 name = "drot_dhara_storage"
-version = "0.9.15"
+version = "0.10.0"
 dependencies = [
  "anyhow",
  "chrono",
@@ -565,7 +566,7 @@ dependencies = [
 
 [[package]]
 name = "drot_kernel"
-version = "0.9.15"
+version = "0.10.0"
 dependencies = [
  "anyhow",
  "chrono",
@@ -585,11 +586,10 @@ dependencies = [
 
 [[package]]
 name = "drot_tui"
-version = "0.9.15"
+version = "0.10.0"
 dependencies = [
  "anyhow",
  "crossterm",
- "drot_dhara_storage",
  "drot_kernel",
  "ratatui",
  "ratatui-crossterm",

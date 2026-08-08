@@ -1,12 +1,12 @@
 # DROT architecture
 
-Operator tool crate layout for [dhara_repo_orchestration](https://github.com/D-Naveenz/dhara_repo_orchestration). Host products (for example [dhara_storage](https://github.com/D-Naveenz/dhara_storage)) pin this repo as a git submodule and consume `drot` / `drot_tui` artifacts or local builds.
+Operator tool crate layout for [dhara_repo_orchestration](https://github.com/D-Naveenz/dhara_repo_orchestration). Host products (for example [dhara_storage](https://github.com/D-Naveenz/dhara_storage)) pin this repo as a git submodule and consume `drot` artifacts or local builds.
 
 Version authority is `[workspace.package].version` in this repo’s `Cargo.toml`.
 
 ## Crate DAG
 
-**drot_kernel** (framework) ← **drot_dhara_storage** (product extension) ← **drot** / **drot_tui** (hosts).
+**drot_kernel** (framework) ← **drot_dhara_storage** (product extension) ← **drot** (binary host) → **drot_tui** (TUI library).
 
 ```mermaid
 flowchart LR
@@ -30,25 +30,26 @@ flowchart LR
     defs[filedefs]
   end
 
-  subgraph tui [drot_tui]
+  subgraph tuiLib [drot_tui lib]
     screens[screens / widgets]
-    app[app.rs event loop]
+    appLoop[app.rs event loop]
   end
 
   extension --> kernel
-  tui --> extension
-  tui --> kernel
+  tuiLib --> kernel
   bin[drot bin] --> extension
   bin --> kernel
+  bin --> tuiLib
 ```
 
 | Layer | Responsibility | Example |
 |-------|----------------|---------|
-| **Hosts** (`drot` / `drot_tui`) | Binary orchestration and TUI event loop; Cargo feature selects the extension | argv → dispatch; screens / widgets |
+| **Host** (`drot`) | Single binary: argv dispatch to Direct CLI or TUI; Cargo feature selects the extension | empty command → TUI; subcommand → CLI; `--help` → help |
+| **TUI lib** (`drot_tui`) | Event loop and widgets | `run_tui`, action panel |
 | **Extension** (`drot_dhara_storage`) | Product commands, upsert onto base specs, domain ops, filedefs | `quality::run_clippy`, `release::run_cargo_release` |
 | **Kernel** (`drot_kernel`) | Host APIs, base command stubs, registry, paths, config activation, logging | `register_base_commands`, `detect_config_drift` |
 
-`app.rs` lives in the **binary / TUI host** crates; hosts must not depend on each other.
+Dispatch lives in `drot` (`app.rs`); the TUI library must not depend on the `drot` binary crate.
 
 ### Extension linking
 
@@ -60,9 +61,9 @@ flowchart LR
 
 1. `register_base_commands` (kernel stubs)
 2. `register_extensions` → extension `upsert_command` / `add_section`
-3. Hosts read the registry for help / tree / execute
+3. Host reads the registry for help / tree / execute
 
-## TUI layout (`drot_tui`)
+## TUI layout (`drot_tui` library)
 
 | Region | Role |
 |--------|------|

@@ -32,6 +32,7 @@ pub fn sync_state_from_tab_view(tab_state: &TabViewState) -> MainTab {
     tab_from_index(tab_state.selected_index)
 }
 
+#[allow(clippy::too_many_arguments)] // Center panel owns tabs, scrolls, and options widgets in one pass.
 pub fn render_center_panel(
     frame: &mut Frame<'_>,
     area: Rect,
@@ -138,11 +139,8 @@ fn render_info_tab(
     lines.push(String::new());
     lines.extend(text_wrap::wrap_line(command.summary, width));
 
-    // Description — fuller prose.
+    // Description — fuller prose when it adds more than the summary.
     if !command.ui.description.is_empty() && command.ui.description != command.summary {
-        lines.push(String::new());
-        lines.extend(text_wrap::wrap_paragraphs(command.ui.description, width));
-    } else if !command.ui.description.is_empty() && command.summary.is_empty() {
         lines.push(String::new());
         lines.extend(text_wrap::wrap_paragraphs(command.ui.description, width));
     }
@@ -179,6 +177,7 @@ fn render_info_tab(
     scroll_body::render_scroll_body(area, scroll, buf);
 }
 
+#[allow(clippy::too_many_arguments)] // Options tab wires form widgets and click regions together.
 fn render_options_tab(
     frame: &mut Frame,
     area: Rect,
@@ -229,8 +228,8 @@ fn render_options_tab(
         return;
     }
 
-    let mut y = fields_area.y;
     for (index, field) in command.ui.fields.iter().enumerate() {
+        let y = fields_area.y.saturating_add(index as u16);
         if y >= fields_area.y + fields_area.height {
             break;
         }
@@ -297,7 +296,6 @@ fn render_options_tab(
                 .render(row, frame.buffer_mut());
             }
         }
-        y += 1;
     }
 }
 
