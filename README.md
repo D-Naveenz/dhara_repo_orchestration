@@ -21,6 +21,8 @@ From this repository root:
 cargo build -p drot --profile dist
 ```
 
+Local builds use `[profile.dist]` (thin LTO → `target/dist/`). CI Package Pipeline ships `cargo build -p drot --release` (fat LTO).
+
 Hosts enable the default Cargo feature `extension-dhara-storage` (links `drot_dhara_storage`). Build with `--no-default-features` for a kernel-only binary (base commands disabled until an extension is linked).
 
 Run tests:

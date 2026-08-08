@@ -14,17 +14,17 @@ license = "Apache-2.0"
 repository = "https://github.com/D-Naveenz/dhara_repo_orchestration"
 homepage = "https://github.com/D-Naveenz/dhara_repo_orchestration"
 
-# Operator CLI — packed by DROT CI; storage downloads artifacts by submodule SHA
+# Ship profile — DROT Package Pipeline (`cargo build -p drot --release`).
+# Fat LTO is worth the link time on CI; local day-to-day builds use `dist` instead.
 [profile.release]
-codegen-units = 1
-lto = true
-opt-level = "s"
-strip = true
-
-[profile.dist]
-inherits = "release"
 opt-level = 3
 lto = true
 codegen-units = 1
-strip = "symbols"
 panic = "abort"
+strip = true
+
+# Local profile — host `ensure-drot-dist` / `run-drot` (`--profile dist` → `target/dist/`).
+# Same speed/size knobs as release, but thin LTO so rebuilds stay tolerable on a workstation.
+[profile.dist]
+inherits = "release"
+lto = "thin"

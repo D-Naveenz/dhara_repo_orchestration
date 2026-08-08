@@ -68,6 +68,8 @@ cargo run -p drot --profile dist -- -r <host-repo>
 
 Binary lands in **this** repo’s `target/dist/drot` (`.exe` on Windows). No subcommand on a TTY opens the TUI; `--help` lists commands.
 
+**Profiles:** `dist` (thin LTO) for local / host `ensure-drot-dist`; `release` (fat LTO) for Package Pipeline ship artifacts.
+
 ### Host submodule layout (agents)
 
 When this repo is pinned under a host (e.g. `dhara_storage/tooling/drot`):
