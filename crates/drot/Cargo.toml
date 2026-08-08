@@ -5,7 +5,7 @@ edition.workspace = true
 license.workspace = true
 repository.workspace = true
 homepage.workspace = true
-description = "Dhara Repository Orchestration Tool — direct CLI for workflows, scripts, and agents."
+description = "Dhara Repository Orchestration Tool — CLI and interactive TUI for workflows, scripts, and agents."
 readme = "../../README.md"
 documentation = "https://github.com/D-Naveenz/dhara_repo_orchestration"
 keywords = ["tooling", "release", "nuget", "verification", "defs"]
@@ -20,6 +20,7 @@ extension-dhara-storage = ["dep:drot_dhara_storage"]
 anyhow = "1.0"
 drot_dhara_storage = { path = "../drot_dhara_storage", optional = true }
 drot_kernel = { path = "../drot_kernel" }
+drot_tui = { path = "../drot_tui", default-features = false }
 
 [dev-dependencies]
 tempfile = "3.27"

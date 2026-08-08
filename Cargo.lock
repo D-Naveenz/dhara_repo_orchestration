@@ -538,6 +538,7 @@ dependencies = [
  "anyhow",
  "drot_dhara_storage",
  "drot_kernel",
+ "drot_tui",
  "tempfile",
 ]
 
@@ -589,7 +590,6 @@ version = "0.9.15"
 dependencies = [
  "anyhow",
  "crossterm",
- "drot_dhara_storage",
  "drot_kernel",
  "ratatui",
  "ratatui-crossterm",

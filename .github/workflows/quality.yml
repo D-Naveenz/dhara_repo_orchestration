@@ -31,11 +31,8 @@ jobs:
       - name: Cargo fmt
         run: cargo fmt --all -- --check
 
-      - name: Cargo clippy (CLI path)
-        run: cargo clippy -p drot -p drot_dhara_storage -p drot_kernel --all-targets -- -D warnings
+      - name: Cargo clippy
+        run: cargo clippy -p drot -p drot_tui -p drot_dhara_storage -p drot_kernel --all-targets -- -D warnings
 
-      - name: Cargo test (CLI path)
-        run: cargo test -p drot -p drot_dhara_storage -p drot_kernel
-
-      - name: Cargo clippy (TUI)
-        run: cargo clippy -p drot_tui --all-targets
+      - name: Cargo test
+        run: cargo test -p drot -p drot_tui -p drot_dhara_storage -p drot_kernel

@@ -6,10 +6,7 @@
 
 Host repositories such as [dhara_storage][dhara-storage] pin this project as a git submodule and do **not** co-own the tool version. Version authority is this workspace’s `[workspace.package].version` in `Cargo.toml`.
 
-| Binary | Who it is for |
-|--------|----------------|
-| `drot` | CI, scripts, and automation |
-| `drot_tui` | Interactive use by developers |
+One binary: **`drot`**. No subcommand on a TTY opens the interactive TUI; a subcommand runs the Direct CLI; `--help` lists commands without opening the TUI (for agents and scripts).
 
 ## Prerequisites
 
@@ -22,15 +19,16 @@ From this repository root:
 
 ```bash
 cargo build -p drot --profile dist
-cargo build -p drot_tui
 ```
+
+Local builds use `[profile.dist]` (thin LTO → `target/dist/`). CI Package Pipeline ships `cargo build -p drot --release` (fat LTO).
 
 Hosts enable the default Cargo feature `extension-dhara-storage` (links `drot_dhara_storage`). Build with `--no-default-features` for a kernel-only binary (base commands disabled until an extension is linked).
 
 Run tests:
 
 ```bash
-cargo test -p drot -p drot_kernel -p drot_dhara_storage
+cargo test -p drot -p drot_kernel -p drot_dhara_storage -p drot_tui
 ```
 
 Consumers often download CI artifacts (`drot-windows-x64`, `drot-linux-x64`) for the pinned submodule commit instead of compiling DROT in their own CI.
@@ -39,7 +37,7 @@ Consumers often download CI artifacts (`drot-windows-x64`, `drot-linux-x64`) for
 
 ### 1. Point at a host repository
 
-Typical invocations from a host (example: dhara_storage) use `-r` / `--repo` after the binary is on your `PATH` or under `target/dist/`.
+Typical invocations from a host (example: dhara_storage) use `-r` / `--repository` after the binary is on your `PATH` or under `target/dist/`.
 
 ### 2. Common operator flows
 
@@ -52,16 +50,21 @@ Exact subcommands depend on the linked product extension (for example `drot_dhar
 
 Prefer this repo’s [AGENTS.md](AGENTS.md) and the host’s scripts for the exact commands that host expects.
 
+```bash
+drot --help
+drot -r <host-repo> --yes quality run
+```
+
 ### 3. TUI
 
-Interactive three-panel shell (`drot_tui`): Tasks tree, tabbed center (Info / Options / Troubleshooting / System), Actions (progress + Run/Cancel).
+Interactive three-panel shell: Tasks tree, tabbed center (Info / Options / Troubleshooting / System), Actions (progress + Run/Cancel).
 
-From a host such as dhara_storage, prefer the host’s `run-drot` script (git-stamps `target/dist/` against this checkout’s `HEAD`). With no args it opens the TUI; pass `--cli` for the direct CLI.
+From a host such as dhara_storage, prefer the host’s `run-drot` script (git-stamps `target/dist/drot` against this checkout’s `HEAD`). With no subcommand it opens the TUI; pass a subcommand or `--help` for the Direct CLI.
 
 From this repository root:
 
 ```bash
-cargo run -p drot_tui --profile dist
+cargo run -p drot --profile dist -- -r <host-repo>
 ```
 
 ## Related

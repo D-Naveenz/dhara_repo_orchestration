@@ -30,17 +30,17 @@ jobs:
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
 
-      - name: Build drot (dist)
-        run: cargo build -p drot --profile dist
+      - name: Build drot (release)
+        run: cargo build -p drot --release
 
       - name: Stage artifact
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p dist-out
-          cp target/dist/drot.exe dist-out/drot.exe
-          if [ -d target/dist/package ]; then
-            cp -a target/dist/package dist-out/package
+          cp target/release/drot.exe dist-out/drot.exe
+          if [ -d target/release/package ]; then
+            cp -a target/release/package dist-out/package
           elif [ -d crates/drot_dhara_storage/package ]; then
             cp -a crates/drot_dhara_storage/package dist-out/package
           fi
@@ -64,18 +64,18 @@ jobs:
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
 
-      - name: Build drot (dist)
-        run: cargo build -p drot --profile dist
+      - name: Build drot (release)
+        run: cargo build -p drot --release
 
       - name: Stage artifact
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p dist-out
-          cp target/dist/drot dist-out/drot
+          cp target/release/drot dist-out/drot
           chmod +x dist-out/drot
-          if [ -d target/dist/package ]; then
-            cp -a target/dist/package dist-out/package
+          if [ -d target/release/package ]; then
+            cp -a target/release/package dist-out/package
           elif [ -d crates/drot_dhara_storage/package ]; then
             cp -a crates/drot_dhara_storage/package dist-out/package
           fi

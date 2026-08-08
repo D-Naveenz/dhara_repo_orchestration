@@ -12,6 +12,7 @@ use crate::focus::TuiFocus;
 use crate::theme::ValidationTone;
 use crate::widgets::{padded_button, panel, progress_bar, status_line};
 
+#[allow(clippy::too_many_arguments)] // Action panel binds progress, status, and run control.
 pub fn render_action_panel(
     frame: &mut Frame<'_>,
     area: Rect,

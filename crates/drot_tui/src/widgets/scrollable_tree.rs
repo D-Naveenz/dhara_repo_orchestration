@@ -282,6 +282,7 @@ pub fn visible_count<T: std::fmt::Debug>(nodes: &[TreeNode<T>], state: &TreeView
     TreeView::new(nodes, state).visible_count()
 }
 
+#[allow(clippy::too_many_arguments)] // Tree renderer takes layout, labels, and theme together.
 pub fn render_clipped_tree<T: std::fmt::Debug>(
     area: Rect,
     nodes: &[TreeNode<T>],
