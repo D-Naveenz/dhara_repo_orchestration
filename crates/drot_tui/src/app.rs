@@ -1,5 +1,5 @@
 use std::io::{self, IsTerminal, Stdout};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::mpsc::{self, Receiver};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
@@ -160,6 +160,7 @@ pub fn run_tui(
     result
 }
 
+#[allow(clippy::too_many_arguments)] // UI shell bootstrap carries registry, boot, and modal host together.
 fn build_app(
     state: AppState,
     registry: CommandRegistry,
@@ -815,10 +816,10 @@ fn finish_repository_setup(app: &mut DharaTui, repo_root: PathBuf) -> Result<()>
     Ok(())
 }
 
-fn build_context(exe_root: &PathBuf, boot: &TuiBootParams, repo_root: PathBuf) -> ToolContext {
+fn build_context(exe_root: &Path, boot: &TuiBootParams, repo_root: PathBuf) -> ToolContext {
     ToolContext {
         repo_root,
-        tool_root: exe_root.clone(),
+        tool_root: exe_root.to_path_buf(),
         run_mode: RunMode::Interactive,
         min: boot.min,
         trace: boot.trace,
