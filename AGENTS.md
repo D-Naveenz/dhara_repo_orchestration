@@ -25,7 +25,7 @@ Cross-product **operator** CLI and TUI for Dhara workspaces: config activation, 
 ### Goals
 
 - One tool version authority (`[workspace.package].version` in this repo’s `Cargo.toml`)
-- Direct CLI for CI/agents; TUI for developers
+- One `drot` binary: Direct CLI for CI/agents; TUI when launched with no subcommand on a TTY
 - Kernel framework + one compile-time **product extension** (default: `drot_dhara_storage`) so hosts stay thin
 - Progress and audit logging that work in both modes (session starts at activation)
 
@@ -45,8 +45,8 @@ Cross-product **operator** CLI and TUI for Dhara workspaces: config activation, 
 |------|------|
 | `crates/drot_kernel` | Framework — base commands, registry, forms, runner, interactive, logging, progress |
 | `crates/drot_dhara_storage` | Storage product **extension** — upserts handlers, ops, filedefs |
-| `crates/drot` | Direct CLI host (`extension-dhara-storage` feature, default on) |
-| `crates/drot_tui` | Interactive TUI host (same feature) |
+| `crates/drot` | Single binary host — Direct CLI + interactive TUI (`extension-dhara-storage` feature, default on) |
+| `crates/drot_tui` | TUI library used by `drot` (no separate binary) |
 | `docs/**` | Deep reference (logging, TUI progress, architecture) |
 
 Hosts link **exactly one** extension via Cargo features at compile time. Kernel registers base command stubs; the extension adds product commands and fills handlers. Commands without a handler or with `is_disabled` are listed but warn on execute.
@@ -60,13 +60,13 @@ Deep reference: [docs/README.md](docs/README.md).
 From this repository root (standalone checkout):
 
 ```bash
-cargo build -p drot -p drot_tui --profile dist
+cargo build -p drot --profile dist
 cargo test -p drot -p drot_kernel -p drot_dhara_storage -p drot_tui
 cargo run -p drot -- -r <host-repo> --yes quality run
-cargo run -p drot_tui --profile dist
+cargo run -p drot --profile dist -- -r <host-repo>
 ```
 
-Binaries land in **this** repo’s `target/dist/` (`drot`, `drot_tui`).
+Binary lands in **this** repo’s `target/dist/drot` (`.exe` on Windows). No subcommand on a TTY opens the TUI; `--help` lists commands.
 
 ### Host submodule layout (agents)
 
@@ -76,9 +76,9 @@ When this repo is pinned under a host (e.g. `dhara_storage/tooling/drot`):
 |---------|------|
 | **Source** (edit here) | `tooling/drot/` (this checkout) |
 | **Run / rebuild** | Host scripts such as `./tooling/scripts/run-drot.ps1` / `ensure-drot-dist` |
-| **Binaries + git stamp** | Host `<repo>/target/dist/{drot,drot_tui}` and `.drot-git-rev` — **not** under the submodule |
+| **Binary + git stamp** | Host `<repo>/target/dist/drot` and `.drot-git-rev` — **not** under the submodule |
 
-Host wrappers set `CARGO_TARGET_DIR=<host>/target` and build `--manifest-path tooling/drot/Cargo.toml --profile dist`. Do **not** search the submodule tree for `drot.exe`. When spawning subagents for DROT work, pass both the source root (`tooling/drot`) and the host artifact path (`target/dist`).
+Host wrappers set `CARGO_TARGET_DIR=<host>/target` and build `--manifest-path tooling/drot/Cargo.toml -p drot --profile dist`. Do **not** search the submodule tree for `drot.exe`. When spawning subagents for DROT work, pass both the source root (`tooling/drot`) and the host artifact path (`target/dist`).
 
 ---
 

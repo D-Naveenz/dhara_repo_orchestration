@@ -4,7 +4,7 @@ use anyhow::{Context, Result, bail};
 
 use crate::runtime_cache::{resolve_and_persist_repository, try_cached_repository};
 
-/// Shared root CLI flags for `drot` and `drot_tui`.
+/// Shared root CLI flags for `drot` (Direct CLI and interactive TUI).
 #[derive(Debug, Clone)]
 pub struct RootArgs {
     pub repository: Option<PathBuf>,
@@ -144,7 +144,7 @@ pub fn parse_root_args(args: Vec<String>, mode: ParseMode) -> Result<RootArgs> {
                 }
                 ParseMode::Interactive => {
                     bail!(
-                        "unexpected argument '{other}' (drot_tui does not take subcommands; use drot for CLI)"
+                        "unexpected argument '{other}' (interactive mode does not take subcommands; omit the subcommand for the TUI or pass a command for Direct CLI)"
                     );
                 }
             },

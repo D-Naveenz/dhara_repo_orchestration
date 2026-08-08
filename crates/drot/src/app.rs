@@ -8,8 +8,10 @@ use drot_kernel::{
     CommandRegistry, LoggingOptions, ParseMode, RootArgs, RunMode, ToolContext,
     activation::run_activation, begin_operator_session, ensure_workspace_state, parse_root_args,
     paths::resolve_exe_root, register_base_commands, register_extensions,
-    resolve_and_persist_repository, set_linked_extension, try_early_repository, workers,
+    resolve_and_persist_repository, set_linked_extension, stale_cached_repository,
+    try_early_repository, workers,
 };
+use drot_tui::{TuiBootParams, can_launch_tui, run_tui};
 
 pub fn run() -> Result<()> {
     #[cfg(feature = "extension-dhara-storage")]
@@ -36,11 +38,24 @@ pub fn run() -> Result<()> {
         return Ok(());
     }
 
-    if cli.show_help || cli.command.is_empty() {
+    if cli.show_help {
         print!("{}", help_text(&registry));
         return Ok(());
     }
 
+    // No subcommand: interactive TUI when a TTY is available; otherwise CLI help for agents/CI.
+    if cli.command.is_empty() {
+        if !can_launch_tui() {
+            print!("{}", help_text(&registry));
+            return Ok(());
+        }
+        return run_interactive(&registry, &cli);
+    }
+
+    run_direct(&registry, &cli)
+}
+
+fn run_direct(registry: &CommandRegistry, cli: &RootArgs) -> Result<()> {
     let exe_root =
         resolve_exe_root(env::current_exe().context("failed to resolve current executable")?)?;
 
@@ -52,7 +67,7 @@ pub fn run() -> Result<()> {
         repo_root.clone(),
         exe_root.clone(),
         run_mode,
-        &cli,
+        cli,
         effective_workers,
     );
 
@@ -79,6 +94,59 @@ pub fn run() -> Result<()> {
     if result.exit_code != 0 {
         std::process::exit(result.exit_code);
     }
+    Ok(())
+}
+
+fn run_interactive(registry: &CommandRegistry, cli: &RootArgs) -> Result<()> {
+    let exe_root =
+        resolve_exe_root(env::current_exe().context("failed to resolve current executable")?)?;
+
+    let run_mode = RunMode::Interactive;
+    let effective_workers = workers::init_global_thread_pool(cli.workers)?;
+
+    let boot = TuiBootParams {
+        min: cli.min,
+        trace: cli.trace,
+        workers: effective_workers,
+        yes: cli.yes,
+        package_dir: cli.package_dir.clone(),
+        output_dir: cli.output_dir.clone(),
+        logs_dir: cli.logs_dir.clone(),
+    };
+
+    if let Some(repo_root) = try_early_repository(&exe_root, cli.repository.clone())? {
+        let context = build_context(
+            repo_root.clone(),
+            exe_root.clone(),
+            run_mode,
+            cli,
+            effective_workers,
+        );
+        let session = begin_operator_session(LoggingOptions::from_context(&context))
+            .context("failed to initialize operator logging")?;
+        let pending_activation = run_activation(&repo_root, cli.yes, run_mode)?.unwrap_or_default();
+        ensure_workspace_state(&context);
+        let result = run_tui(
+            registry,
+            exe_root,
+            boot,
+            Some(context),
+            pending_activation,
+            None,
+        );
+        match result {
+            Ok(()) => session.finish(0, None, None),
+            Err(error) => {
+                session.finish(1, None, Some(&error.to_string()));
+                return Err(error);
+            }
+        }
+    } else {
+        let stale_hint = stale_cached_repository(&exe_root);
+        // Logging starts when the TUI activates a repository (see run_tui / activation path).
+        run_tui(registry, exe_root, boot, None, Vec::new(), stale_hint)?;
+    }
+
     Ok(())
 }
 
@@ -116,7 +184,7 @@ fn resolve_repository_for_direct(
     }
 
     bail!(
-        "repository path is required; pass -r/--repository <path> or run drot_tui to create {}/runtime.toml",
+        "repository path is required; pass -r/--repository <path> or run drot (no subcommand) on a TTY to create {}/runtime.toml",
         exe_root.display()
     );
 }
@@ -140,8 +208,10 @@ fn prompt_repository_path() -> Result<PathBuf> {
 
 fn help_text(registry: &CommandRegistry) -> String {
     format!(
-        "Usage: drot [global-options] <command> [command-options]\n\n\
-         Direct CLI for CI, agents, and scripts. For the interactive TUI, run drot_tui.\n\n\
+        "Usage: drot [global-options] [<command> [command-options]]\n\n\
+         With no subcommand on a TTY, opens the interactive TUI.\n\
+         With a subcommand, runs the Direct CLI (CI, agents, scripts).\n\
+         Use --help to list commands without opening the TUI.\n\n\
          Global options (may appear before or after the command):\n\
            -r, --repository <path>  repository directory or dhara.config.toml (overrides runtime cache)\n\
            --package-dir <path>\n\
@@ -153,7 +223,7 @@ fn help_text(registry: &CommandRegistry) -> String {
            -y, --yes         apply configuration drift without prompting\n\
            -h, --help\n\
            --version\n\n\
-         Repository resolution:\n\
+         Repository resolution (Direct):\n\
            1. -r/--repository when provided\n\
            2. exe_path/runtime.toml when valid\n\
            3. interactive prompt on TTY\n\n\
