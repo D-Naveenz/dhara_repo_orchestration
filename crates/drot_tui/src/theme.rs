@@ -17,6 +17,9 @@ pub const SUCCESS: Color = Color::Rgb(80, 180, 120);
 pub const WARNING: Color = Color::Rgb(220, 180, 80);
 pub const ERROR: Color = Color::Rgb(220, 90, 90);
 pub const SELECTED_BG: Color = Color::Rgb(50, 90, 130);
+pub const COMBO_BG: Color = Color::Rgb(44, 44, 52);
+pub const COMBO_BG_SELECTED: Color = Color::Rgb(52, 52, 62);
+pub const COMBO_BORDER: Color = Color::Rgb(100, 100, 112);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ValidationTone {

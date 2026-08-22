@@ -288,6 +288,36 @@ fn render_options_tab(
     }
 }
 
+fn register_combo_clicks(
+    option_field_clicks: &mut ClickRegionRegistry<OptionFieldAction>,
+    regions: &bios_combo::ComboClickRegions,
+    index: usize,
+) {
+    // Specific combo parts first — registry returns the first matching region.
+    option_field_clicks.register(
+        regions.left,
+        OptionFieldAction::ComboPart {
+            field: index,
+            part: ComboPart::Left,
+        },
+    );
+    option_field_clicks.register(
+        regions.value,
+        OptionFieldAction::ComboPart {
+            field: index,
+            part: ComboPart::Value,
+        },
+    );
+    option_field_clicks.register(
+        regions.right,
+        OptionFieldAction::ComboPart {
+            field: index,
+            part: ComboPart::Right,
+        },
+    );
+    option_field_clicks.register(regions.label, OptionFieldAction::Field(index));
+}
+
 #[allow(clippy::too_many_arguments)]
 fn render_form_field(
     frame: &mut Frame,
@@ -335,28 +365,7 @@ fn render_form_field(
                 embedded_combo,
                 frame.buffer_mut(),
             );
-            option_field_clicks.register(regions.row, OptionFieldAction::Field(index));
-            option_field_clicks.register(
-                regions.left,
-                OptionFieldAction::ComboPart {
-                    field: index,
-                    part: ComboPart::Left,
-                },
-            );
-            option_field_clicks.register(
-                regions.value,
-                OptionFieldAction::ComboPart {
-                    field: index,
-                    part: ComboPart::Value,
-                },
-            );
-            option_field_clicks.register(
-                regions.right,
-                OptionFieldAction::ComboPart {
-                    field: index,
-                    part: ComboPart::Right,
-                },
-            );
+            register_combo_clicks(option_field_clicks, &regions, index);
         }
         (
             FieldKind::Combo(_) | FieldKind::Select(_) | FieldKind::Preset(_),
@@ -371,28 +380,7 @@ fn render_form_field(
                 embedded_combo,
                 frame.buffer_mut(),
             );
-            option_field_clicks.register(regions.row, OptionFieldAction::Field(index));
-            option_field_clicks.register(
-                regions.left,
-                OptionFieldAction::ComboPart {
-                    field: index,
-                    part: ComboPart::Left,
-                },
-            );
-            option_field_clicks.register(
-                regions.value,
-                OptionFieldAction::ComboPart {
-                    field: index,
-                    part: ComboPart::Value,
-                },
-            );
-            option_field_clicks.register(
-                regions.right,
-                OptionFieldAction::ComboPart {
-                    field: index,
-                    part: ComboPart::Right,
-                },
-            );
+            register_combo_clicks(option_field_clicks, &regions, index);
         }
         (
             FieldKind::Text | FieldKind::Path | FieldKind::BrowsablePath { .. },
