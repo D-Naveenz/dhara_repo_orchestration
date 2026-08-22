@@ -13,15 +13,6 @@ pub enum ComboPart {
     Right,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum ComboAction {
-    FocusLeft,
-    FocusValue,
-    FocusRight,
-    CyclePrev,
-    CycleNext,
-}
-
 pub struct ComboClickRegions {
     pub left: Rect,
     pub value: Rect,

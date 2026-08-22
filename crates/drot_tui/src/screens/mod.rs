@@ -240,7 +240,7 @@ fn render_options_tab(
 
     let mut y = fields_area.y;
     let mut current_group: Option<&str> = None;
-    let mut group_start = y;
+    const GROUP_INDENT: u16 = 2;
 
     for (index, field) in command.ui.fields.iter().enumerate() {
         if y >= fields_area.y + fields_area.height {
@@ -248,14 +248,10 @@ fn render_options_tab(
         }
 
         if current_group != field.group {
-            if current_group.is_some() && y > group_start {
-                button_group::render_group_border(
-                    Rect::new(fields_area.x, group_start, fields_area.width, y - group_start),
-                    frame.buffer_mut(),
-                );
+            if current_group.is_some() {
+                y += 1;
             }
             current_group = field.group;
-            group_start = y;
             if let Some(title) = field.group {
                 if y < fields_area.y + fields_area.height {
                     button_group::render_group_title(
@@ -264,15 +260,14 @@ fn render_options_tab(
                         frame.buffer_mut(),
                     );
                     y += 1;
-                    group_start = y;
                 }
             }
         }
 
         let row = Rect::new(
-            fields_area.x.saturating_add(1),
+            fields_area.x.saturating_add(GROUP_INDENT),
             y,
-            fields_area.width.saturating_sub(2),
+            fields_area.width.saturating_sub(GROUP_INDENT),
             1,
         );
         render_form_field(
@@ -290,13 +285,6 @@ fn render_options_tab(
             option_field_clicks,
         );
         y += 1;
-    }
-
-    if current_group.is_some() && y > group_start {
-        button_group::render_group_border(
-            Rect::new(fields_area.x, group_start, fields_area.width, y - group_start),
-            frame.buffer_mut(),
-        );
     }
 }
 
