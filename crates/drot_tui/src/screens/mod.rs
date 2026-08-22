@@ -370,11 +370,12 @@ fn render_form_field(
         }
         (FieldKind::Radio(options), FormValue::Select(sel)) => {
             let label = options.get(*sel).copied().unwrap_or("");
+            let row_selected = selected && content_focused;
             let marquee_key = format!("{command_id}:{index}");
             let mut params = ComboRenderParams {
                 field,
                 value: label,
-                selected,
+                selected: row_selected,
                 embedded: embedded_combo,
                 marquee: combo_marquee,
                 marquee_key: &marquee_key,
@@ -393,11 +394,12 @@ fn render_form_field(
             FormValue::Select(sel),
         ) => {
             let label = preset_label(&field.kind, *sel);
+            let row_selected = selected && content_focused;
             let marquee_key = format!("{command_id}:{index}");
             let mut params = ComboRenderParams {
                 field,
                 value: label,
-                selected,
+                selected: row_selected,
                 embedded: embedded_combo,
                 marquee: combo_marquee,
                 marquee_key: &marquee_key,

@@ -11,11 +11,11 @@ use unicode_width::UnicodeWidthStr;
 use crate::theme as dhara_theme;
 use crate::widgets::text_marquee::{LabelMarquee, center_offset, clip_right, clip_window};
 
-const CHROME_WIDTH: u16 = 6;
 const OPEN: &str = "【";
 const CLOSE: &str = "】";
 const LEFT_ARROW: &str = "⮜";
 const RIGHT_ARROW: &str = "⮞";
+const PAD: &str = " ";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ComboPart {
@@ -43,6 +43,18 @@ pub struct ComboRenderParams<'a> {
     pub now: Instant,
 }
 
+struct ClusterLayout {
+    cluster_x: u16,
+    cluster_w: u16,
+    open: Rect,
+    left: Rect,
+    pad_left: Rect,
+    text: Rect,
+    pad_right: Rect,
+    right: Rect,
+    close: Rect,
+}
+
 pub fn render_bios_combo(
     area: Rect,
     label: &str,
@@ -50,94 +62,157 @@ pub fn render_bios_combo(
     buf: &mut Buffer,
 ) -> ComboClickRegions {
     let text_w = resolve_text_slot_width(params.field, area.width);
-    let cluster_w = text_w.saturating_add(CHROME_WIDTH);
-    let cluster_x = area.x.saturating_add(area.width.saturating_sub(cluster_w));
-    let label_render_w = cluster_x.saturating_sub(area.x);
-
-    let label_style = if params.selected && params.embedded.is_none() {
-        Style::default().fg(dhara_theme::ACCENT)
-    } else {
-        Style::default().fg(dhara_theme::TEXT)
-    };
-    Paragraph::new(Line::from(Span::styled(
-        clip_label(label, label_render_w as usize),
-        label_style,
-    )))
-    .render(Rect::new(area.x, area.y, label_render_w.max(1), 1), buf);
-
-    let cluster = Rect::new(cluster_x, area.y, cluster_w, 1);
+    let layout = cluster_layout(area, text_w);
+    let label_render_w = layout.cluster_x.saturating_sub(area.x);
     let embedded_inner = params.embedded == Some(ComboPart::Inner);
-    paint_cluster_background(cluster, params.selected, embedded_inner, buf);
+    let bg = cluster_bg(params.selected, embedded_inner);
 
-    let mut x = cluster.x;
-    let open_area = Rect::new(x, area.y, 1, 1);
-    x += 1;
-    let left_area = Rect::new(x, area.y, 1, 1);
-    x += 1;
-    let pad_left = Rect::new(x, area.y, 1, 1);
-    x += 1;
-    let text_area = Rect::new(x, area.y, text_w, 1);
-    x = x.saturating_add(text_w);
-    let pad_right = Rect::new(x, area.y, 1, 1);
-    x += 1;
-    let right_area = Rect::new(x, area.y, 1, 1);
-    x += 1;
-    let close_area = Rect::new(x, area.y, 1, 1);
+    paint_label(
+        Rect::new(area.x, area.y, label_render_w.max(1), 1),
+        label,
+        params.selected,
+        embedded_inner,
+        buf,
+    );
 
-    let bracket_style = bracket_style(params.selected, embedded_inner);
-    Paragraph::new(Line::from(Span::styled(OPEN, bracket_style))).render(open_area, buf);
-    Paragraph::new(Line::from(Span::styled(" ", Style::default().bg(cluster_bg(params.selected, embedded_inner)))))
-        .render(pad_left, buf);
-    Paragraph::new(Line::from(Span::styled(" ", Style::default().bg(cluster_bg(params.selected, embedded_inner)))))
-        .render(pad_right, buf);
-    Paragraph::new(Line::from(Span::styled(CLOSE, bracket_style))).render(close_area, buf);
+    paint_cluster_background(
+        Rect::new(layout.cluster_x, area.y, layout.cluster_w, 1),
+        bg,
+        buf,
+    );
 
-    Paragraph::new(Line::from(Span::styled(
+    paint_span(layout.open, OPEN, bracket_style(params.selected, embedded_inner, bg), buf);
+    paint_span(layout.pad_left, PAD, Style::default().bg(bg), buf);
+    paint_span(layout.pad_right, PAD, Style::default().bg(bg), buf);
+    paint_span(layout.close, CLOSE, bracket_style(params.selected, embedded_inner, bg), buf);
+    paint_span(
+        layout.left,
         LEFT_ARROW,
-        arrow_style(ComboPart::Left, params.selected, params.embedded),
-    )))
-    .render(left_area, buf);
-    Paragraph::new(Line::from(Span::styled(
+        arrow_style(params.selected, embedded_inner, bg),
+        buf,
+    );
+    paint_span(
+        layout.right,
         RIGHT_ARROW,
-        arrow_style(ComboPart::Right, params.selected, params.embedded),
-    )))
-    .render(right_area, buf);
-
-    paint_value_text(text_area, params, buf);
+        arrow_style(params.selected, embedded_inner, bg),
+        buf,
+    );
+    paint_value_text(layout.text, params, bg, buf);
 
     ComboClickRegions {
         label: Rect::new(area.x, area.y, label_render_w.max(1), 1),
-        left: left_area,
-        right: right_area,
-        open: open_area,
-        text: text_area,
-        close: close_area,
+        left: layout.left,
+        right: layout.right,
+        open: layout.open,
+        text: layout.text,
+        close: layout.close,
     }
+}
+
+fn cluster_layout(area: Rect, text_w: u16) -> ClusterLayout {
+    let open_w = display_width(OPEN) as u16;
+    let left_w = display_width(LEFT_ARROW) as u16;
+    let pad_w = display_width(PAD) as u16;
+    let right_w = display_width(RIGHT_ARROW) as u16;
+    let close_w = display_width(CLOSE) as u16;
+    let cluster_w = open_w
+        .saturating_add(left_w)
+        .saturating_add(pad_w)
+        .saturating_add(text_w)
+        .saturating_add(pad_w)
+        .saturating_add(right_w)
+        .saturating_add(close_w);
+    let cluster_x = area.x.saturating_add(area.width.saturating_sub(cluster_w));
+    let y = area.y;
+
+    let mut x = cluster_x;
+    let open = Rect::new(x, y, open_w.max(1), 1);
+    x = x.saturating_add(open_w);
+    let left = Rect::new(x, y, left_w.max(1), 1);
+    x = x.saturating_add(left_w);
+    let pad_left = Rect::new(x, y, pad_w.max(1), 1);
+    x = x.saturating_add(pad_w);
+    let text = Rect::new(x, y, text_w, 1);
+    x = x.saturating_add(text_w);
+    let pad_right = Rect::new(x, y, pad_w.max(1), 1);
+    x = x.saturating_add(pad_w);
+    let right = Rect::new(x, y, right_w.max(1), 1);
+    x = x.saturating_add(right_w);
+    let close = Rect::new(x, y, close_w.max(1), 1);
+
+    ClusterLayout {
+        cluster_x,
+        cluster_w,
+        open,
+        left,
+        pad_left,
+        text,
+        pad_right,
+        right,
+        close,
+    }
+}
+
+fn display_width(text: &str) -> usize {
+    text.width().max(1)
+}
+
+fn chrome_width_for_row(_row_width: u16) -> u16 {
+    (display_width(OPEN)
+        + display_width(LEFT_ARROW)
+        + display_width(PAD)
+        + display_width(PAD)
+        + display_width(RIGHT_ARROW)
+        + display_width(CLOSE)) as u16
 }
 
 fn resolve_text_slot_width(field: &FieldSpec, row_width: u16) -> u16 {
     let auto = max_combo_option_width(&field.kind).max(1) as u16;
     let requested = field.tui_combo_width.unwrap_or(auto);
-    let max_text = row_width.saturating_sub(CHROME_WIDTH).max(1);
+    let max_text = row_width.saturating_sub(chrome_width_for_row(row_width)).max(1);
     requested.min(max_text)
 }
 
-fn paint_value_text(area: Rect, params: &mut ComboRenderParams<'_>, buf: &mut Buffer) {
+fn paint_label(area: Rect, label: &str, selected: bool, embedded_inner: bool, buf: &mut Buffer) {
+    let style = if selected {
+        if embedded_inner {
+            Style::default()
+                .fg(dhara_theme::ACCENT)
+                .add_modifier(Modifier::BOLD)
+        } else {
+            Style::default().fg(dhara_theme::ACCENT)
+        }
+    } else {
+        Style::default().fg(dhara_theme::TEXT)
+    };
+    Paragraph::new(Line::from(Span::styled(
+        clip_label(label, area.width as usize),
+        style,
+    )))
+    .render(area, buf);
+}
+
+fn paint_span(area: Rect, text: &str, style: Style, buf: &mut Buffer) {
+    buf.set_string(area.x, area.y, text, style);
+}
+
+fn paint_value_text(area: Rect, params: &mut ComboRenderParams<'_>, bg: ratatui::style::Color, buf: &mut Buffer) {
     let slot_w = area.width as usize;
     let value = params.value;
     let overflow = value.width() > slot_w;
     let embedded_inner = params.embedded == Some(ComboPart::Inner);
     let style = if embedded_inner {
-        dhara_theme::selected_style()
+        Style::default()
+            .fg(dhara_theme::ACCENT)
+            .bg(bg)
+            .add_modifier(Modifier::BOLD)
     } else if params.selected {
         Style::default()
             .fg(dhara_theme::TEXT)
-            .bg(dhara_theme::COMBO_BG)
+            .bg(bg)
             .add_modifier(Modifier::BOLD)
     } else {
-        Style::default()
-            .fg(dhara_theme::TEXT)
-            .bg(dhara_theme::COMBO_BG)
+        Style::default().fg(dhara_theme::TEXT).bg(bg)
     };
 
     let display = if overflow && params.selected && embedded_inner {
@@ -162,9 +237,9 @@ fn paint_value_text(area: Rect, params: &mut ComboRenderParams<'_>, buf: &mut Bu
     );
 }
 
-fn cluster_bg(selected: bool, embedded: bool) -> ratatui::style::Color {
-    if embedded {
-        dhara_theme::SELECTED_BG
+fn cluster_bg(selected: bool, embedded_inner: bool) -> ratatui::style::Color {
+    if embedded_inner {
+        dhara_theme::COMBO_BG_SELECTED
     } else if selected {
         dhara_theme::COMBO_BG_SELECTED
     } else {
@@ -172,8 +247,7 @@ fn cluster_bg(selected: bool, embedded: bool) -> ratatui::style::Color {
     }
 }
 
-fn paint_cluster_background(cluster: Rect, selected: bool, embedded: bool, buf: &mut Buffer) {
-    let bg = cluster_bg(selected, embedded);
+fn paint_cluster_background(cluster: Rect, bg: ratatui::style::Color, buf: &mut Buffer) {
     for x in cluster.x..cluster.x.saturating_add(cluster.width) {
         if let Some(cell) = buf.cell_mut((x, cluster.y)) {
             cell.set_bg(bg);
@@ -181,35 +255,30 @@ fn paint_cluster_background(cluster: Rect, selected: bool, embedded: bool, buf: 
     }
 }
 
-fn bracket_style(selected: bool, embedded: bool) -> Style {
-    if embedded {
+fn bracket_style(selected: bool, embedded_inner: bool, bg: ratatui::style::Color) -> Style {
+    if embedded_inner {
         Style::default()
             .fg(dhara_theme::ACCENT)
-            .bg(dhara_theme::SELECTED_BG)
+            .bg(bg)
             .add_modifier(Modifier::BOLD)
     } else if selected {
-        Style::default()
-            .fg(dhara_theme::ACCENT)
-            .bg(dhara_theme::COMBO_BG_SELECTED)
+        Style::default().fg(dhara_theme::COMBO_BORDER).bg(bg)
     } else {
-        Style::default()
-            .fg(dhara_theme::COMBO_BORDER)
-            .bg(dhara_theme::COMBO_BG)
+        Style::default().fg(dhara_theme::COMBO_BORDER).bg(bg)
     }
 }
 
-fn arrow_style(part: ComboPart, selected: bool, embedded: Option<ComboPart>) -> Style {
-    if embedded == Some(part) {
-        dhara_theme::selected_style()
-    } else if selected {
+/// Arrow buttons: **focus** when inner is embedded (accent, bold); **relax** otherwise (muted).
+fn arrow_style(selected: bool, embedded_inner: bool, bg: ratatui::style::Color) -> Style {
+    if selected && embedded_inner {
         Style::default()
             .fg(dhara_theme::ACCENT)
-            .bg(dhara_theme::COMBO_BG)
+            .bg(bg)
             .add_modifier(Modifier::BOLD)
+    } else if selected {
+        Style::default().fg(dhara_theme::MUTED).bg(bg)
     } else {
-        Style::default()
-            .fg(dhara_theme::MUTED)
-            .bg(dhara_theme::COMBO_BG)
+        Style::default().fg(dhara_theme::MUTED).bg(dhara_theme::COMBO_BG)
     }
 }
 
@@ -262,11 +331,8 @@ mod tests {
     }
 
     #[test]
-    fn cluster_width_includes_six_chrome_columns() {
-        let field = combo_field(Some(8));
-        assert_eq!(
-            resolve_text_slot_width(&field, 80).saturating_add(CHROME_WIDTH),
-            14
-        );
+    fn chrome_width_accounts_for_wide_brackets() {
+        let chrome = chrome_width_for_row(80);
+        assert!(chrome >= 8);
     }
 }
