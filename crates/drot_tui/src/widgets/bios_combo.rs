@@ -48,10 +48,10 @@ struct ClusterLayout {
     cluster_w: u16,
     open: Rect,
     left: Rect,
-    pad_left: Rect,
     text: Rect,
-    pad_right: Rect,
+    pad_before_right: Rect,
     right: Rect,
+    pad_before_close: Rect,
     close: Rect,
 }
 
@@ -65,13 +65,14 @@ pub fn render_bios_combo(
     let layout = cluster_layout(area, text_w);
     let label_render_w = layout.cluster_x.saturating_sub(area.x);
     let embedded_inner = params.embedded == Some(ComboPart::Inner);
-    let bg = cluster_bg(params.selected, embedded_inner);
+    let inner_active = params.selected && embedded_inner;
+    let bg = cluster_bg(params.selected, inner_active);
 
     paint_label(
         Rect::new(area.x, area.y, label_render_w.max(1), 1),
         label,
         params.selected,
-        embedded_inner,
+        inner_active,
         buf,
     );
 
@@ -81,23 +82,33 @@ pub fn render_bios_combo(
         buf,
     );
 
-    paint_span(layout.open, OPEN, bracket_style(params.selected, embedded_inner, bg), buf);
-    paint_span(layout.pad_left, PAD, Style::default().bg(bg), buf);
-    paint_span(layout.pad_right, PAD, Style::default().bg(bg), buf);
-    paint_span(layout.close, CLOSE, bracket_style(params.selected, embedded_inner, bg), buf);
+    paint_span(layout.open, OPEN, bracket_style(params.selected, inner_active, bg), buf);
     paint_span(
         layout.left,
         LEFT_ARROW,
-        arrow_style(params.selected, embedded_inner, bg),
+        arrow_style(params.selected, inner_active, bg),
         buf,
     );
+    paint_span(layout.pad_before_right, PAD, Style::default().bg(bg), buf);
     paint_span(
         layout.right,
         RIGHT_ARROW,
-        arrow_style(params.selected, embedded_inner, bg),
+        arrow_style(params.selected, inner_active, bg),
         buf,
     );
-    paint_value_text(layout.text, params, bg, buf);
+    paint_span(
+        layout.pad_before_close,
+        PAD,
+        Style::default().bg(bg),
+        buf,
+    );
+    paint_span(
+        layout.close,
+        CLOSE,
+        bracket_style(params.selected, inner_active, bg),
+        buf,
+    );
+    paint_value_text(layout.text, params, inner_active, bg, buf);
 
     ComboClickRegions {
         label: Rect::new(area.x, area.y, label_render_w.max(1), 1),
@@ -117,10 +128,10 @@ fn cluster_layout(area: Rect, text_w: u16) -> ClusterLayout {
     let close_w = display_width(CLOSE) as u16;
     let cluster_w = open_w
         .saturating_add(left_w)
-        .saturating_add(pad_w)
         .saturating_add(text_w)
         .saturating_add(pad_w)
         .saturating_add(right_w)
+        .saturating_add(pad_w)
         .saturating_add(close_w);
     let cluster_x = area.x.saturating_add(area.width.saturating_sub(cluster_w));
     let y = area.y;
@@ -130,14 +141,14 @@ fn cluster_layout(area: Rect, text_w: u16) -> ClusterLayout {
     x = x.saturating_add(open_w);
     let left = Rect::new(x, y, left_w.max(1), 1);
     x = x.saturating_add(left_w);
-    let pad_left = Rect::new(x, y, pad_w.max(1), 1);
-    x = x.saturating_add(pad_w);
     let text = Rect::new(x, y, text_w, 1);
     x = x.saturating_add(text_w);
-    let pad_right = Rect::new(x, y, pad_w.max(1), 1);
+    let pad_before_right = Rect::new(x, y, pad_w.max(1), 1);
     x = x.saturating_add(pad_w);
     let right = Rect::new(x, y, right_w.max(1), 1);
     x = x.saturating_add(right_w);
+    let pad_before_close = Rect::new(x, y, pad_w.max(1), 1);
+    x = x.saturating_add(pad_w);
     let close = Rect::new(x, y, close_w.max(1), 1);
 
     ClusterLayout {
@@ -145,10 +156,10 @@ fn cluster_layout(area: Rect, text_w: u16) -> ClusterLayout {
         cluster_w,
         open,
         left,
-        pad_left,
         text,
-        pad_right,
+        pad_before_right,
         right,
+        pad_before_close,
         close,
     }
 }
@@ -173,9 +184,9 @@ fn resolve_text_slot_width(field: &FieldSpec, row_width: u16) -> u16 {
     requested.min(max_text)
 }
 
-fn paint_label(area: Rect, label: &str, selected: bool, embedded_inner: bool, buf: &mut Buffer) {
+fn paint_label(area: Rect, label: &str, selected: bool, inner_active: bool, buf: &mut Buffer) {
     let style = if selected {
-        if embedded_inner {
+        if inner_active {
             Style::default()
                 .fg(dhara_theme::ACCENT)
                 .add_modifier(Modifier::BOLD)
@@ -196,12 +207,17 @@ fn paint_span(area: Rect, text: &str, style: Style, buf: &mut Buffer) {
     buf.set_string(area.x, area.y, text, style);
 }
 
-fn paint_value_text(area: Rect, params: &mut ComboRenderParams<'_>, bg: ratatui::style::Color, buf: &mut Buffer) {
+fn paint_value_text(
+    area: Rect,
+    params: &mut ComboRenderParams<'_>,
+    inner_active: bool,
+    bg: ratatui::style::Color,
+    buf: &mut Buffer,
+) {
     let slot_w = area.width as usize;
     let value = params.value;
     let overflow = value.width() > slot_w;
-    let embedded_inner = params.embedded == Some(ComboPart::Inner);
-    let style = if embedded_inner {
+    let style = if inner_active {
         Style::default()
             .fg(dhara_theme::ACCENT)
             .bg(bg)
@@ -215,7 +231,7 @@ fn paint_value_text(area: Rect, params: &mut ComboRenderParams<'_>, bg: ratatui:
         Style::default().fg(dhara_theme::TEXT).bg(bg)
     };
 
-    let display = if overflow && params.selected && embedded_inner {
+    let display = if overflow && inner_active {
         let offset = params.marquee.advance(params.marquee_key, value, slot_w, params.now);
         clip_window(value, offset, slot_w)
     } else if overflow {
@@ -237,10 +253,8 @@ fn paint_value_text(area: Rect, params: &mut ComboRenderParams<'_>, bg: ratatui:
     );
 }
 
-fn cluster_bg(selected: bool, embedded_inner: bool) -> ratatui::style::Color {
-    if embedded_inner {
-        dhara_theme::COMBO_BG_SELECTED
-    } else if selected {
+fn cluster_bg(selected: bool, inner_active: bool) -> ratatui::style::Color {
+    if inner_active || selected {
         dhara_theme::COMBO_BG_SELECTED
     } else {
         dhara_theme::COMBO_BG
@@ -255,8 +269,8 @@ fn paint_cluster_background(cluster: Rect, bg: ratatui::style::Color, buf: &mut 
     }
 }
 
-fn bracket_style(selected: bool, embedded_inner: bool, bg: ratatui::style::Color) -> Style {
-    if embedded_inner {
+fn bracket_style(selected: bool, inner_active: bool, bg: ratatui::style::Color) -> Style {
+    if inner_active {
         Style::default()
             .fg(dhara_theme::ACCENT)
             .bg(bg)
@@ -268,9 +282,9 @@ fn bracket_style(selected: bool, embedded_inner: bool, bg: ratatui::style::Color
     }
 }
 
-/// Arrow buttons: **focus** when inner is embedded (accent, bold); **relax** otherwise (muted).
-fn arrow_style(selected: bool, embedded_inner: bool, bg: ratatui::style::Color) -> Style {
-    if selected && embedded_inner {
+/// Arrow buttons: **focus** when inner is active (accent, bold); **relax** otherwise (muted).
+fn arrow_style(selected: bool, inner_active: bool, bg: ratatui::style::Color) -> Style {
+    if inner_active {
         Style::default()
             .fg(dhara_theme::ACCENT)
             .bg(bg)
