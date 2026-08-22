@@ -14,6 +14,7 @@ pub struct FooterContext<'a> {
     pub shell_focus: &'a ShellFocus,
     pub modal_hints: Option<Vec<(&'static str, &'static str)>>,
     pub editing_form: bool,
+    pub embedded_editing: bool,
 }
 
 pub fn footer_hints(ctx: &FooterContext<'_>) -> Vec<(&'static str, &'static str)> {
@@ -41,6 +42,12 @@ pub fn footer_hints(ctx: &FooterContext<'_>) -> Vec<(&'static str, &'static str)
             hints.push(("Click", "tab"));
         }
         Some(TuiFocus::TabContent) => match ctx.state.main_tab {
+            MainTab::Options if ctx.embedded_editing => {
+                hints.push(("Tab", "exit field"));
+                hints.push(("←→", "cycle"));
+                hints.push(("Type", "edit"));
+                hints.push(("Esc", "cancel"));
+            }
             MainTab::Options if ctx.editing_form => {
                 hints.push(("Type", "edit"));
                 hints.push(("←→", "cycle select"));
