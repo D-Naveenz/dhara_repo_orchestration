@@ -10,7 +10,10 @@ use tracing::debug;
 use zip::ZipArchive;
 
 use crate::logging::log_module_step_debug;
-use crate::output::{emit_stderr_line, emit_stdout_line, set_active_child};
+use crate::output::{
+    emit_stdout_line, emit_subprocess_stderr_line, emit_subprocess_stdout_line,
+    emit_subprocess_step_succeeded, set_active_child,
+};
 
 fn command_display(program: &str, args: &[String]) -> String {
     if args.is_empty() {
@@ -41,6 +44,7 @@ pub fn run_command(program: &str, args: &[String], cwd: &Path) -> Result<()> {
         status = %status,
         "command completed successfully"
     );
+    emit_subprocess_step_succeeded();
     Ok(())
 }
 
@@ -82,6 +86,7 @@ pub fn run_command_with_env_redacted(
         status = %status,
         "command completed successfully"
     );
+    emit_subprocess_step_succeeded();
     Ok(())
 }
 
@@ -277,10 +282,10 @@ fn run_command_capture<'a>(
         .with_context(|| format!("failed to start '{program}'"))?;
 
     for line in String::from_utf8_lossy(&output.stdout).lines() {
-        emit_stdout_line(line.to_owned());
+        emit_subprocess_stdout_line(line.to_owned());
     }
     for line in String::from_utf8_lossy(&output.stderr).lines() {
-        emit_stderr_line(line.to_owned());
+        emit_subprocess_stderr_line(line.to_owned());
     }
 
     Ok(output)
@@ -296,9 +301,9 @@ where
                 break;
             };
             if stdout {
-                emit_stdout_line(line);
+                emit_subprocess_stdout_line(line);
             } else {
-                emit_stderr_line(line);
+                emit_subprocess_stderr_line(line);
             }
         }
     })
