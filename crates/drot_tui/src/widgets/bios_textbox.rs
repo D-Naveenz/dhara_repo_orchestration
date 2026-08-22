@@ -1,6 +1,6 @@
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
-use ratatui::style::Style;
+use ratatui::style::{Modifier, Style};
 use ratatui::text::{Line, Span};
 use ratatui::widgets::{Paragraph, Widget};
 
@@ -19,27 +19,39 @@ pub fn render_bios_textbox(
     embedded: bool,
     buf: &mut Buffer,
 ) -> TextboxClickRegions {
-    let prefix = if selected { "▸ " } else { "  " };
-    let label_text = format!("{prefix}{label} ");
+    let prompt = if selected {
+        Span::styled("> ", Style::default().fg(dhara_theme::ACCENT).add_modifier(Modifier::BOLD))
+    } else {
+        Span::raw("  ")
+    };
+    let label_style = if selected {
+        Style::default().fg(dhara_theme::ACCENT)
+    } else {
+        Style::default().fg(dhara_theme::TEXT)
+    };
+    let label_text = format!("{label} ");
+    let prefix_width: u16 = 2;
     let label_width = label_text.chars().count() as u16;
 
-    Paragraph::new(Line::from(Span::styled(
-        label_text,
-        if selected {
-            dhara_theme::selected_style()
-        } else {
-            Style::default().fg(dhara_theme::TEXT)
-        },
-    )))
-    .render(Rect::new(area.x, area.y, label_width.min(area.width), 1), buf);
+    Paragraph::new(Line::from(vec![
+        prompt,
+        Span::styled(label_text, label_style),
+    ]))
+    .render(
+        Rect::new(area.x, area.y, (prefix_width + label_width).min(area.width), 1),
+        buf,
+    );
 
-    let input_x = area.x.saturating_add(label_width.min(area.width));
-    let input_w = area.width.saturating_sub(label_width.min(area.width)).max(4);
-    let prompt = ">_";
+    let input_x = area.x.saturating_add((prefix_width + label_width).min(area.width));
+    let input_w = area
+        .width
+        .saturating_sub((prefix_width + label_width).min(area.width))
+        .max(4);
+    let input_prompt = ">_";
     let display = if value.is_empty() {
-        prompt.to_owned()
+        input_prompt.to_owned()
     } else {
-        format!("{prompt}{value}")
+        format!("{input_prompt}{value}")
     };
 
     let style = if embedded {
@@ -68,6 +80,9 @@ fn truncate(text: &str, max_chars: usize) -> String {
     } else if max_chars == 0 {
         String::new()
     } else {
-        text.chars().take(max_chars.saturating_sub(1)).collect::<String>() + "…"
+        text.chars()
+            .take(max_chars.saturating_sub(1))
+            .collect::<String>()
+            + "…"
     }
 }

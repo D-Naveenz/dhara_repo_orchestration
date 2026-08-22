@@ -2,7 +2,7 @@ use std::io::{self, IsTerminal, Stdout};
 use std::path::{Path, PathBuf};
 use std::sync::mpsc::{self, Receiver};
 use std::sync::{Arc, Mutex};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use anyhow::{Context, Result};
 use crossterm::event::{
@@ -72,6 +72,7 @@ pub struct DharaTui {
     pub task_tree_nodes:
         Vec<ratatui_interact::components::TreeNode<crate::adapters::task_tree::TaskTreeData>>,
     pub tree_label_marquee: scrollable_tree::TreeLabelMarquee,
+    pub combo_marquee: crate::widgets::text_marquee::LabelMarquee,
     pub tab_view_state: TabViewState,
     pub info_scroll: ScrollableContentState,
     pub trouble_scroll: ScrollableContentState,
@@ -192,6 +193,7 @@ fn build_app(
         task_tree_widget: WidgetTreeState::new(),
         task_tree_nodes,
         tree_label_marquee: scrollable_tree::TreeLabelMarquee::new(),
+        combo_marquee: crate::widgets::text_marquee::LabelMarquee::new(),
         tab_view_state: TabViewState::new(4),
         info_scroll: ScrollableContentState::new(Vec::new()),
         trouble_scroll: ScrollableContentState::new(Vec::new()),
@@ -339,6 +341,8 @@ fn draw(frame: &mut ratatui::Frame<'_>, app: &mut DharaTui) {
         &mut app.option_field_clicks,
         &mut app.reset_btn,
         &mut app.shell_clicks,
+        &mut app.combo_marquee,
+        Instant::now(),
     );
     app.tab_clicks = center_clicks.registry;
     let center_chunks =
@@ -951,7 +955,7 @@ fn enter_selected_field(app: &mut DharaTui) {
         FieldKind::Combo(_) | FieldKind::Select(_) | FieldKind::Preset(_) | FieldKind::Radio(_) => {
             app.embedded_focus = Some(EmbeddedFocus::Combo {
                 field_index: app.form_field,
-                part: crate::widgets::ComboPart::Value,
+                part: crate::widgets::ComboPart::Inner,
             });
         }
         FieldKind::Boolean => {
@@ -996,7 +1000,7 @@ fn handle_option_field_action(app: &mut DharaTui, action: OptionFieldAction) {
                         | FieldKind::Radio(_) => {
                             app.embedded_focus = Some(EmbeddedFocus::Combo {
                                 field_index: index,
-                                part: crate::widgets::ComboPart::Value,
+                                part: crate::widgets::ComboPart::Inner,
                             });
                         }
                     }
@@ -1005,11 +1009,20 @@ fn handle_option_field_action(app: &mut DharaTui, action: OptionFieldAction) {
         }
         OptionFieldAction::ComboPart { field, part } => {
             app.form_field = field;
-            app.embedded_focus = Some(EmbeddedFocus::Combo { field_index: field, part });
             if matches!(part, crate::widgets::ComboPart::Left) {
+                app.embedded_focus = Some(EmbeddedFocus::Combo {
+                    field_index: field,
+                    part: crate::widgets::ComboPart::Inner,
+                });
                 cycle_option_select(app, -1);
             } else if matches!(part, crate::widgets::ComboPart::Right) {
+                app.embedded_focus = Some(EmbeddedFocus::Combo {
+                    field_index: field,
+                    part: crate::widgets::ComboPart::Inner,
+                });
                 cycle_option_select(app, 1);
+            } else {
+                app.embedded_focus = Some(EmbeddedFocus::Combo { field_index: field, part });
             }
             apply_preset_if_selected(&mut app.state, &app.registry, field);
         }

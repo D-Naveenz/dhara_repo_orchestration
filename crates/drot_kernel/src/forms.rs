@@ -336,6 +336,22 @@ pub fn preset_label(kind: &FieldKind, index: usize) -> &str {
     select_options(kind).get(index).copied().unwrap_or("")
 }
 
+/// Longest display label width across combo-like option lists (character count).
+pub fn max_combo_option_width(kind: &FieldKind) -> usize {
+    if let Some(options) = preset_options(kind) {
+        return options
+            .iter()
+            .map(|option| option.label.chars().count())
+            .max()
+            .unwrap_or(1);
+    }
+    select_options(kind)
+        .iter()
+        .map(|option| option.chars().count())
+        .max()
+        .unwrap_or(1)
+}
+
 #[cfg(test)]
 mod tests {
     use std::sync::Arc;
@@ -386,6 +402,7 @@ mod tests {
                 group: None,
                 invert_switch: false,
                 tui_only: false,
+                tui_combo_width: None,
             },
             FieldSpec {
                 key: "configuration",
@@ -399,6 +416,7 @@ mod tests {
                 group: None,
                 invert_switch: false,
                 tui_only: false,
+                tui_combo_width: None,
             },
             FieldSpec {
                 key: "check",
@@ -412,6 +430,7 @@ mod tests {
                 group: None,
                 invert_switch: false,
                 tui_only: false,
+                tui_combo_width: None,
             },
         ]);
 
@@ -442,6 +461,7 @@ mod tests {
             group: None,
             invert_switch: true,
             tui_only: false,
+            tui_combo_width: None,
         }]);
 
         let tui_form = CommandForm::from_command_tui(&command);
@@ -467,10 +487,28 @@ mod tests {
             group: None,
             invert_switch: true,
             tui_only: false,
+            tui_combo_width: None,
         }]);
 
         let form = CommandForm::from_command_tui(&command);
         assert_eq!(form.boolean_at(&command, "step_verify"), Some(false));
+    }
+
+    #[test]
+    fn max_combo_option_width_uses_longest_preset_label() {
+        use crate::command::{FieldKind, PresetOption};
+
+        let kind = FieldKind::Preset(&[
+            PresetOption {
+                id: "a",
+                label: "Short",
+            },
+            PresetOption {
+                id: "b",
+                label: "Production parity",
+            },
+        ]);
+        assert_eq!(super::max_combo_option_width(&kind), "Production parity".chars().count());
     }
 
     #[test]
@@ -487,6 +525,7 @@ mod tests {
             group: None,
             invert_switch: false,
             tui_only: false,
+            tui_combo_width: None,
         }]);
 
         let form = CommandForm::from_command(&command);

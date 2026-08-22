@@ -17,6 +17,7 @@ The TUI therefore uses **TUI-specific defaults and presets** that only affect fo
 | `invert_switch` | — | Checked step **includes** the step; unchecked emits the skip flag (e.g. `--skip-verify`) |
 | `group` | — | Section heading in the Options tab |
 | `tui_only` | Not serialized | Preset picker and other UI-only fields |
+| `tui_combo_width` | Ignored | Optional inner text slot width; marquee when value overflows |
 | `FieldKind::Preset` | — | Workflow preset row; applying a preset sets other fields |
 
 Kernel hooks ([`ProductHooks`](../crates/drot_kernel/src/product.rs)) let the product extension apply presets after TUI init:
@@ -49,10 +50,32 @@ Default on open / Reset: **Dry run**.
 
 ## Widget kit and embedded focus
 
-Grouped fields render in the Options tab with BIOS-style controls:
+Grouped fields render in the Options tab with BIOS-style controls.
 
-- **Combo / select** — bracketed value with ←→ cycling; click enters embedded focus on arrow or value parts
-- **Text / path** — boxed input; Enter or click to edit inline
+### Combo layout and focus
+
+Each combo row is **caption left**, **inner cluster right-aligned**:
+
+```
+Label                    【 ⮜ _ {value slot} _ ⮞ 】
+```
+
+| Region | Click / focus | Visual |
+| ------ | ------------- | ------ |
+| Label | Enters **inner** focus | Accent fg when row selected; **no chevron prefix** |
+| `【`, value slot, `】` | **Inner** focus | Inner highlight; brackets and text accent |
+| `⮜`, `⮞` | **Buttons** — cycle prev/next | Distinct button styling; always whole symbols |
+
+**Sizing:**
+
+- Unspecified (`tui_combo_width: None`): text slot = longest option label width; total cluster = slot + 6 chrome columns (`【⮜` + pad + slot + pad + `⮞】`).
+- Specified (`tui_combo_width: Some(n)`): text slot = `n`; marquee when the current value is wider.
+
+Pad spaces beside the value slot are fixed and **not** part of marquee scrolling. Short values are **center-aligned** inside the slot.
+
+### Other controls
+
+- **Text / path** — boxed `【>_…】` input; selected row shows a bold **`>`** label prefix (coding/terminal cue)
 - **Boolean steps** — checkbox; inverted switches mean “include step” when checked
 - **Preset** — combo of workflow presets; changing preset applies field values via hooks
 

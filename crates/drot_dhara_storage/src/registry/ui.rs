@@ -198,6 +198,7 @@ pub(crate) fn ui_for_command(
                     group: Some(s("group.mode")),
                     invert_switch: false,
                     tui_only: false,
+                    tui_combo_width: None,
                 },
             ],
             quick_run: false,
@@ -425,6 +426,7 @@ fn release_run_ui() -> CommandUi {
                 group: Some(s("cmd.release.run.group.advanced")),
                 invert_switch: false,
                 tui_only: false,
+                tui_combo_width: None,
             },
         ],
         quick_run: false,
@@ -489,6 +491,7 @@ fn preset_field(
         group,
         invert_switch: false,
         tui_only: true,
+        tui_combo_width: None,
     }
 }
 
@@ -513,6 +516,7 @@ fn include_step(
         group,
         invert_switch: true,
         tui_only: false,
+        tui_combo_width: None,
     }
 }
 
@@ -543,6 +547,7 @@ fn combo_field(
         group,
         invert_switch: false,
         tui_only: false,
+        tui_combo_width: None,
     }
 }
 
@@ -567,6 +572,7 @@ fn radio_field(
         group,
         invert_switch: false,
         tui_only: false,
+        tui_combo_width: None,
     }
 }
 
@@ -591,6 +597,7 @@ fn text_field(
         group,
         invert_switch: false,
         tui_only: false,
+        tui_combo_width: None,
     }
 }
 
@@ -613,6 +620,7 @@ fn required_path(
         group,
         invert_switch: false,
         tui_only: false,
+        tui_combo_width: None,
     }
 }
 
@@ -635,5 +643,6 @@ fn optional_path(
         group,
         invert_switch: false,
         tui_only: false,
+        tui_combo_width: None,
     }
 }

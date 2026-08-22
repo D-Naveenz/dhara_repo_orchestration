@@ -27,7 +27,10 @@ pub use command::{
     FieldSpec, PresetOption, SectionSpec,
 };
 pub use context::{CommandResult, ReportField, RunMode, StructuredReport, ToolContext};
-pub use forms::{CommandForm, FormValue, preset_id, preset_label, preset_options, select_options};
+pub use forms::{
+    CommandForm, FormValue, max_combo_option_width, preset_id, preset_label, preset_options,
+    select_options,
+};
 pub use interactive::{
     ActivationPrompt, AppState, DiagnosticLine, DiagnosticSeverity, FAVORITES_GROUP, MainTab,
     NavTree, QUICK_ACTIONS, StatusTone, TreeNode, TreeViewState, VisibleTreeRow,

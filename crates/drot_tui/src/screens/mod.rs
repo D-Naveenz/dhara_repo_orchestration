@@ -4,6 +4,7 @@ use drot_kernel::FormValue;
 use drot_kernel::forms::{preset_id, preset_label};
 use drot_kernel::{AppState, DiagnosticSeverity, MainTab};
 use drot_kernel::{CommandRegistry, CommandSpec, FieldKind};
+use std::time::Instant;
 use ratatui::Frame;
 use ratatui::layout::{Constraint, Layout, Rect};
 use ratatui::style::Style;
@@ -22,7 +23,7 @@ use crate::strings::{self, t};
 use crate::theme as dhara_theme;
 use crate::widgets::{
     bios_combo, bios_textbox, button_group, padded_button, panel, scroll_body,
-    tab_table, text_wrap, ComboPart,
+    tab_table, text_marquee::LabelMarquee, text_wrap, ComboPart, ComboRenderParams,
 };
 
 pub struct CenterPanelClicks {
@@ -57,6 +58,8 @@ pub fn render_center_panel(
     option_field_clicks: &mut ClickRegionRegistry<OptionFieldAction>,
     reset_btn: &mut ButtonState,
     shell_clicks: &mut ClickRegionRegistry<TuiFocus>,
+    combo_marquee: &mut LabelMarquee,
+    now: Instant,
 ) -> CenterPanelClicks {
     sync_tab_view_from_state(tab_state, state.main_tab);
     tab_state.focused = shell_focus.is_focused(&TuiFocus::MainTabs)
@@ -112,6 +115,8 @@ pub fn render_center_panel(
             reset_btn,
             shell_focus,
             shell_clicks,
+            combo_marquee,
+            now,
         ),
         2 => render_trouble_tab(body, frame.buffer_mut(), state, trouble_scroll),
         3 => render_system_tab(body, frame.buffer_mut(), state, system_scroll),
@@ -203,6 +208,8 @@ fn render_options_tab(
     reset_btn: &mut ButtonState,
     shell_focus: &crate::focus::ShellFocus,
     shell_clicks: &mut ClickRegionRegistry<TuiFocus>,
+    combo_marquee: &mut LabelMarquee,
+    now: Instant,
 ) {
     let chunks = Layout::vertical([Constraint::Min(0), Constraint::Length(1)]).split(area);
     let fields_area = chunks[0];
@@ -283,6 +290,9 @@ fn render_options_tab(
             option_input,
             theme,
             option_field_clicks,
+            command.id,
+            combo_marquee,
+            now,
         );
         y += 1;
     }
@@ -293,19 +303,16 @@ fn register_combo_clicks(
     regions: &bios_combo::ComboClickRegions,
     index: usize,
 ) {
-    // Specific combo parts first — registry returns the first matching region.
+    let inner = OptionFieldAction::ComboPart {
+        field: index,
+        part: ComboPart::Inner,
+    };
+    // Buttons first — registry returns the first matching region.
     option_field_clicks.register(
         regions.left,
         OptionFieldAction::ComboPart {
             field: index,
             part: ComboPart::Left,
-        },
-    );
-    option_field_clicks.register(
-        regions.value,
-        OptionFieldAction::ComboPart {
-            field: index,
-            part: ComboPart::Value,
         },
     );
     option_field_clicks.register(
@@ -315,6 +322,9 @@ fn register_combo_clicks(
             part: ComboPart::Right,
         },
     );
+    option_field_clicks.register(regions.open, inner);
+    option_field_clicks.register(regions.text, inner);
+    option_field_clicks.register(regions.close, inner);
     option_field_clicks.register(regions.label, OptionFieldAction::Field(index));
 }
 
@@ -332,6 +342,9 @@ fn render_form_field(
     option_input: &InputState,
     theme: &Theme,
     option_field_clicks: &mut ClickRegionRegistry<OptionFieldAction>,
+    command_id: &'static str,
+    combo_marquee: &mut LabelMarquee,
+    now: Instant,
 ) {
     let _ = editing_form;
     let embedded_combo = match embedded_focus {
@@ -357,12 +370,20 @@ fn render_form_field(
         }
         (FieldKind::Radio(options), FormValue::Select(sel)) => {
             let label = options.get(*sel).copied().unwrap_or("");
+            let marquee_key = format!("{command_id}:{index}");
+            let mut params = ComboRenderParams {
+                field,
+                value: label,
+                selected,
+                embedded: embedded_combo,
+                marquee: combo_marquee,
+                marquee_key: &marquee_key,
+                now,
+            };
             let regions = bios_combo::render_bios_combo(
                 row,
                 field.label,
-                label,
-                selected,
-                embedded_combo,
+                &mut params,
                 frame.buffer_mut(),
             );
             register_combo_clicks(option_field_clicks, &regions, index);
@@ -372,12 +393,20 @@ fn render_form_field(
             FormValue::Select(sel),
         ) => {
             let label = preset_label(&field.kind, *sel);
+            let marquee_key = format!("{command_id}:{index}");
+            let mut params = ComboRenderParams {
+                field,
+                value: label,
+                selected,
+                embedded: embedded_combo,
+                marquee: combo_marquee,
+                marquee_key: &marquee_key,
+                now,
+            };
             let regions = bios_combo::render_bios_combo(
                 row,
                 field.label,
-                label,
-                selected,
-                embedded_combo,
+                &mut params,
                 frame.buffer_mut(),
             );
             register_combo_clicks(option_field_clicks, &regions, index);

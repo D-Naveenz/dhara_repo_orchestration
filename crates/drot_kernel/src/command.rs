@@ -65,6 +65,8 @@ pub struct FieldSpec {
     pub invert_switch: bool,
     /// When true, field is omitted from [`crate::forms::CommandForm::build_args`].
     pub tui_only: bool,
+    /// When set, TUI combo inner text slot width; marquee when the value overflows.
+    pub tui_combo_width: Option<u16>,
 }
 
 impl FieldSpec {
@@ -87,6 +89,7 @@ impl FieldSpec {
             group: None,
             invert_switch: false,
             tui_only: false,
+            tui_combo_width: None,
         }
     }
 
@@ -110,6 +113,7 @@ impl FieldSpec {
             group: None,
             invert_switch: false,
             tui_only: false,
+            tui_combo_width: None,
         }
     }
 
