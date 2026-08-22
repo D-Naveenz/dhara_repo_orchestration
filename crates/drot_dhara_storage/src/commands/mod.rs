@@ -92,6 +92,9 @@ pub(crate) struct BuildRunArgs {
     pub skip_native: bool,
     #[arg(long, action = ArgAction::SetTrue)]
     pub skip_verify: bool,
+    /// Also stage cross-native targets buildable on this host (for example `win-arm64` on Windows x64).
+    #[arg(long, action = ArgAction::SetTrue)]
+    pub cross_native: bool,
     #[arg(long, default_value = "Release")]
     pub configuration: String,
 }
@@ -218,6 +221,8 @@ pub(crate) fn package_options(args: PackageArgs, context: &ToolContext) -> Packa
         execute_publish: false,
         native_stage_override: args.native_stage,
         prepacked_nuget_override: None,
+        include_cross_native: true,
+        expected_native_runtimes: None,
     }
 }
 
@@ -234,6 +239,8 @@ pub(crate) fn publish_options(args: PublishArgs, context: &ToolContext) -> Resul
         execute_publish: args.execute && !args.dry_run,
         native_stage_override: None,
         prepacked_nuget_override: None,
+        include_cross_native: true,
+        expected_native_runtimes: None,
     })
 }
 

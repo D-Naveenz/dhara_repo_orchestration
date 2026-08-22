@@ -263,6 +263,15 @@ pub(crate) fn ui_for_command(
                     default_value: Some("false"),
                 },
                 FieldSpec {
+                    key: "cross_native",
+                    label: s("cmd.build.run.field.cross_native.label"),
+                    help: s("cmd.build.run.field.cross_native.help"),
+                    kind: FieldKind::Boolean,
+                    binding: ArgBinding::Switch("--cross-native"),
+                    required: false,
+                    default_value: Some("false"),
+                },
+                FieldSpec {
                     key: "skip_verify",
                     label: s("cmd.build.run.field.skip_verify.label"),
                     help: s("cmd.build.run.field.skip_verify.help"),

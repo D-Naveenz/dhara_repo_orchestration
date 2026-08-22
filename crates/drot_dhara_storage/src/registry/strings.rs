@@ -130,6 +130,10 @@ pub(crate) fn s(key: &str) -> &'static str {
         "cmd.build.run.field.skip_native.help" => {
             "Do not build and stage dhara-sd for host runtimes."
         }
+        "cmd.build.run.field.cross_native.label" => "Cross-native",
+        "cmd.build.run.field.cross_native.help" => {
+            "Also stage cross-native targets buildable on this host (for example win-arm64 on Windows x64). Requires MSVC ARM64 build tools when enabled on Windows."
+        }
         "cmd.build.run.field.skip_verify.label" => "Skip verify",
         "cmd.build.run.field.skip_verify.help" => "Do not pack and verify the NuGet package.",
         "cmd.build.run.field.configuration.label" => "Configuration",

@@ -3,11 +3,12 @@ use anyhow::Result;
 use drot_kernel::{
     ToolContext,
     paths::embedded_defs_package_path,
-    repo_config::{apply_config_drift, detect_config_drift, load_config},
+    repo_config::{apply_config_drift, detect_config_drift, load_config, DharaRepoConfig},
 };
 
 use crate::filedefs::{DefsPaths, sync_embedded_package, trid_progress::log_build_progress};
-use crate::ops::nuget::{PackageOptions, stage_native_for_host, verify};
+use crate::ops::nuget::{PackageOptions, stage_native_for_host, stage_native_under_msvc_env, verify};
+use crate::ops::native_rids::staging_runtimes_on_host;
 use crate::ops::quality;
 use crate::ops::workflow_progress::{begin_workflow, plan_unit_step, run_planned_step};
 
@@ -21,6 +22,7 @@ pub struct BuildRunOptions {
     pub skip_dotnet: bool,
     pub skip_native: bool,
     pub skip_verify: bool,
+    pub cross_native: bool,
     pub configuration: String,
 }
 
@@ -87,6 +89,9 @@ pub fn run(context: &ToolContext, options: &BuildRunOptions) -> Result<()> {
         )?;
     }
 
+    let staged_runtimes =
+        staging_runtimes_on_host(&config.ci.native_runtimes, options.cross_native);
+
     let mut package_options = PackageOptions {
         configuration: options.configuration.clone(),
         version_override: None,
@@ -95,6 +100,8 @@ pub fn run(context: &ToolContext, options: &BuildRunOptions) -> Result<()> {
         execute_publish: false,
         native_stage_override: None,
         prepacked_nuget_override: None,
+        include_cross_native: options.cross_native,
+        expected_native_runtimes: None,
     };
 
     if !options.skip_native {
@@ -103,17 +110,13 @@ pub fn run(context: &ToolContext, options: &BuildRunOptions) -> Result<()> {
             "Staging host native assets",
             "Building dhara-sd for host runtimes",
             || {
-                stage_native_for_host(
-                    &context.repo_root,
-                    &context.tool_root,
-                    &config,
-                    &package_options,
-                )?;
+                stage_native_for_build_run(context, &config, &package_options)?;
                 Ok(())
             },
         )?;
         let artifacts_root = context.tool_root.join("artifacts");
         package_options.native_stage_override = Some(artifacts_root.join("native-stage"));
+        package_options.expected_native_runtimes = Some(staged_runtimes);
     }
 
     if !options.skip_verify {
@@ -134,6 +137,26 @@ pub fn run(context: &ToolContext, options: &BuildRunOptions) -> Result<()> {
     }
 
     Ok(())
+}
+
+#[cfg_attr(windows, allow(unused_variables))]
+fn stage_native_for_build_run(
+    context: &ToolContext,
+    config: &DharaRepoConfig,
+    package_options: &PackageOptions,
+) -> Result<()> {
+    #[cfg(windows)]
+    if package_options.include_cross_native {
+        return stage_native_under_msvc_env(&context.repo_root, &package_options.configuration);
+    }
+
+    stage_native_for_host(
+        &context.repo_root,
+        &context.tool_root,
+        config,
+        package_options,
+    )
+    .map(|_| ())
 }
 
 fn run_defs_sync(context: &ToolContext) -> Result<()> {

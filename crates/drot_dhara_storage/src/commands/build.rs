@@ -21,6 +21,7 @@ pub(crate) fn build_run_command(context: &ToolContext, args: &[String]) -> Resul
             skip_dotnet: args.skip_dotnet,
             skip_native: args.skip_native,
             skip_verify: args.skip_verify,
+            cross_native: args.cross_native,
             configuration: args.configuration,
         },
     )?;
