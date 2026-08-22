@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 use std::path::Path;
 
 use crate::{
-    OutputStream, ProgressSnapshot, WorkspaceSnapshot,
+    OutputEvent, OutputStream, ProgressSnapshot, WorkspaceSnapshot,
     repo_config::{ConfigDriftItem, apply_config_drift},
     workspace::DefsPackageStatus,
 };
@@ -40,6 +40,8 @@ pub enum DiagnosticSeverity {
 pub struct DiagnosticLine {
     pub severity: DiagnosticSeverity,
     pub text: String,
+    /// Indented detail under a preceding headline (same error block).
+    pub continuation: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -62,6 +64,7 @@ pub struct AppState {
     pub forms: BTreeMap<&'static str, CommandForm>,
     pub active_run: Option<RunHandle>,
     pub troubleshooting_lines: Vec<DiagnosticLine>,
+    subprocess_output_buffer: Vec<String>,
     pub progress: Option<ProgressSnapshot>,
     pub status_message: String,
     pub status_tone: StatusTone,
@@ -95,6 +98,7 @@ impl AppState {
             forms: BTreeMap::new(),
             active_run: None,
             troubleshooting_lines: Vec::new(),
+            subprocess_output_buffer: Vec::new(),
             progress: None,
             status_message: "Ready.".to_owned(),
             status_tone: StatusTone::Ready,
@@ -193,6 +197,7 @@ impl AppState {
         command_path.extend(args);
 
         self.troubleshooting_lines.clear();
+        self.subprocess_output_buffer.clear();
         self.progress = None;
         self.status_message = format!("Running {}...", command.path_string());
         self.status_tone = StatusTone::Running;
@@ -208,34 +213,29 @@ impl AppState {
 
     pub fn poll_active_run(&mut self) {
         let mut completed = None;
-        if let Some(run) = &mut self.active_run {
+        let mut pending_events = Vec::new();
+        if let Some(run) = self.active_run.as_mut() {
             while let Ok(event) = run.output_rx.try_recv() {
-                match event.stream {
-                    OutputStream::Stderr => {
-                        self.troubleshooting_lines.push(DiagnosticLine {
-                            severity: DiagnosticSeverity::Error,
-                            text: event.line,
-                        });
-                    }
-                    OutputStream::Warn => {
-                        self.troubleshooting_lines.push(DiagnosticLine {
-                            severity: DiagnosticSeverity::Warn,
-                            text: event.line,
-                        });
-                    }
-                    OutputStream::Stdout => {}
-                }
+                pending_events.push(event);
             }
 
             if let Some(result) = run.try_take_completion() {
                 completed = Some((run.label.clone(), result));
             }
         }
+        for event in pending_events {
+            self.absorb_output_event(event);
+        }
 
         if let Some((label, completion)) = completed {
             match completion {
                 RunCompletion::Succeeded(result) => {
                     let success = result.exit_code == 0;
+                    if !success {
+                        self.flush_subprocess_output_to_troubleshooting();
+                    } else {
+                        self.subprocess_output_buffer.clear();
+                    }
                     self.status_tone = if success {
                         StatusTone::Success
                     } else {
@@ -245,17 +245,71 @@ impl AppState {
                     self.status_message = format!("{label} completed with status {status}.");
                 }
                 RunCompletion::Failed(error) => {
+                    self.flush_subprocess_output_to_troubleshooting();
+                    if !self.has_error_headline() {
+                        self.troubleshooting_lines.push(DiagnosticLine {
+                            severity: DiagnosticSeverity::Error,
+                            text: error,
+                            continuation: false,
+                        });
+                    }
                     self.status_tone = StatusTone::Failed;
-                    self.status_message = error.clone();
-                    self.troubleshooting_lines.push(DiagnosticLine {
-                        severity: DiagnosticSeverity::Error,
-                        text: error,
-                    });
+                    self.status_message = self
+                        .troubleshooting_lines
+                        .iter()
+                        .find(|line| !line.continuation)
+                        .map(|line| line.text.clone())
+                        .unwrap_or_else(|| "Command failed.".to_owned());
                 }
             }
             self.active_run = None;
             self.progress = None;
         }
+    }
+
+    fn absorb_output_event(&mut self, event: OutputEvent) {
+        match event.stream {
+            OutputStream::Stderr => {
+                self.troubleshooting_lines.push(DiagnosticLine {
+                    severity: DiagnosticSeverity::Error,
+                    text: event.line,
+                    continuation: false,
+                });
+            }
+            OutputStream::Warn => {
+                self.troubleshooting_lines.push(DiagnosticLine {
+                    severity: DiagnosticSeverity::Warn,
+                    text: event.line,
+                    continuation: false,
+                });
+            }
+            OutputStream::Subprocess => {
+                self.subprocess_output_buffer.push(event.line);
+            }
+            OutputStream::SubprocessStepSucceeded => {
+                self.subprocess_output_buffer.clear();
+            }
+            OutputStream::Stdout => {}
+        }
+    }
+
+    fn flush_subprocess_output_to_troubleshooting(&mut self) {
+        for line in self.subprocess_output_buffer.drain(..) {
+            if !subprocess_line_is_diagnostic(&line) {
+                continue;
+            }
+            self.troubleshooting_lines.push(DiagnosticLine {
+                severity: DiagnosticSeverity::Error,
+                text: line,
+                continuation: true,
+            });
+        }
+    }
+
+    fn has_error_headline(&self) -> bool {
+        self.troubleshooting_lines
+            .iter()
+            .any(|line| !line.continuation && line.severity == DiagnosticSeverity::Error)
     }
 
     pub fn apply_progress_snapshot(&mut self, snapshot: ProgressSnapshot) {
@@ -310,13 +364,65 @@ impl AppState {
     }
 }
 
+/// Returns true when a subprocess line is an actionable warning/error, not routine progress noise.
+fn subprocess_line_is_diagnostic(line: &str) -> bool {
+    let trimmed = line.trim();
+    if trimmed.is_empty() {
+        return false;
+    }
+
+    if is_subprocess_progress_line(trimmed) {
+        return false;
+    }
+
+    if trimmed.contains("error:") || trimmed.contains("error[E") {
+        return true;
+    }
+    if trimmed.contains("warning:") {
+        return true;
+    }
+    if trimmed.contains("FAILED") || trimmed.contains("panicked at") {
+        return true;
+    }
+
+    let lower = trimmed.to_ascii_lowercase();
+    if lower.contains("could not compile")
+        || lower.contains("fatal error")
+        || lower.contains("command failed")
+        || (lower.contains("linker ") && (lower.contains("not found") || lower.contains("failed")))
+    {
+        return true;
+    }
+
+    // Non-progress output from the failing step (linker notes, MSBuild errors, etc.).
+    true
+}
+
+fn is_subprocess_progress_line(line: &str) -> bool {
+    line.starts_with("Finished `")
+        || line.starts_with("Generated ")
+        || line.starts_with("Compiling ")
+        || line.starts_with("Checking ")
+        || line.starts_with("Documenting ")
+        || line.starts_with("Running unittests ")
+        || line.starts_with("Running tests")
+        || line.starts_with("Doc-tests ")
+        || line.starts_with("> ")
+        || line.starts_with("     Running ")
+        || (line.starts_with("test result:") && line.contains("ok."))
+        || (line.starts_with("running ") && line.ends_with(" tests"))
+}
+
 #[cfg(test)]
 mod tests {
     use std::sync::Arc;
 
     use anyhow::Result;
 
-    use crate::{ProgressSnapshot, RunPhase, WorkspaceSnapshot, workspace::DefsPackageStatus};
+    use crate::{
+        OutputEvent, OutputStream, ProgressSnapshot, RunPhase, WorkspaceSnapshot,
+        workspace::DefsPackageStatus,
+    };
 
     use crate::command::{
         CommandRegistry, CommandResult, CommandSpec, CommandUi, RunMode, SectionSpec, ToolContext,
@@ -359,6 +465,83 @@ mod tests {
             package_version: None,
             definition_count: None,
         }
+    }
+
+    #[test]
+    fn subprocess_output_buffered_until_command_failure() {
+        let mut state = AppState::new();
+        state.absorb_output_event(OutputEvent {
+            stream: OutputStream::Subprocess,
+            line: "Finished `dev` profile".to_owned(),
+        });
+        assert!(state.troubleshooting_lines.is_empty());
+
+        state.absorb_output_event(OutputEvent {
+            stream: OutputStream::Warn,
+            line: "verification mismatch".to_owned(),
+        });
+        assert_eq!(state.troubleshooting_lines.len(), 1);
+
+        state.flush_subprocess_output_to_troubleshooting();
+        assert_eq!(state.troubleshooting_lines.len(), 1);
+    }
+
+    #[test]
+    fn command_failure_headline_groups_subprocess_details() {
+        let mut state = AppState::new();
+        state.absorb_output_event(OutputEvent {
+            stream: OutputStream::Stderr,
+            line: "build run failed after 2m — command failed with status exit code: 101"
+                .to_owned(),
+        });
+        state.absorb_output_event(OutputEvent {
+            stream: OutputStream::Subprocess,
+            line: "error: linker `link.exe` not found".to_owned(),
+        });
+        state.flush_subprocess_output_to_troubleshooting();
+
+        assert_eq!(state.troubleshooting_lines.len(), 2);
+        assert!(!state.troubleshooting_lines[0].continuation);
+        assert!(state.troubleshooting_lines[1].continuation);
+    }
+
+    #[test]
+    fn subprocess_step_success_clears_buffered_output() {
+        let mut state = AppState::new();
+        state.absorb_output_event(OutputEvent {
+            stream: OutputStream::Subprocess,
+            line: "Finished `dev` profile".to_owned(),
+        });
+        state.absorb_output_event(OutputEvent {
+            stream: OutputStream::SubprocessStepSucceeded,
+            line: String::new(),
+        });
+        state.absorb_output_event(OutputEvent {
+            stream: OutputStream::Subprocess,
+            line: "error: linker `link.exe` not found".to_owned(),
+        });
+
+        state.flush_subprocess_output_to_troubleshooting();
+        assert_eq!(state.troubleshooting_lines.len(), 1);
+        assert!(state.troubleshooting_lines[0].continuation);
+        assert!(
+            state.troubleshooting_lines[0]
+                .text
+                .contains("linker `link.exe`")
+        );
+    }
+
+    #[test]
+    fn subprocess_progress_lines_are_not_diagnostics() {
+        assert!(super::is_subprocess_progress_line(
+            "Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.33s"
+        ));
+        assert!(!super::subprocess_line_is_diagnostic(
+            "Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.33s"
+        ));
+        assert!(super::subprocess_line_is_diagnostic(
+            "error: could not compile `dhara-sd` due to 1 previous error"
+        ));
     }
 
     #[test]

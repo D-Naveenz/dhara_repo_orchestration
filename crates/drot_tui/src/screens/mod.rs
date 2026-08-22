@@ -312,6 +312,11 @@ fn render_trouble_tab(
     let width = area.width as usize;
     let mut lines: Vec<String> = Vec::new();
     for line in &state.troubleshooting_lines {
+        if line.continuation {
+            let text = format!("      {}", line.text);
+            lines.extend(text_wrap::wrap_line(&text, width));
+            continue;
+        }
         let prefix = match line.severity {
             DiagnosticSeverity::Warn => "WARN",
             DiagnosticSeverity::Error => "ERR ",
