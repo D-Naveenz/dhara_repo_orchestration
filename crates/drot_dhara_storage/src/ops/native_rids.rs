@@ -148,6 +148,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(all(windows, target_arch = "x86_64"))]
     fn staging_runtimes_toggle_cross_native_on_windows_x64() {
         let all = vec!["win-x64".to_owned(), "win-arm64".to_owned()];
         assert_eq!(
