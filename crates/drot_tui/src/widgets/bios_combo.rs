@@ -46,6 +46,7 @@ struct ClusterLayout {
     cluster_w: u16,
     pad_left: Rect,
     left: Rect,
+    pad_after_left: Rect,
     text: Rect,
     pad_before_right: Rect,
     right: Rect,
@@ -87,6 +88,7 @@ pub fn render_bios_combo(
         arrow_style(params.selected, inner_active, bg),
         buf,
     );
+    paint_span(layout.pad_after_left, PAD, pad_style, buf);
     paint_span(layout.pad_before_right, PAD, pad_style, buf);
     paint_span(
         layout.right,
@@ -112,6 +114,7 @@ fn cluster_layout(area: Rect, text_w: u16) -> ClusterLayout {
     let right_w = display_width(RIGHT_ARROW) as u16;
     let cluster_w = pad_w
         .saturating_add(left_w)
+        .saturating_add(pad_w)
         .saturating_add(text_w)
         .saturating_add(pad_w)
         .saturating_add(right_w)
@@ -124,6 +127,8 @@ fn cluster_layout(area: Rect, text_w: u16) -> ClusterLayout {
     x = x.saturating_add(pad_w);
     let left = Rect::new(x, y, left_w.max(1), 1);
     x = x.saturating_add(left_w);
+    let pad_after_left = Rect::new(x, y, pad_w.max(1), 1);
+    x = x.saturating_add(pad_w);
     let text = Rect::new(x, y, text_w, 1);
     x = x.saturating_add(text_w);
     let pad_before_right = Rect::new(x, y, pad_w.max(1), 1);
@@ -137,6 +142,7 @@ fn cluster_layout(area: Rect, text_w: u16) -> ClusterLayout {
         cluster_w,
         pad_left,
         left,
+        pad_after_left,
         text,
         pad_before_right,
         right,
@@ -151,6 +157,7 @@ fn display_width(text: &str) -> usize {
 fn chrome_width_for_row(_row_width: u16) -> u16 {
     (display_width(PAD)
         + display_width(LEFT_ARROW)
+        + display_width(PAD)
         + display_width(PAD)
         + display_width(RIGHT_ARROW)
         + display_width(PAD)) as u16
@@ -313,6 +320,6 @@ mod tests {
     #[test]
     fn chrome_width_includes_arrows_and_pads() {
         let chrome = chrome_width_for_row(80);
-        assert_eq!(chrome, 5);
+        assert_eq!(chrome, 6);
     }
 }

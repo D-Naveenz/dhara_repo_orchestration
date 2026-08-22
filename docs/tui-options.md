@@ -70,7 +70,7 @@ Label                    [ ⮜ _ {value slot} _ ⮞ ]
 
 **Sizing:**
 
-- Unspecified (`tui_combo_width: None`): text slot = longest option label width; total cluster = slot + 5 chrome columns (`pad` + `⮜` + slot + `pad` + `⮞` + `pad`).
+- Unspecified (`tui_combo_width: None`): text slot = longest option label width; total cluster = slot + 6 chrome columns (`pad` + `⮜` + `pad` + slot + `pad` + `⮞` + `pad`).
 - Specified (`tui_combo_width: Some(n)`): text slot = `n`; marquee when the current value is wider.
 
 Pad spaces beside the value slot are fixed and **not** part of marquee scrolling. Short values are **center-aligned** inside the slot.
