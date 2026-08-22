@@ -3,12 +3,14 @@ use anyhow::Result;
 use drot_kernel::{
     ToolContext,
     paths::embedded_defs_package_path,
-    repo_config::{apply_config_drift, detect_config_drift, load_config, DharaRepoConfig},
+    repo_config::{DharaRepoConfig, apply_config_drift, detect_config_drift, load_config},
 };
 
 use crate::filedefs::{DefsPaths, sync_embedded_package, trid_progress::log_build_progress};
-use crate::ops::nuget::{PackageOptions, stage_native_for_host, stage_native_under_msvc_env, verify};
 use crate::ops::native_rids::staging_runtimes_on_host;
+use crate::ops::nuget::{
+    PackageOptions, stage_native_for_host, stage_native_under_msvc_env, verify,
+};
 use crate::ops::quality;
 use crate::ops::workflow_progress::{begin_workflow, plan_unit_step, run_planned_step};
 

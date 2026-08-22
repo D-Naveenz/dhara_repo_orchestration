@@ -157,10 +157,8 @@ pub fn pack(
 }
 
 fn setup_pack_plan(config: &DharaRepoConfig, options: &PackageOptions) -> Result<()> {
-    let runtimes = staging_runtimes_on_host(
-        &config.ci.native_runtimes,
-        options.include_cross_native,
-    );
+    let runtimes =
+        staging_runtimes_on_host(&config.ci.native_runtimes, options.include_cross_native);
     if runtimes.is_empty()
         && options.native_stage_override.is_none()
         && native_stage_from_env().is_none()
@@ -481,10 +479,8 @@ fn stage_native_assets(
         bail!("only Release packaging is currently supported");
     };
 
-    let runtimes = staging_runtimes_on_host(
-        &config.ci.native_runtimes,
-        options.include_cross_native,
-    );
+    let runtimes =
+        staging_runtimes_on_host(&config.ci.native_runtimes, options.include_cross_native);
     if runtimes.is_empty() {
         bail!("no native runtimes are buildable on the current host");
     }
@@ -582,10 +578,8 @@ pub fn stage_native_for_host(
     config: &DharaRepoConfig,
     options: &PackageOptions,
 ) -> Result<CommandResult> {
-    let runtimes = staging_runtimes_on_host(
-        &config.ci.native_runtimes,
-        options.include_cross_native,
-    );
+    let runtimes =
+        staging_runtimes_on_host(&config.ci.native_runtimes, options.include_cross_native);
     if runtimes.is_empty() {
         bail!("no native runtimes are buildable on the current host");
     }
@@ -956,10 +950,7 @@ fn validate_staged_native_assets(
     Ok(())
 }
 
-fn expected_native_runtimes(
-    config: &DharaRepoConfig,
-    options: &PackageOptions,
-) -> Vec<String> {
+fn expected_native_runtimes(config: &DharaRepoConfig, options: &PackageOptions) -> Vec<String> {
     options
         .expected_native_runtimes
         .clone()
