@@ -190,6 +190,12 @@ pub fn verify(
     config: &DharaRepoConfig,
     options: &PackageOptions,
 ) -> Result<CommandResult> {
+    if !options.configuration.eq_ignore_ascii_case("Release") {
+        bail!(
+            "NuGet package verification requires Release configuration (got {})",
+            options.configuration
+        );
+    }
     log_module_step_debug(&format!(
         "verifying NuGet package (configuration={})",
         options.configuration
@@ -474,9 +480,14 @@ fn stage_native_assets(
     report_progress: bool,
 ) -> Result<()> {
     let profile_flag = if options.configuration.eq_ignore_ascii_case("Release") {
-        "--release"
+        Some("--release")
+    } else if options.configuration.eq_ignore_ascii_case("Debug") {
+        None
     } else {
-        bail!("only Release packaging is currently supported");
+        bail!(
+            "unsupported native staging configuration: {}",
+            options.configuration
+        );
     };
 
     let runtimes =
@@ -507,23 +518,27 @@ fn stage_native_assets(
             stage_root = %stage_root.display(),
             "staging dhara-sd sidecar"
         );
-        run_command(
-            "cargo",
-            &[
-                "build".to_owned(),
-                "-p".to_owned(),
-                "dhara-sd".to_owned(),
-                profile_flag.to_owned(),
-                "--target".to_owned(),
-                target.clone(),
-            ],
-            repo_root,
-        )?;
+        let mut build_args = vec![
+            "build".to_owned(),
+            "-p".to_owned(),
+            "dhara-sd".to_owned(),
+        ];
+        if let Some(flag) = profile_flag {
+            build_args.push(flag.to_owned());
+        }
+        build_args.push("--target".to_owned());
+        build_args.push(target.clone());
+        run_command("cargo", &build_args, repo_root)?;
 
+        let profile_dir = if profile_flag.is_some() {
+            "release"
+        } else {
+            "debug"
+        };
         let source_path = repo_root
             .join("target")
             .join(target)
-            .join("release")
+            .join(profile_dir)
             .join(lib_name);
         let destination_path = stage_root
             .join("runtimes")

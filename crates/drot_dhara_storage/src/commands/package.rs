@@ -133,10 +133,11 @@ pub(crate) fn package_publish_command(
 
 pub(crate) fn release_run_command(context: &ToolContext, args: &[String]) -> Result<CommandResult> {
     #[cfg(windows)]
-    if std::env::var_os("DHARA_TOOL_INSIDE_MSVC").is_none() {
+    if std::env::var_os(drot_kernel::msvc::INSIDE_MSVC_ENV_VAR).is_none() {
         let exe = std::env::current_exe().context("failed to resolve drot executable path")?;
         let mut command = format!(
-            "set DHARA_TOOL_INSIDE_MSVC=1&& \"{}\" release run",
+            "set {}=1&& \"{}\" release run",
+            drot_kernel::msvc::INSIDE_MSVC_ENV_VAR,
             exe.display()
         );
         for arg in args {
