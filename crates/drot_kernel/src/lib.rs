@@ -24,10 +24,10 @@ pub use base_commands::register_base_commands;
 pub use bootstrap::register_extensions;
 pub use command::{
     ArgBinding, CommandHandler, CommandRegistry, CommandSpec, CommandUi, Extension, FieldKind,
-    FieldSpec, SectionSpec,
+    FieldSpec, PresetOption, SectionSpec,
 };
 pub use context::{CommandResult, ReportField, RunMode, StructuredReport, ToolContext};
-pub use forms::{CommandForm, FormValue};
+pub use forms::{CommandForm, FormValue, preset_id, preset_label, preset_options, select_options};
 pub use interactive::{
     ActivationPrompt, AppState, DiagnosticLine, DiagnosticSeverity, FAVORITES_GROUP, MainTab,
     NavTree, QUICK_ACTIONS, StatusTone, TreeNode, TreeViewState, VisibleTreeRow,

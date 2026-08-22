@@ -1,6 +1,8 @@
 use std::path::Path;
 use std::sync::OnceLock;
 
+use crate::command::CommandSpec;
+use crate::forms::CommandForm;
 use crate::workspace::WorkspaceSnapshot;
 
 pub trait ProductHooks: Send + Sync {
@@ -12,6 +14,16 @@ pub trait ProductHooks: Send + Sync {
     fn embedded_defs_dir_relative(&self) -> &'static str;
     /// Analyze a defs package on disk into a workspace snapshot.
     fn analyze_defs_package(&self, defs_path: &Path) -> WorkspaceSnapshot;
+    /// Apply product-specific TUI form defaults (presets, etc.).
+    fn initialize_tui_form(&self, _form: &mut CommandForm, _command: &CommandSpec) {}
+    /// Apply a named TUI preset after the operator changes the preset field.
+    fn apply_tui_preset(
+        &self,
+        _form: &mut CommandForm,
+        _command: &CommandSpec,
+        _preset_id: &str,
+    ) {
+    }
 }
 
 static HOOKS: OnceLock<&'static dyn ProductHooks> = OnceLock::new();

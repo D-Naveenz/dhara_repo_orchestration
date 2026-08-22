@@ -26,13 +26,26 @@ pub enum ArgBinding {
     Switch(&'static str),
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct PresetOption {
+    pub id: &'static str,
+    pub label: &'static str,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum FieldKind {
     Text,
     Path,
     BrowsablePath { dialog_title: &'static str },
     Boolean,
+    /// Legacy select; rendered as [`FieldKind::Combo`] in the TUI.
     Select(&'static [&'static str]),
+    /// BIOS-style cycle control in the TUI.
+    Combo(&'static [&'static str]),
+    /// Mutually exclusive options displayed as `[*]` / `[ ]`.
+    Radio(&'static [&'static str]),
+    /// TUI-only preset picker; values are not serialized to CLI.
+    Preset(&'static [PresetOption]),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -44,6 +57,69 @@ pub struct FieldSpec {
     pub binding: ArgBinding,
     pub required: bool,
     pub default_value: Option<&'static str>,
+    /// Optional TUI-only default; falls back to [`Self::default_value`].
+    pub tui_default_value: Option<&'static str>,
+    /// Visual grouping key for bordered button groups in the Options tab.
+    pub group: Option<&'static str>,
+    /// When true, a checked boolean means *include* the step (omit `--skip-*` when true).
+    pub invert_switch: bool,
+    /// When true, field is omitted from [`crate::forms::CommandForm::build_args`].
+    pub tui_only: bool,
+}
+
+impl FieldSpec {
+    pub const fn boolean(
+        key: &'static str,
+        label: &'static str,
+        help: &'static str,
+        flag: &'static str,
+        default_value: Option<&'static str>,
+    ) -> Self {
+        Self {
+            key,
+            label,
+            help,
+            kind: FieldKind::Boolean,
+            binding: ArgBinding::Switch(flag),
+            required: false,
+            default_value,
+            tui_default_value: None,
+            group: None,
+            invert_switch: false,
+            tui_only: false,
+        }
+    }
+
+    pub const fn combo(
+        key: &'static str,
+        label: &'static str,
+        help: &'static str,
+        flag: &'static str,
+        options: &'static [&'static str],
+        default_value: Option<&'static str>,
+    ) -> Self {
+        Self {
+            key,
+            label,
+            help,
+            kind: FieldKind::Combo(options),
+            binding: ArgBinding::FlagValue(flag),
+            required: false,
+            default_value,
+            tui_default_value: None,
+            group: None,
+            invert_switch: false,
+            tui_only: false,
+        }
+    }
+
+    pub fn effective_default(&self, tui: bool) -> Option<&'static str> {
+        if tui {
+            self.tui_default_value.or(self.default_value)
+        } else {
+            self.default_value
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
