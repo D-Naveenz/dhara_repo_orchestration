@@ -11,8 +11,6 @@ use unicode_width::UnicodeWidthStr;
 use crate::theme as dhara_theme;
 use crate::widgets::text_marquee::{LabelMarquee, center_offset, clip_right, clip_window};
 
-const OPEN: &str = "【";
-const CLOSE: &str = "】";
 const LEFT_ARROW: &str = "⮜";
 const RIGHT_ARROW: &str = "⮞";
 const PAD: &str = " ";
@@ -28,9 +26,9 @@ pub struct ComboClickRegions {
     pub label: Rect,
     pub left: Rect,
     pub right: Rect,
-    pub open: Rect,
+    /// Full highlighted cluster (`[ ⮜ value ⮞ ]` — brackets are the bg, not glyphs).
+    pub inner: Rect,
     pub text: Rect,
-    pub close: Rect,
 }
 
 pub struct ComboRenderParams<'a> {
@@ -46,13 +44,12 @@ pub struct ComboRenderParams<'a> {
 struct ClusterLayout {
     cluster_x: u16,
     cluster_w: u16,
-    open: Rect,
+    pad_left: Rect,
     left: Rect,
     text: Rect,
     pad_before_right: Rect,
     right: Rect,
-    pad_before_close: Rect,
-    close: Rect,
+    pad_right: Rect,
 }
 
 pub fn render_bios_combo(
@@ -67,6 +64,7 @@ pub fn render_bios_combo(
     let embedded_inner = params.embedded == Some(ComboPart::Inner);
     let inner_active = params.selected && embedded_inner;
     let bg = cluster_bg(params.selected, inner_active);
+    let pad_style = Style::default().bg(bg);
 
     paint_label(
         Rect::new(area.x, area.y, label_render_w.max(1), 1),
@@ -82,63 +80,48 @@ pub fn render_bios_combo(
         buf,
     );
 
-    paint_span(layout.open, OPEN, bracket_style(params.selected, inner_active, bg), buf);
+    paint_span(layout.pad_left, PAD, pad_style, buf);
     paint_span(
         layout.left,
         LEFT_ARROW,
         arrow_style(params.selected, inner_active, bg),
         buf,
     );
-    paint_span(layout.pad_before_right, PAD, Style::default().bg(bg), buf);
+    paint_span(layout.pad_before_right, PAD, pad_style, buf);
     paint_span(
         layout.right,
         RIGHT_ARROW,
         arrow_style(params.selected, inner_active, bg),
         buf,
     );
-    paint_span(
-        layout.pad_before_close,
-        PAD,
-        Style::default().bg(bg),
-        buf,
-    );
-    paint_span(
-        layout.close,
-        CLOSE,
-        bracket_style(params.selected, inner_active, bg),
-        buf,
-    );
+    paint_span(layout.pad_right, PAD, pad_style, buf);
     paint_value_text(layout.text, params, inner_active, bg, buf);
 
     ComboClickRegions {
         label: Rect::new(area.x, area.y, label_render_w.max(1), 1),
         left: layout.left,
         right: layout.right,
-        open: layout.open,
+        inner: Rect::new(layout.cluster_x, area.y, layout.cluster_w, 1),
         text: layout.text,
-        close: layout.close,
     }
 }
 
 fn cluster_layout(area: Rect, text_w: u16) -> ClusterLayout {
-    let open_w = display_width(OPEN) as u16;
-    let left_w = display_width(LEFT_ARROW) as u16;
     let pad_w = display_width(PAD) as u16;
+    let left_w = display_width(LEFT_ARROW) as u16;
     let right_w = display_width(RIGHT_ARROW) as u16;
-    let close_w = display_width(CLOSE) as u16;
-    let cluster_w = open_w
+    let cluster_w = pad_w
         .saturating_add(left_w)
         .saturating_add(text_w)
         .saturating_add(pad_w)
         .saturating_add(right_w)
-        .saturating_add(pad_w)
-        .saturating_add(close_w);
+        .saturating_add(pad_w);
     let cluster_x = area.x.saturating_add(area.width.saturating_sub(cluster_w));
     let y = area.y;
 
     let mut x = cluster_x;
-    let open = Rect::new(x, y, open_w.max(1), 1);
-    x = x.saturating_add(open_w);
+    let pad_left = Rect::new(x, y, pad_w.max(1), 1);
+    x = x.saturating_add(pad_w);
     let left = Rect::new(x, y, left_w.max(1), 1);
     x = x.saturating_add(left_w);
     let text = Rect::new(x, y, text_w, 1);
@@ -147,20 +130,17 @@ fn cluster_layout(area: Rect, text_w: u16) -> ClusterLayout {
     x = x.saturating_add(pad_w);
     let right = Rect::new(x, y, right_w.max(1), 1);
     x = x.saturating_add(right_w);
-    let pad_before_close = Rect::new(x, y, pad_w.max(1), 1);
-    x = x.saturating_add(pad_w);
-    let close = Rect::new(x, y, close_w.max(1), 1);
+    let pad_right = Rect::new(x, y, pad_w.max(1), 1);
 
     ClusterLayout {
         cluster_x,
         cluster_w,
-        open,
+        pad_left,
         left,
         text,
         pad_before_right,
         right,
-        pad_before_close,
-        close,
+        pad_right,
     }
 }
 
@@ -169,12 +149,11 @@ fn display_width(text: &str) -> usize {
 }
 
 fn chrome_width_for_row(_row_width: u16) -> u16 {
-    (display_width(OPEN)
+    (display_width(PAD)
         + display_width(LEFT_ARROW)
         + display_width(PAD)
-        + display_width(PAD)
         + display_width(RIGHT_ARROW)
-        + display_width(CLOSE)) as u16
+        + display_width(PAD)) as u16
 }
 
 fn resolve_text_slot_width(field: &FieldSpec, row_width: u16) -> u16 {
@@ -269,19 +248,6 @@ fn paint_cluster_background(cluster: Rect, bg: ratatui::style::Color, buf: &mut 
     }
 }
 
-fn bracket_style(selected: bool, inner_active: bool, bg: ratatui::style::Color) -> Style {
-    if inner_active {
-        Style::default()
-            .fg(dhara_theme::ACCENT)
-            .bg(bg)
-            .add_modifier(Modifier::BOLD)
-    } else if selected {
-        Style::default().fg(dhara_theme::COMBO_BORDER).bg(bg)
-    } else {
-        Style::default().fg(dhara_theme::COMBO_BORDER).bg(bg)
-    }
-}
-
 /// Arrow buttons: **focus** when inner is active (accent, bold); **relax** otherwise (muted).
 fn arrow_style(selected: bool, inner_active: bool, bg: ratatui::style::Color) -> Style {
     if inner_active {
@@ -345,8 +311,8 @@ mod tests {
     }
 
     #[test]
-    fn chrome_width_accounts_for_wide_brackets() {
+    fn chrome_width_includes_arrows_and_pads() {
         let chrome = chrome_width_for_row(80);
-        assert!(chrome >= 8);
+        assert_eq!(chrome, 5);
     }
 }

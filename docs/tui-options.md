@@ -57,18 +57,20 @@ Grouped fields render in the Options tab with BIOS-style controls.
 Each combo row is **caption left**, **inner cluster right-aligned**:
 
 ```
-Label                    【 ⮜ _ {value slot} _ ⮞ 】
+Label                    [ ⮜ _ {value slot} _ ⮞ ]
 ```
+
+(`[` and `]` denote the highlighted background — not drawn as glyphs.)
 
 | Region | Click / focus | Visual |
 | ------ | ------------- | ------ |
 | Label | Enters **inner** focus | Accent fg when row selected; **no chevron prefix** |
-| `【`, value slot, `】` | **Inner** focus | Inner highlight; brackets and text accent |
+| Highlighted cluster, value slot | **Inner** focus | Background highlight; text accent when inner active |
 | `⮜`, `⮞` | **Buttons** — cycle prev/next | Distinct button styling; always whole symbols |
 
 **Sizing:**
 
-- Unspecified (`tui_combo_width: None`): text slot = longest option label width; total cluster = slot + 6 chrome columns (`【⮜` + pad + slot + pad + `⮞】`).
+- Unspecified (`tui_combo_width: None`): text slot = longest option label width; total cluster = slot + 5 chrome columns (`pad` + `⮜` + slot + `pad` + `⮞` + `pad`).
 - Specified (`tui_combo_width: Some(n)`): text slot = `n`; marquee when the current value is wider.
 
 Pad spaces beside the value slot are fixed and **not** part of marquee scrolling. Short values are **center-aligned** inside the slot.

@@ -322,9 +322,8 @@ fn register_combo_clicks(
             part: ComboPart::Right,
         },
     );
-    option_field_clicks.register(regions.open, inner);
+    option_field_clicks.register(regions.inner, inner);
     option_field_clicks.register(regions.text, inner);
-    option_field_clicks.register(regions.close, inner);
     option_field_clicks.register(regions.label, OptionFieldAction::Field(index));
 }
 
