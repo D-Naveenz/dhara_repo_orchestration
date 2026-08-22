@@ -8,9 +8,9 @@ use drot_kernel::{
 
 use crate::filedefs::{DefsPaths, sync_embedded_package, trid_progress::log_build_progress};
 use crate::ops::native_rids::staging_runtimes_on_host;
-use crate::ops::nuget::{
-    PackageOptions, stage_native_for_host, stage_native_under_msvc_env, verify,
-};
+#[cfg(windows)]
+use crate::ops::nuget::stage_native_under_msvc_env;
+use crate::ops::nuget::{PackageOptions, stage_native_for_host, verify};
 use crate::ops::quality;
 use crate::ops::workflow_progress::{begin_workflow, plan_unit_step, run_planned_step};
 

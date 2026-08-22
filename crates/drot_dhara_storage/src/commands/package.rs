@@ -8,9 +8,10 @@ use drot_kernel::paths::resolve_path_against_repo;
 use drot_kernel::{CommandResult, ToolContext};
 
 use crate::ops::native_merge::merge_native_stages;
+#[cfg(windows)]
+use crate::ops::nuget::stage_native_under_msvc_env;
 use crate::ops::nuget::{
     PackageOptions, pack as pack_package, publish as publish_package, stage_native_for_host,
-    stage_native_under_msvc_env,
 };
 use crate::ops::release::run as run_release;
 use crate::ops::verify::verify_package;
