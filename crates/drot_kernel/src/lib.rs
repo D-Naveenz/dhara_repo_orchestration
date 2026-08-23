@@ -7,6 +7,10 @@ pub mod context;
 pub mod forms;
 pub mod interactive;
 pub mod logging;
+#[cfg(windows)]
+pub mod msvc;
+#[cfg(not(windows))]
+#[path = "msvc_stub.rs"]
 pub mod msvc;
 pub mod operation_progress;
 pub mod output;
