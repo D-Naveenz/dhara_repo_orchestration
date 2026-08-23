@@ -16,6 +16,7 @@ The TUI therefore uses **TUI-specific defaults and presets** that only affect fo
 | `tui_default_value` | Ignored | Initial value when the form opens |
 | `invert_switch` | — | Checked step **includes** the step; unchecked emits the skip flag (e.g. `--skip-verify`) |
 | `group` | — | Section heading in the Options tab |
+| `tui_nest` | — | Extra indent levels under the group (whole row: control + label) |
 | `tui_only` | Not serialized | Preset picker and other UI-only fields |
 | `tui_combo_width` | Ignored | Optional inner text slot width; marquee when value overflows |
 | `FieldKind::Preset` | — | Workflow preset row; applying a preset sets other fields |
@@ -78,7 +79,7 @@ Pad spaces beside the value slot are fixed and **not** part of marquee scrolling
 ### Other controls
 
 - **Text / path** — boxed `【>_…】` input; selected row shows a bold **`>`** label prefix (coding/terminal cue)
-- **Boolean steps** — checkbox; inverted switches mean “include step” when checked
+- **Boolean steps** — checkbox; inverted switches mean “include step” when checked. Nested steps (e.g. `cargo doc` / `dotnet test` under quality) use `tui_nest` so the checkbox and label indent together.
 - **Preset** — combo of workflow presets; changing preset applies field values via hooks
 
 When a field has embedded focus, **Tab** commits and exits the field. Footer hints switch to embedded mode (`Tab: exit field`, etc.).

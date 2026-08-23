@@ -403,6 +403,7 @@ mod tests {
                 invert_switch: false,
                 tui_only: false,
                 tui_combo_width: None,
+                tui_nest: 0,
             },
             FieldSpec {
                 key: "configuration",
@@ -417,6 +418,7 @@ mod tests {
                 invert_switch: false,
                 tui_only: false,
                 tui_combo_width: None,
+                tui_nest: 0,
             },
             FieldSpec {
                 key: "check",
@@ -431,6 +433,7 @@ mod tests {
                 invert_switch: false,
                 tui_only: false,
                 tui_combo_width: None,
+                tui_nest: 0,
             },
         ]);
 
@@ -462,6 +465,7 @@ mod tests {
             invert_switch: true,
             tui_only: false,
             tui_combo_width: None,
+            tui_nest: 0,
         }]);
 
         let tui_form = CommandForm::from_command_tui(&command);
@@ -488,6 +492,7 @@ mod tests {
             invert_switch: true,
             tui_only: false,
             tui_combo_width: None,
+            tui_nest: 0,
         }]);
 
         let form = CommandForm::from_command_tui(&command);
@@ -526,6 +531,7 @@ mod tests {
             invert_switch: false,
             tui_only: false,
             tui_combo_width: None,
+            tui_nest: 0,
         }]);
 
         let form = CommandForm::from_command(&command);

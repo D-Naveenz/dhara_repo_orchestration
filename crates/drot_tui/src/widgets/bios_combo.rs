@@ -302,6 +302,7 @@ mod tests {
             invert_switch: false,
             tui_only: false,
             tui_combo_width: width,
+            tui_nest: 0,
         }
     }
 

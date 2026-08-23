@@ -271,10 +271,14 @@ fn render_options_tab(
             }
         }
 
+        let nest = u16::from(field.tui_nest).saturating_mul(GROUP_INDENT);
         let row = Rect::new(
-            fields_area.x.saturating_add(GROUP_INDENT),
+            fields_area.x.saturating_add(GROUP_INDENT).saturating_add(nest),
             y,
-            fields_area.width.saturating_sub(GROUP_INDENT),
+            fields_area
+                .width
+                .saturating_sub(GROUP_INDENT)
+                .saturating_sub(nest),
             1,
         );
         render_form_field(

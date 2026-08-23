@@ -67,6 +67,8 @@ pub struct FieldSpec {
     pub tui_only: bool,
     /// When set, TUI combo inner text slot width; marquee when the value overflows.
     pub tui_combo_width: Option<u16>,
+    /// Extra Options-tab nest levels under the group indent (checkbox + label shift together).
+    pub tui_nest: u8,
 }
 
 impl FieldSpec {
@@ -90,6 +92,7 @@ impl FieldSpec {
             invert_switch: false,
             tui_only: false,
             tui_combo_width: None,
+            tui_nest: 0,
         }
     }
 
@@ -114,6 +117,7 @@ impl FieldSpec {
             invert_switch: false,
             tui_only: false,
             tui_combo_width: None,
+            tui_nest: 0,
         }
     }
 

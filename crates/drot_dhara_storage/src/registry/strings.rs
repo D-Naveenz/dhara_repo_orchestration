@@ -159,9 +159,9 @@ pub(crate) fn s(key: &str) -> &'static str {
         "cmd.build.run.field.step_quality.help" => {
             "Run fmt, clippy, doc, Rust tests, and dotnet test."
         }
-        "cmd.build.run.field.step_docs.label" => "  cargo doc",
+        "cmd.build.run.field.step_docs.label" => "cargo doc",
         "cmd.build.run.field.step_docs.help" => "Include cargo doc in quality checks.",
-        "cmd.build.run.field.step_dotnet.label" => "  dotnet test",
+        "cmd.build.run.field.step_dotnet.label" => "dotnet test",
         "cmd.build.run.field.step_dotnet.help" => "Include dotnet test in quality checks.",
         "cmd.build.run.field.step_native.label" => "Stage native sidecar",
         "cmd.build.run.field.step_native.help" => {

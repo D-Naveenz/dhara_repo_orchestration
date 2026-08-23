@@ -199,6 +199,7 @@ pub(crate) fn ui_for_command(
                     invert_switch: false,
                     tui_only: false,
                     tui_combo_width: None,
+                    tui_nest: 0,
                 },
             ],
             quick_run: false,
@@ -284,6 +285,7 @@ fn build_run_ui() -> CommandUi {
                 Some("true"),
                 Some("true"),
                 Some(workflow),
+                0,
             ),
             include_step(
                 "step_defs",
@@ -293,6 +295,7 @@ fn build_run_ui() -> CommandUi {
                 Some("true"),
                 Some("true"),
                 Some(workflow),
+                0,
             ),
             include_step(
                 "step_quality",
@@ -302,6 +305,7 @@ fn build_run_ui() -> CommandUi {
                 Some("true"),
                 Some("true"),
                 Some(workflow),
+                0,
             ),
             include_step(
                 "step_docs",
@@ -311,6 +315,7 @@ fn build_run_ui() -> CommandUi {
                 Some("true"),
                 Some("false"),
                 Some(workflow),
+                1,
             ),
             include_step(
                 "step_dotnet",
@@ -320,6 +325,7 @@ fn build_run_ui() -> CommandUi {
                 Some("true"),
                 Some("true"),
                 Some(workflow),
+                1,
             ),
             include_step(
                 "step_native",
@@ -329,6 +335,7 @@ fn build_run_ui() -> CommandUi {
                 Some("true"),
                 Some("true"),
                 Some(workflow),
+                0,
             ),
             include_step(
                 "step_verify",
@@ -338,6 +345,7 @@ fn build_run_ui() -> CommandUi {
                 Some("true"),
                 Some("false"),
                 Some(workflow),
+                0,
             ),
             combo_field(
                 "native_scope",
@@ -385,6 +393,7 @@ fn release_run_ui() -> CommandUi {
                 Some("true"),
                 Some("false"),
                 Some(steps),
+                0,
             ),
             include_step(
                 "step_nuget",
@@ -394,6 +403,7 @@ fn release_run_ui() -> CommandUi {
                 Some("true"),
                 Some("false"),
                 Some(steps),
+                0,
             ),
             combo_field(
                 "configuration",
@@ -427,6 +437,7 @@ fn release_run_ui() -> CommandUi {
                 invert_switch: false,
                 tui_only: false,
                 tui_combo_width: None,
+                tui_nest: 0,
             },
         ],
         quick_run: false,
@@ -492,6 +503,7 @@ fn preset_field(
         invert_switch: false,
         tui_only: true,
         tui_combo_width: None,
+        tui_nest: 0,
     }
 }
 
@@ -503,6 +515,7 @@ fn include_step(
     cli_default: Option<&'static str>,
     tui_default: Option<&'static str>,
     group: Option<&'static str>,
+    nest: u8,
 ) -> FieldSpec {
     FieldSpec {
         key,
@@ -517,6 +530,7 @@ fn include_step(
         invert_switch: true,
         tui_only: false,
         tui_combo_width: None,
+        tui_nest: nest,
     }
 }
 
@@ -548,6 +562,7 @@ fn combo_field(
         invert_switch: false,
         tui_only: false,
         tui_combo_width: None,
+        tui_nest: 0,
     }
 }
 
@@ -573,6 +588,7 @@ fn radio_field(
         invert_switch: false,
         tui_only: false,
         tui_combo_width: None,
+        tui_nest: 0,
     }
 }
 
@@ -598,6 +614,7 @@ fn text_field(
         invert_switch: false,
         tui_only: false,
         tui_combo_width: None,
+        tui_nest: 0,
     }
 }
 
@@ -621,6 +638,7 @@ fn required_path(
         invert_switch: false,
         tui_only: false,
         tui_combo_width: None,
+        tui_nest: 0,
     }
 }
 
@@ -644,5 +662,6 @@ fn optional_path(
         invert_switch: false,
         tui_only: false,
         tui_combo_width: None,
+        tui_nest: 0,
     }
 }
