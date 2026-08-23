@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## v0.11.1 - 2026-08-23
+
+### Fixed
+- `run_with_msvc_env` again uses a temporary `.cmd` that calls `vcvarsall.bat x64_arm64` instead of inlining the command through PowerShell/`cmd /c`, which broke Windows paths on GitHub Actions (`'\' is not recognized`) during `package stage-native --msvc-env`.
+
+### Technical
+- Bumped workspace package version to **0.11.1**.
+
 ## v0.11.0 - 2026-08-23
 
 ### Added
