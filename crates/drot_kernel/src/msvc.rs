@@ -59,20 +59,43 @@ pub fn reexec_under_devshell_if_needed(args: &[String]) -> Result<bool> {
 }
 
 /// Runs a shell command line inside the Visual Studio Developer environment.
+///
+/// Uses a temporary `.cmd` that calls `vcvarsall.bat x64_arm64` then the command.
+/// Inline `cmd.exe /c "..."` through PowerShell mangles Windows paths (for example
+/// `'\' is not recognized`); the batch file avoids that quoting failure. The
+/// `x64_arm64` vcvars flavor is required so host `win-x64` agents can link
+/// `win-arm64` natives during `package stage-native --msvc-env`.
 pub fn run_with_msvc_env(command: &str) -> Result<()> {
     let vs_install = locate_visual_studio_install()?;
-    let escaped = command.replace('\'', "''");
-    let script = format!(
-        r#"$vsPath = '{vs}'; Import-Module (Join-Path $vsPath 'Common7\Tools\Microsoft.VisualStudio.DevShell.dll'); Enter-VsDevShell -VsInstallPath $vsPath -SkipAutomaticLocation; $env:{inside}='1'; cmd.exe /d /c "{escaped}""#,
-        vs = vs_install.display(),
-        inside = INSIDE_MSVC_ENV_VAR,
-        escaped = escaped.replace('"', "\\\""),
-    );
+    let vcvars = vs_install
+        .join("VC")
+        .join("Auxiliary")
+        .join("Build")
+        .join("vcvarsall.bat");
+    if !vcvars.is_file() {
+        bail!(
+            "Visual Studio vcvarsall.bat was not found at {}",
+            vcvars.display()
+        );
+    }
 
-    let status = Command::new("powershell.exe")
-        .args(["-NoProfile", "-NonInteractive", "-Command", &script])
+    let script = format!(
+        "@echo off\r\ncall \"{vcvars}\" x64_arm64\r\nif errorlevel 1 exit /b %errorlevel%\r\n{command}\r\n",
+        vcvars = vcvars.display(),
+        command = command,
+    );
+    let batch = env::temp_dir().join(format!("drot_msvc_{}.cmd", std::process::id()));
+    std::fs::write(&batch, script)
+        .with_context(|| format!("failed to write {}", batch.display()))?;
+
+    let status = Command::new("cmd.exe")
+        .arg("/d")
+        .arg("/c")
+        .arg(&batch)
         .status()
-        .context("failed to spawn PowerShell for MSVC command")?;
+        .context("failed to spawn cmd.exe for MSVC environment")?;
+
+    let _ = std::fs::remove_file(&batch);
 
     if !status.success() {
         bail!("MSVC command failed with status {status}: {command}");
