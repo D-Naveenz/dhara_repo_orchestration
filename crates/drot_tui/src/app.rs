@@ -503,14 +503,55 @@ fn handle_tab_content_key(app: &mut DharaTui, key: &KeyEvent) -> bool {
                         app.embedded_focus = None;
                         true
                     }
+                    KeyCode::Esc => {
+                        if matches!(app.embedded_focus, Some(EmbeddedFocus::Text { .. })) {
+                            // Discard in-progress edits by reloading from the form value.
+                            sync_option_widgets_from_form(
+                                &app.state,
+                                &app.registry,
+                                app.form_field,
+                                &mut app.option_input,
+                                &mut app.option_checkbox,
+                            );
+                            app.editing_form = false;
+                            app.embedded_focus = None;
+                        }
+                        true
+                    }
                     KeyCode::Left => {
-                        cycle_option_select(app, -1);
-                        apply_preset_if_selected(&mut app.state, &app.registry, app.form_field);
+                        if matches!(app.embedded_focus, Some(EmbeddedFocus::Text { .. })) {
+                            app.option_input.move_left();
+                        } else {
+                            cycle_option_select(app, -1);
+                            apply_preset_if_selected(&mut app.state, &app.registry, app.form_field);
+                        }
                         true
                     }
                     KeyCode::Right => {
-                        cycle_option_select(app, 1);
-                        apply_preset_if_selected(&mut app.state, &app.registry, app.form_field);
+                        if matches!(app.embedded_focus, Some(EmbeddedFocus::Text { .. })) {
+                            app.option_input.move_right();
+                        } else {
+                            cycle_option_select(app, 1);
+                            apply_preset_if_selected(&mut app.state, &app.registry, app.form_field);
+                        }
+                        true
+                    }
+                    KeyCode::Home => {
+                        if matches!(app.embedded_focus, Some(EmbeddedFocus::Text { .. })) {
+                            app.option_input.move_home();
+                        }
+                        true
+                    }
+                    KeyCode::End => {
+                        if matches!(app.embedded_focus, Some(EmbeddedFocus::Text { .. })) {
+                            app.option_input.move_end();
+                        }
+                        true
+                    }
+                    KeyCode::Delete => {
+                        if matches!(app.embedded_focus, Some(EmbeddedFocus::Text { .. })) {
+                            app.option_input.delete_char_forward();
+                        }
                         true
                     }
                     KeyCode::Char(_) | KeyCode::Backspace => {

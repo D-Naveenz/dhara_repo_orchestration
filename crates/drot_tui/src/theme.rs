@@ -51,10 +51,6 @@ pub fn border_style() -> Style {
     Style::default().fg(BORDER)
 }
 
-pub fn selected_style() -> Style {
-    Style::default().fg(Color::White).bg(SELECTED_BG)
-}
-
 pub fn tree_selected_style() -> Style {
     Style::default()
         .fg(WARNING)

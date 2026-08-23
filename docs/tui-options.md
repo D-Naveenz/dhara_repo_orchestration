@@ -76,9 +76,25 @@ Label                    [ ⮜ _ {value slot} _ ⮞ ]
 
 Pad spaces beside the value slot are fixed and **not** part of marquee scrolling. Short values are **center-aligned** inside the slot.
 
+### Text / path layout and cursor
+
+Each text row is **caption left** (bold `>` when selected), **input cluster right-aligned**:
+
+```
+> Label                    [ >{value} ]
+```
+
+(`[` and `]` denote the highlighted background — not drawn as glyphs. Pads sit beside the `>` prompt/value.)
+
+| State | Cursor |
+| ----- | ------ |
+| Idle empty | Static `_` cue inside the highlight |
+| Embedded edit | Terminal caret via Ratatui `Frame::set_cursor_position` (usually blinks); `←`/`→`/`Home`/`End` move `InputState.cursor_pos` |
+
+Highlight width grows with the value (minimum text slot, capped by the row). Long values scroll so the caret stays visible.
+
 ### Other controls
 
-- **Text / path** — boxed `【>_…】` input; selected row shows a bold **`>`** label prefix (coding/terminal cue)
 - **Boolean steps** — checkbox; inverted switches mean “include step” when checked. Nested steps (e.g. `cargo doc` / `dotnet test` under quality) use `tui_nest` so the checkbox and label indent together.
 - **Preset** — combo of workflow presets; changing preset applies field values via hooks
 

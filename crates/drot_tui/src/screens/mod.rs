@@ -425,16 +425,26 @@ fn render_form_field(
             } else {
                 text.as_str()
             };
-            let regions = bios_textbox::render_bios_textbox(
+            let cursor_pos = if embedded_text {
+                option_input.cursor_pos
+            } else {
+                display.chars().count()
+            };
+            let result = bios_textbox::render_bios_textbox(
                 row,
                 field.label,
                 display,
-                selected,
-                embedded_text,
+                selected && content_focused,
+                embedded_text && content_focused,
+                cursor_pos,
                 frame.buffer_mut(),
             );
-            option_field_clicks.register(regions.row, OptionFieldAction::Field(index));
-            option_field_clicks.register(regions.input, OptionFieldAction::Field(index));
+            if let Some(pos) = result.cursor {
+                frame.set_cursor_position(pos);
+            }
+            option_field_clicks.register(result.regions.input, OptionFieldAction::Field(index));
+            option_field_clicks.register(result.regions.label, OptionFieldAction::Field(index));
+            option_field_clicks.register(result.regions.row, OptionFieldAction::Field(index));
         }
         _ => {
             Paragraph::new(Line::styled(
