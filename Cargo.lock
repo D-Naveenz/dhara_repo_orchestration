@@ -502,12 +502,13 @@ dependencies = [
 
 [[package]]
 name = "dhara_storage_core"
-version = "0.9.23"
+version = "0.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0a097fa5c9d4bf4c4b8136d301cc151d8f1b7065b92ea0f959957cdccae663bf"
+checksum = "c4c481fdbdccfabd985730a8b199dd5eb9743e9316115660168a3ce678096c36"
 dependencies = [
+ "crossbeam-channel",
  "flatbuffers",
- "quick-xml",
+ "quick-xml 0.41.0",
  "serde",
  "thiserror 2.0.20",
 ]
@@ -552,7 +553,7 @@ dependencies = [
  "dhara_storage_core",
  "drot_kernel",
  "once_cell",
- "quick-xml",
+ "quick-xml 0.42.0",
  "rayon",
  "serde",
  "sevenz-rust",
@@ -1339,6 +1340,16 @@ name = "quick-xml"
 version = "0.41.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e660451e55124f798a69a5af3f49ccfbefbd41910eefd25caf2393e1f3473ec1"
+dependencies = [
+ "memchr",
+ "serde",
+]
+
+[[package]]
+name = "quick-xml"
+version = "0.42.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "41b1177fdf999d2321d3fb46ff47159d9c1fb9ad66a4879f8c50a0b504615e9b"
 dependencies = [
  "memchr",
  "serde",
