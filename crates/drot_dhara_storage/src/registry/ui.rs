@@ -507,6 +507,7 @@ fn preset_field(
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 fn include_step(
     key: &'static str,
     label: &'static str,
@@ -534,6 +535,7 @@ fn include_step(
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 fn combo_field(
     key: &'static str,
     label: &'static str,

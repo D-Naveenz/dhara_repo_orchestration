@@ -259,15 +259,15 @@ fn render_options_tab(
                 y += 1;
             }
             current_group = field.group;
-            if let Some(title) = field.group {
-                if y < fields_area.y + fields_area.height {
-                    button_group::render_group_title(
-                        Rect::new(fields_area.x, y, fields_area.width, 1),
-                        title,
-                        frame.buffer_mut(),
-                    );
-                    y += 1;
-                }
+            if let Some(title) = field.group
+                && y < fields_area.y + fields_area.height
+            {
+                button_group::render_group_title(
+                    Rect::new(fields_area.x, y, fields_area.width, 1),
+                    title,
+                    frame.buffer_mut(),
+                );
+                y += 1;
             }
         }
 

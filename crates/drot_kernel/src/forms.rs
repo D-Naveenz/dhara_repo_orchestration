@@ -45,10 +45,10 @@ impl CommandForm {
     }
 
     pub fn set_boolean(&mut self, command: &CommandSpec, key: &str, value: bool) {
-        if let Some(index) = self.field_index(command, key) {
-            if let Some(FormValue::Boolean(current)) = self.values.get_mut(index) {
-                *current = value;
-            }
+        if let Some(index) = self.field_index(command, key)
+            && let Some(FormValue::Boolean(current)) = self.values.get_mut(index)
+        {
+            *current = value;
         }
     }
 
@@ -60,18 +60,18 @@ impl CommandForm {
             return;
         };
         let options = select_options(&field.kind);
-        if let Some(sel) = options.iter().position(|candidate| *candidate == option) {
-            if let Some(FormValue::Select(current)) = self.values.get_mut(index) {
-                *current = sel;
-            }
+        if let Some(sel) = options.iter().position(|candidate| *candidate == option)
+            && let Some(FormValue::Select(current)) = self.values.get_mut(index)
+        {
+            *current = sel;
         }
     }
 
     pub fn set_select_index(&mut self, command: &CommandSpec, key: &str, index: usize) {
-        if let Some(field_index) = self.field_index(command, key) {
-            if let Some(FormValue::Select(current)) = self.values.get_mut(field_index) {
-                *current = index;
-            }
+        if let Some(field_index) = self.field_index(command, key)
+            && let Some(FormValue::Select(current)) = self.values.get_mut(field_index)
+        {
+            *current = index;
         }
     }
 

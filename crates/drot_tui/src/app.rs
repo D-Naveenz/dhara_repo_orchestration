@@ -554,10 +554,10 @@ fn handle_tab_content_key(app: &mut DharaTui, key: &KeyEvent) -> bool {
                         true
                     }
                     KeyCode::Char(_) | KeyCode::Backspace => {
-                        if let Some(EmbeddedFocus::Text { field_index }) = app.embedded_focus {
-                            if field_index == app.form_field {
-                                let _ = handle_form_edit_key(app, *key);
-                            }
+                        if let Some(EmbeddedFocus::Text { field_index }) = app.embedded_focus
+                            && field_index == app.form_field
+                        {
+                            let _ = handle_form_edit_key(app, *key);
                         }
                         true
                     }

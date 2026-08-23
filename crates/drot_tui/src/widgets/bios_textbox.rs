@@ -97,8 +97,6 @@ pub fn render_bios_textbox(
             .fg(dhara_theme::ACCENT)
             .bg(bg)
             .add_modifier(Modifier::BOLD)
-    } else if row_selected {
-        Style::default().fg(dhara_theme::TEXT).bg(bg)
     } else {
         Style::default().fg(dhara_theme::TEXT).bg(bg)
     };

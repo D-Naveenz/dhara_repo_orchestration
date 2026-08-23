@@ -2,12 +2,15 @@ use std::env;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-use anyhow::{Context, Result, bail};
+#[cfg(windows)]
+use anyhow::Context;
+use anyhow::{Result, bail};
 
 /// Set on child processes re-launched under the Visual Studio Developer environment.
 pub const INSIDE_MSVC_ENV_VAR: &str = "DHARA_TOOL_INSIDE_MSVC";
 
 /// Commands that do not require MSVC tooling; skip eager DevShell re-exec on Windows.
+#[cfg(windows)]
 const DEVSHELL_SKIP_COMMANDS: &[&[&str]] = &[
     &["config", "show"],
     &["config", "env", "init"],
@@ -35,7 +38,7 @@ pub fn reexec_under_devshell_if_needed(args: &[String]) -> Result<bool> {
     #[cfg(not(windows))]
     {
         let _ = args;
-        return Ok(false);
+        Ok(false)
     }
 
     #[cfg(windows)]

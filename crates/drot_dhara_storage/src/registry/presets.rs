@@ -70,7 +70,7 @@ mod tests {
 
     use super::{apply_form_preset, default_preset_id};
 
-    fn build_run_command<'a>(registry: &'a CommandRegistry) -> &'a drot_kernel::CommandSpec {
+    fn build_run_command(registry: &CommandRegistry) -> &drot_kernel::CommandSpec {
         registry
             .commands()
             .find(|command| command.id == "build.run")
