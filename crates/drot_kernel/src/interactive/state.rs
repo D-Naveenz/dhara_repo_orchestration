@@ -138,16 +138,27 @@ impl AppState {
     }
 
     pub fn ensure_form(&mut self, command: &CommandSpec) {
+        let created = !self.forms.contains_key(command.id);
         self.forms
             .entry(command.id)
-            .or_insert_with(|| CommandForm::from_command(command));
+            .or_insert_with(|| CommandForm::from_command_tui(command));
+        if created {
+            Self::initialize_tui_form(self.forms.get_mut(command.id).expect("form"), command);
+        }
     }
 
     pub fn reset_form(&mut self, command: &CommandSpec) {
-        self.forms
-            .insert(command.id, CommandForm::from_command(command));
+        let mut form = CommandForm::from_command_tui(command);
+        Self::initialize_tui_form(&mut form, command);
+        self.forms.insert(command.id, form);
         self.status_message = format!("Reset options for {}", command.path_string());
         self.status_tone = StatusTone::Ready;
+    }
+
+    fn initialize_tui_form(form: &mut CommandForm, command: &CommandSpec) {
+        if let Some(hooks) = crate::product::product_hooks() {
+            hooks.initialize_tui_form(form, command);
+        }
     }
 
     pub fn select_command(&mut self, registry: &CommandRegistry, command_id: &'static str) {

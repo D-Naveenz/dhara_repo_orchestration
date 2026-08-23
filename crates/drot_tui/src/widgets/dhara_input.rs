@@ -16,17 +16,3 @@ pub fn render_path_input(
         .theme(theme)
         .render_stateful(frame, area)
 }
-
-pub fn render_field_input(
-    frame: &mut Frame<'_>,
-    area: Rect,
-    label: &str,
-    state: &InputState,
-    theme: &Theme,
-) -> ClickRegion<ratatui_interact::components::InputAction> {
-    Input::new(state)
-        .label(label)
-        .with_border(false)
-        .theme(theme)
-        .render_stateful(frame, area)
-}

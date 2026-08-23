@@ -1,6 +1,7 @@
 pub mod modals;
 
 use drot_kernel::FormValue;
+use drot_kernel::forms::{preset_id, preset_label};
 use drot_kernel::{AppState, DiagnosticSeverity, MainTab};
 use drot_kernel::{CommandRegistry, CommandSpec, FieldKind};
 use ratatui::Frame;
@@ -14,11 +15,16 @@ use ratatui_interact::components::{
 };
 use ratatui_interact::theme::Theme;
 use ratatui_interact::traits::ClickRegionRegistry;
+use std::time::Instant;
 
+use crate::embedded::OptionFieldAction;
 use crate::focus::TuiFocus;
 use crate::strings::{self, t};
 use crate::theme as dhara_theme;
-use crate::widgets::{dhara_input, padded_button, panel, scroll_body, tab_table, text_wrap};
+use crate::widgets::{
+    ComboPart, ComboRenderParams, bios_combo, bios_textbox, button_group, padded_button, panel,
+    scroll_body, tab_table, text_marquee::LabelMarquee, text_wrap,
+};
 
 pub struct CenterPanelClicks {
     pub registry: ClickRegionRegistry<TabViewAction>,
@@ -46,11 +52,14 @@ pub fn render_center_panel(
     system_scroll: &mut ScrollableContentState,
     form_field: usize,
     editing_form: bool,
+    embedded_focus: Option<crate::embedded::EmbeddedFocus>,
     option_input: &InputState,
     option_checkbox: &CheckBoxState,
-    option_field_clicks: &mut ClickRegionRegistry<usize>,
+    option_field_clicks: &mut ClickRegionRegistry<OptionFieldAction>,
     reset_btn: &mut ButtonState,
     shell_clicks: &mut ClickRegionRegistry<TuiFocus>,
+    combo_marquee: &mut LabelMarquee,
+    now: Instant,
 ) -> CenterPanelClicks {
     sync_tab_view_from_state(tab_state, state.main_tab);
     tab_state.focused = shell_focus.is_focused(&TuiFocus::MainTabs)
@@ -97,6 +106,7 @@ pub fn render_center_panel(
             registry,
             form_field,
             editing_form,
+            embedded_focus,
             option_input,
             option_checkbox,
             theme,
@@ -105,6 +115,8 @@ pub fn render_center_panel(
             reset_btn,
             shell_focus,
             shell_clicks,
+            combo_marquee,
+            now,
         ),
         2 => render_trouble_tab(body, frame.buffer_mut(), state, trouble_scroll),
         3 => render_system_tab(body, frame.buffer_mut(), state, system_scroll),
@@ -163,14 +175,16 @@ fn render_info_tab(
     };
     lines.extend(text_wrap::wrap_line(&format!("  {syntax}"), width));
 
-    // Options (when present)
+    // CLI flags reference (Options tab is the primary human surface).
     if !command.ui.fields.is_empty() {
         lines.push(String::new());
-        lines.extend(text_wrap::wrap_line(t("doc.options"), width));
-        for field in &command.ui.fields {
-            let entry = format!("  {} — {}", field.label, field.help);
-            lines.extend(text_wrap::wrap_line(&entry, width));
-        }
+        lines.extend(text_wrap::wrap_line(t("doc.cli_flags"), width));
+        let syntax = if command.args_summary.is_empty() {
+            command.path_string()
+        } else {
+            format!("{} {}", command.path_string(), command.args_summary)
+        };
+        lines.extend(text_wrap::wrap_line(&format!("  {syntax}"), width));
     }
 
     scroll.set_lines(lines);
@@ -185,14 +199,17 @@ fn render_options_tab(
     registry: &CommandRegistry,
     form_field: usize,
     editing_form: bool,
+    embedded_focus: Option<crate::embedded::EmbeddedFocus>,
     option_input: &InputState,
     _option_checkbox: &CheckBoxState,
     theme: &Theme,
     content_focused: bool,
-    option_field_clicks: &mut ClickRegionRegistry<usize>,
+    option_field_clicks: &mut ClickRegionRegistry<OptionFieldAction>,
     reset_btn: &mut ButtonState,
     shell_focus: &crate::focus::ShellFocus,
     shell_clicks: &mut ClickRegionRegistry<TuiFocus>,
+    combo_marquee: &mut LabelMarquee,
+    now: Instant,
 ) {
     let chunks = Layout::vertical([Constraint::Min(0), Constraint::Length(1)]).split(area);
     let fields_area = chunks[0];
@@ -228,73 +245,209 @@ fn render_options_tab(
         return;
     }
 
+    let mut y = fields_area.y;
+    let mut current_group: Option<&str> = None;
+    const GROUP_INDENT: u16 = 2;
+
     for (index, field) in command.ui.fields.iter().enumerate() {
-        let y = fields_area.y.saturating_add(index as u16);
         if y >= fields_area.y + fields_area.height {
             break;
         }
-        let row = Rect::new(fields_area.x, y, fields_area.width, 1);
-        let selected = index == form_field;
-        let style = if selected && content_focused {
-            dhara_theme::selected_style()
-        } else {
-            Style::default().fg(dhara_theme::TEXT)
-        };
 
-        match (&form.values[index], &field.kind) {
-            (FormValue::Boolean(value), FieldKind::Boolean) if selected && editing_form => {
-                let mut cb = CheckBoxState::new(*value);
-                cb.set_focused(true);
-                let region = CheckBox::new(field.label, &cb)
-                    .theme(theme)
-                    .render_stateful(row, frame.buffer_mut());
-                option_field_clicks.register(region.area, index);
+        if current_group != field.group {
+            if current_group.is_some() {
+                y += 1;
             }
-            (FormValue::Boolean(value), FieldKind::Boolean) => {
-                let mut cb = CheckBoxState::new(*value);
-                cb.set_focused(selected && content_focused);
-                let region = CheckBox::new(field.label, &cb)
-                    .theme(theme)
-                    .render_stateful(row, frame.buffer_mut());
-                option_field_clicks.register(region.area, index);
+            current_group = field.group;
+            if let Some(title) = field.group
+                && y < fields_area.y + fields_area.height
+            {
+                button_group::render_group_title(
+                    Rect::new(fields_area.x, y, fields_area.width, 1),
+                    title,
+                    frame.buffer_mut(),
+                );
+                y += 1;
             }
-            (
-                FormValue::Text(_),
-                FieldKind::Text | FieldKind::Path | FieldKind::BrowsablePath { .. },
-            ) if selected && editing_form => {
-                let region =
-                    dhara_input::render_field_input(frame, row, field.label, option_input, theme);
-                option_field_clicks.register(region.area, index);
+        }
+
+        let nest = u16::from(field.tui_nest).saturating_mul(GROUP_INDENT);
+        let row = Rect::new(
+            fields_area
+                .x
+                .saturating_add(GROUP_INDENT)
+                .saturating_add(nest),
+            y,
+            fields_area
+                .width
+                .saturating_sub(GROUP_INDENT)
+                .saturating_sub(nest),
+            1,
+        );
+        render_form_field(
+            frame,
+            row,
+            index,
+            field,
+            &form.values[index],
+            index == form_field,
+            content_focused,
+            editing_form,
+            embedded_focus,
+            option_input,
+            theme,
+            option_field_clicks,
+            command.id,
+            combo_marquee,
+            now,
+        );
+        y += 1;
+    }
+}
+
+fn register_combo_clicks(
+    option_field_clicks: &mut ClickRegionRegistry<OptionFieldAction>,
+    regions: &bios_combo::ComboClickRegions,
+    index: usize,
+) {
+    let inner = OptionFieldAction::ComboPart {
+        field: index,
+        part: ComboPart::Inner,
+    };
+    // Buttons first — registry returns the first matching region.
+    option_field_clicks.register(
+        regions.left,
+        OptionFieldAction::ComboPart {
+            field: index,
+            part: ComboPart::Left,
+        },
+    );
+    option_field_clicks.register(
+        regions.right,
+        OptionFieldAction::ComboPart {
+            field: index,
+            part: ComboPart::Right,
+        },
+    );
+    option_field_clicks.register(regions.inner, inner);
+    option_field_clicks.register(regions.text, inner);
+    option_field_clicks.register(regions.label, OptionFieldAction::Field(index));
+}
+
+#[allow(clippy::too_many_arguments)]
+fn render_form_field(
+    frame: &mut Frame,
+    row: Rect,
+    index: usize,
+    field: &drot_kernel::FieldSpec,
+    value: &FormValue,
+    selected: bool,
+    content_focused: bool,
+    editing_form: bool,
+    embedded_focus: Option<crate::embedded::EmbeddedFocus>,
+    option_input: &InputState,
+    theme: &Theme,
+    option_field_clicks: &mut ClickRegionRegistry<OptionFieldAction>,
+    command_id: &'static str,
+    combo_marquee: &mut LabelMarquee,
+    now: Instant,
+) {
+    let _ = editing_form;
+    let embedded_combo = match embedded_focus {
+        Some(crate::embedded::EmbeddedFocus::Combo { field_index, part })
+            if field_index == index =>
+        {
+            Some(part)
+        }
+        _ => None,
+    };
+    let embedded_text = matches!(
+        embedded_focus,
+        Some(crate::embedded::EmbeddedFocus::Text { field_index }) if field_index == index
+    );
+
+    match (&field.kind, value) {
+        (FieldKind::Boolean, FormValue::Boolean(checked)) => {
+            let mut cb = CheckBoxState::new(*checked);
+            cb.set_focused(selected && content_focused);
+            let region = CheckBox::new(field.label, &cb)
+                .theme(theme)
+                .render_stateful(row, frame.buffer_mut());
+            option_field_clicks.register(region.area, OptionFieldAction::Field(index));
+        }
+        (FieldKind::Radio(options), FormValue::Select(sel)) => {
+            let label = options.get(*sel).copied().unwrap_or("");
+            let row_selected = selected && content_focused;
+            let marquee_key = format!("{command_id}:{index}");
+            let mut params = ComboRenderParams {
+                field,
+                value: label,
+                selected: row_selected,
+                embedded: embedded_combo,
+                marquee: combo_marquee,
+                marquee_key: &marquee_key,
+                now,
+            };
+            let regions =
+                bios_combo::render_bios_combo(row, field.label, &mut params, frame.buffer_mut());
+            register_combo_clicks(option_field_clicks, &regions, index);
+        }
+        (
+            FieldKind::Combo(_) | FieldKind::Select(_) | FieldKind::Preset(_),
+            FormValue::Select(sel),
+        ) => {
+            let label = preset_label(&field.kind, *sel);
+            let row_selected = selected && content_focused;
+            let marquee_key = format!("{command_id}:{index}");
+            let mut params = ComboRenderParams {
+                field,
+                value: label,
+                selected: row_selected,
+                embedded: embedded_combo,
+                marquee: combo_marquee,
+                marquee_key: &marquee_key,
+                now,
+            };
+            let regions =
+                bios_combo::render_bios_combo(row, field.label, &mut params, frame.buffer_mut());
+            register_combo_clicks(option_field_clicks, &regions, index);
+        }
+        (
+            FieldKind::Text | FieldKind::Path | FieldKind::BrowsablePath { .. },
+            FormValue::Text(text),
+        ) => {
+            let display = if embedded_text {
+                option_input.text()
+            } else {
+                text.as_str()
+            };
+            let cursor_pos = if embedded_text {
+                option_input.cursor_pos
+            } else {
+                display.chars().count()
+            };
+            let result = bios_textbox::render_bios_textbox(
+                row,
+                field.label,
+                display,
+                selected && content_focused,
+                embedded_text && content_focused,
+                cursor_pos,
+                frame.buffer_mut(),
+            );
+            if let Some(pos) = result.cursor {
+                frame.set_cursor_position(pos);
             }
-            (
-                FormValue::Text(text),
-                FieldKind::Text | FieldKind::Path | FieldKind::BrowsablePath { .. },
-            ) => {
-                let prefix = if selected { "▸ " } else { "  " };
-                Paragraph::new(Line::styled(
-                    format!("{prefix}{}: {text}", field.label),
-                    style,
-                ))
-                .render(row, frame.buffer_mut());
-                option_field_clicks.register(row, index);
-            }
-            (FormValue::Select(sel), FieldKind::Select(options)) => {
-                let value = options.get(*sel).copied().unwrap_or("");
-                let prefix = if selected { "▸ " } else { "  " };
-                Paragraph::new(Line::styled(
-                    format!("{prefix}{}: {value}", field.label),
-                    style,
-                ))
-                .render(row, frame.buffer_mut());
-                option_field_clicks.register(row, index);
-            }
-            _ => {
-                Paragraph::new(Line::styled(
-                    format!("  {}: (unsupported)", field.label),
-                    style,
-                ))
-                .render(row, frame.buffer_mut());
-            }
+            option_field_clicks.register(result.regions.input, OptionFieldAction::Field(index));
+            option_field_clicks.register(result.regions.label, OptionFieldAction::Field(index));
+            option_field_clicks.register(result.regions.row, OptionFieldAction::Field(index));
+        }
+        _ => {
+            Paragraph::new(Line::styled(
+                format!("  {}: (unsupported)", field.label),
+                Style::default().fg(dhara_theme::TEXT),
+            ))
+            .render(row, frame.buffer_mut());
         }
     }
 }
@@ -415,7 +568,6 @@ pub fn apply_option_widgets_to_form(
     option_input: &InputState,
     option_checkbox: &CheckBoxState,
 ) {
-    let _ = option_checkbox;
     let Some(command) = state.selected_command(registry).cloned() else {
         return;
     };
@@ -436,5 +588,39 @@ pub fn apply_option_widgets_to_form(
             *value = option_checkbox.checked;
         }
         _ => {}
+    }
+}
+
+pub fn apply_preset_if_selected(
+    state: &mut AppState,
+    registry: &CommandRegistry,
+    field_index: usize,
+) {
+    let Some(command) = state.selected_command(registry).cloned() else {
+        return;
+    };
+    let Some(field) = command.ui.fields.get(field_index) else {
+        return;
+    };
+    if !matches!(field.kind, FieldKind::Preset(_)) {
+        return;
+    }
+    let Some(form) = state.forms.get(command.id) else {
+        return;
+    };
+    let FormValue::Select(index) = form.values[field_index] else {
+        return;
+    };
+    let Some(selected_preset) = preset_id(&field.kind, index) else {
+        return;
+    };
+    if selected_preset == "custom" {
+        return;
+    }
+    let Some(form) = state.forms.get_mut(command.id) else {
+        return;
+    };
+    if let Some(hooks) = drot_kernel::product_hooks() {
+        hooks.apply_tui_preset(form, &command, selected_preset);
     }
 }

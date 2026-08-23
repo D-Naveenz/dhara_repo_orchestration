@@ -17,6 +17,8 @@ pub const SUCCESS: Color = Color::Rgb(80, 180, 120);
 pub const WARNING: Color = Color::Rgb(220, 180, 80);
 pub const ERROR: Color = Color::Rgb(220, 90, 90);
 pub const SELECTED_BG: Color = Color::Rgb(50, 90, 130);
+pub const COMBO_BG: Color = Color::Rgb(44, 44, 52);
+pub const COMBO_BG_SELECTED: Color = Color::Rgb(52, 52, 62);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ValidationTone {
@@ -47,10 +49,6 @@ pub fn border_only_style() -> Style {
 
 pub fn border_style() -> Style {
     Style::default().fg(BORDER)
-}
-
-pub fn selected_style() -> Style {
-    Style::default().fg(Color::White).bg(SELECTED_BG)
 }
 
 pub fn tree_selected_style() -> Style {
