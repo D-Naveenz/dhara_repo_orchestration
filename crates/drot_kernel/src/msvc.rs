@@ -1,7 +1,7 @@
 use std::env;
-use std::path::PathBuf;
 #[cfg(windows)]
 use std::path::Path;
+use std::path::PathBuf;
 #[cfg(windows)]
 use std::process::Command;
 
