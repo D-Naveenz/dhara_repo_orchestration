@@ -181,9 +181,7 @@ pub(crate) fn s(key: &str) -> &'static str {
         "cmd.release.run.group.steps" => "Release steps",
         "cmd.release.run.group.advanced" => "Advanced",
         "cmd.release.run.field.preset.label" => "Release preset",
-        "cmd.release.run.field.preset.help" => {
-            "Dry-run validation or full publish workflow."
-        }
+        "cmd.release.run.field.preset.help" => "Dry-run validation or full publish workflow.",
         "cmd.release.run.field.step_cargo.label" => "Publish Cargo crates",
         "cmd.release.run.field.step_cargo.help" => "Run the Cargo release phase.",
         "cmd.release.run.field.step_nuget.label" => "Publish NuGet package",

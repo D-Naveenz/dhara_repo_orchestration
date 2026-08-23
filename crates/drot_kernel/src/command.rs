@@ -36,7 +36,9 @@ pub struct PresetOption {
 pub enum FieldKind {
     Text,
     Path,
-    BrowsablePath { dialog_title: &'static str },
+    BrowsablePath {
+        dialog_title: &'static str,
+    },
     Boolean,
     /// Legacy select; rendered as [`FieldKind::Combo`] in the TUI.
     Select(&'static [&'static str]),

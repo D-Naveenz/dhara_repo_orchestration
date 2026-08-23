@@ -41,11 +41,7 @@ impl CommandForm {
     }
 
     pub fn field_index(&self, command: &CommandSpec, key: &str) -> Option<usize> {
-        command
-            .ui
-            .fields
-            .iter()
-            .position(|field| field.key == key)
+        command.ui.fields.iter().position(|field| field.key == key)
     }
 
     pub fn set_boolean(&mut self, command: &CommandSpec, key: &str, value: bool) {
@@ -168,7 +164,12 @@ impl CommandForm {
         }
     }
 
-    pub fn set_radio_index(&mut self, command: &CommandSpec, field_index: usize, option_index: usize) {
+    pub fn set_radio_index(
+        &mut self,
+        command: &CommandSpec,
+        field_index: usize,
+        option_index: usize,
+    ) {
         let Some(field) = command.ui.fields.get(field_index) else {
             return;
         };
@@ -270,9 +271,7 @@ fn init_field_value(field: &FieldSpec, tui: bool) -> FormValue {
             FormValue::Text(field.effective_default(tui).unwrap_or_default().to_owned())
         }
         FieldKind::Boolean => FormValue::Boolean(field.effective_default(tui) == Some("true")),
-        FieldKind::Select(options)
-        | FieldKind::Combo(options)
-        | FieldKind::Radio(options) => {
+        FieldKind::Select(options) | FieldKind::Combo(options) | FieldKind::Radio(options) => {
             let default = field
                 .effective_default(tui)
                 .unwrap_or(options.first().copied().unwrap_or(""));
@@ -328,10 +327,7 @@ pub fn option_count(kind: &FieldKind) -> usize {
 
 pub fn preset_label(kind: &FieldKind, index: usize) -> &str {
     if let Some(options) = preset_options(kind) {
-        return options
-            .get(index)
-            .map(|option| option.label)
-            .unwrap_or("");
+        return options.get(index).map(|option| option.label).unwrap_or("");
     }
     select_options(kind).get(index).copied().unwrap_or("")
 }
@@ -513,7 +509,10 @@ mod tests {
                 label: "Production parity",
             },
         ]);
-        assert_eq!(super::max_combo_option_width(&kind), "Production parity".chars().count());
+        assert_eq!(
+            super::max_combo_option_width(&kind),
+            "Production parity".chars().count()
+        );
     }
 
     #[test]

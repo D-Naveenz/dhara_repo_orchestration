@@ -518,11 +518,7 @@ fn stage_native_assets(
             stage_root = %stage_root.display(),
             "staging dhara-sd sidecar"
         );
-        let mut build_args = vec![
-            "build".to_owned(),
-            "-p".to_owned(),
-            "dhara-sd".to_owned(),
-        ];
+        let mut build_args = vec!["build".to_owned(), "-p".to_owned(), "dhara-sd".to_owned()];
         if let Some(flag) = profile_flag {
             build_args.push(flag.to_owned());
         }

@@ -62,7 +62,10 @@ pub fn render_bios_textbox(
     let label_w = (2 + label_line.width()).min(area.width as usize) as u16;
     Paragraph::new(Line::from(vec![
         Span::styled(label_prefix, prefix_style),
-        Span::styled(clip_label(&label_line, label_w.saturating_sub(2) as usize), label_style),
+        Span::styled(
+            clip_label(&label_line, label_w.saturating_sub(2) as usize),
+            label_style,
+        ),
     ]))
     .render(Rect::new(area.x, area.y, label_w.max(1), 1), buf);
 
@@ -116,12 +119,7 @@ pub fn render_bios_textbox(
     } else if value.is_empty() {
         // Idle empty field: static `_` cue (not a live caret).
         let cue_style = Style::default().fg(dhara_theme::MUTED).bg(bg);
-        buf.set_string(
-            layout.cursor_x,
-            area.y,
-            PLACEHOLDER_CURSOR,
-            cue_style,
-        );
+        buf.set_string(layout.cursor_x, area.y, PLACEHOLDER_CURSOR, cue_style);
         None
     } else {
         None
@@ -161,9 +159,7 @@ fn cluster_layout(
 ) -> ClusterLayout {
     let pad_w = 1u16;
     let prompt_w = display_width(PROMPT) as u16;
-    let chrome = pad_w
-        .saturating_add(prompt_w)
-        .saturating_add(pad_w);
+    let chrome = pad_w.saturating_add(prompt_w).saturating_add(pad_w);
 
     let max_text = avail.saturating_sub(chrome).max(1);
     let content_w = value.width() as u16;
@@ -222,8 +218,15 @@ fn visible_window(
         return (String::new(), 0);
     }
     if !inner_active {
-        let clipped = clip_right(value, slot_w.saturating_sub(if value.is_empty() { 1 } else { 0 }));
-        let col = if value.is_empty() { 0 } else { clipped.width().min(slot_w) };
+        let clipped = clip_right(
+            value,
+            slot_w.saturating_sub(if value.is_empty() { 1 } else { 0 }),
+        );
+        let col = if value.is_empty() {
+            0
+        } else {
+            clipped.width().min(slot_w)
+        };
         return (clipped, col.min(slot_w.saturating_sub(1)));
     }
 

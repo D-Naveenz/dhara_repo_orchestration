@@ -4,7 +4,6 @@ use drot_kernel::FormValue;
 use drot_kernel::forms::{preset_id, preset_label};
 use drot_kernel::{AppState, DiagnosticSeverity, MainTab};
 use drot_kernel::{CommandRegistry, CommandSpec, FieldKind};
-use std::time::Instant;
 use ratatui::Frame;
 use ratatui::layout::{Constraint, Layout, Rect};
 use ratatui::style::Style;
@@ -16,14 +15,15 @@ use ratatui_interact::components::{
 };
 use ratatui_interact::theme::Theme;
 use ratatui_interact::traits::ClickRegionRegistry;
+use std::time::Instant;
 
 use crate::embedded::OptionFieldAction;
 use crate::focus::TuiFocus;
 use crate::strings::{self, t};
 use crate::theme as dhara_theme;
 use crate::widgets::{
-    bios_combo, bios_textbox, button_group, padded_button, panel, scroll_body,
-    tab_table, text_marquee::LabelMarquee, text_wrap, ComboPart, ComboRenderParams,
+    ComboPart, ComboRenderParams, bios_combo, bios_textbox, button_group, padded_button, panel,
+    scroll_body, tab_table, text_marquee::LabelMarquee, text_wrap,
 };
 
 pub struct CenterPanelClicks {
@@ -273,7 +273,10 @@ fn render_options_tab(
 
         let nest = u16::from(field.tui_nest).saturating_mul(GROUP_INDENT);
         let row = Rect::new(
-            fields_area.x.saturating_add(GROUP_INDENT).saturating_add(nest),
+            fields_area
+                .x
+                .saturating_add(GROUP_INDENT)
+                .saturating_add(nest),
             y,
             fields_area
                 .width
@@ -351,10 +354,11 @@ fn render_form_field(
 ) {
     let _ = editing_form;
     let embedded_combo = match embedded_focus {
-        Some(crate::embedded::EmbeddedFocus::Combo {
-            field_index,
-            part,
-        }) if field_index == index => Some(part),
+        Some(crate::embedded::EmbeddedFocus::Combo { field_index, part })
+            if field_index == index =>
+        {
+            Some(part)
+        }
         _ => None,
     };
     let embedded_text = matches!(
@@ -384,12 +388,8 @@ fn render_form_field(
                 marquee_key: &marquee_key,
                 now,
             };
-            let regions = bios_combo::render_bios_combo(
-                row,
-                field.label,
-                &mut params,
-                frame.buffer_mut(),
-            );
+            let regions =
+                bios_combo::render_bios_combo(row, field.label, &mut params, frame.buffer_mut());
             register_combo_clicks(option_field_clicks, &regions, index);
         }
         (
@@ -408,12 +408,8 @@ fn render_form_field(
                 marquee_key: &marquee_key,
                 now,
             };
-            let regions = bios_combo::render_bios_combo(
-                row,
-                field.label,
-                &mut params,
-                frame.buffer_mut(),
-            );
+            let regions =
+                bios_combo::render_bios_combo(row, field.label, &mut params, frame.buffer_mut());
             register_combo_clicks(option_field_clicks, &regions, index);
         }
         (

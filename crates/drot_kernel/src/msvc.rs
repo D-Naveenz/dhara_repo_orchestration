@@ -101,7 +101,10 @@ fn should_skip_devshell_bootstrap(args: &[String]) -> bool {
     if args.is_empty() {
         return false;
     }
-    if args.iter().any(|arg| arg == "--help" || arg == "-h" || arg == "--version" || arg == "-V") {
+    if args
+        .iter()
+        .any(|arg| arg == "--help" || arg == "-h" || arg == "--version" || arg == "-V")
+    {
         return true;
     }
     DEVSHELL_SKIP_COMMANDS.iter().any(|prefix| {

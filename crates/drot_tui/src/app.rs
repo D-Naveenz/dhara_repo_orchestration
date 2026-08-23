@@ -43,9 +43,8 @@ use crate::embedded::{EmbeddedFocus, OptionFieldAction};
 use crate::focus::{ShellFocus, TuiFocus, focus_panel_at_pointer, point_in_rect};
 use crate::screens::modals::{ModalHost, ModalOutcome};
 use crate::screens::{
-    apply_option_widgets_to_form, apply_preset_if_selected, cycle_form_field,
-    render_center_panel, sync_option_widgets_from_form, sync_state_from_tab_view,
-    sync_tab_view_from_state, tab_index,
+    apply_option_widgets_to_form, apply_preset_if_selected, cycle_form_field, render_center_panel,
+    sync_option_widgets_from_form, sync_state_from_tab_view, sync_tab_view_from_state, tab_index,
 };
 use crate::theme::interact_theme;
 use crate::widgets::{action_panel, scrollable_tree, title_bar};
@@ -566,38 +565,38 @@ fn handle_tab_content_key(app: &mut DharaTui, key: &KeyEvent) -> bool {
                 };
             }
             match key.code {
-            KeyCode::Up => {
-                if let Some(command) = app.state.selected_command(&app.registry) {
-                    cycle_form_field(command, &mut app.form_field, -1);
+                KeyCode::Up => {
+                    if let Some(command) = app.state.selected_command(&app.registry) {
+                        cycle_form_field(command, &mut app.form_field, -1);
+                    }
+                    true
                 }
-                true
-            }
-            KeyCode::Down => {
-                if let Some(command) = app.state.selected_command(&app.registry) {
-                    cycle_form_field(command, &mut app.form_field, 1);
+                KeyCode::Down => {
+                    if let Some(command) = app.state.selected_command(&app.registry) {
+                        cycle_form_field(command, &mut app.form_field, 1);
+                    }
+                    true
                 }
-                true
+                KeyCode::Left => {
+                    cycle_option_select(app, -1);
+                    apply_preset_if_selected(&mut app.state, &app.registry, app.form_field);
+                    true
+                }
+                KeyCode::Right => {
+                    cycle_option_select(app, 1);
+                    apply_preset_if_selected(&mut app.state, &app.registry, app.form_field);
+                    true
+                }
+                KeyCode::Char(' ') => {
+                    toggle_selected_field(app);
+                    true
+                }
+                KeyCode::Enter => {
+                    enter_selected_field(app);
+                    true
+                }
+                _ => false,
             }
-            KeyCode::Left => {
-                cycle_option_select(app, -1);
-                apply_preset_if_selected(&mut app.state, &app.registry, app.form_field);
-                true
-            }
-            KeyCode::Right => {
-                cycle_option_select(app, 1);
-                apply_preset_if_selected(&mut app.state, &app.registry, app.form_field);
-                true
-            }
-            KeyCode::Char(' ') => {
-                toggle_selected_field(app);
-                true
-            }
-            KeyCode::Enter => {
-                enter_selected_field(app);
-                true
-            }
-            _ => false,
-        }
         }
         _ => false,
     }
@@ -1032,9 +1031,9 @@ fn handle_option_field_action(app: &mut DharaTui, action: OptionFieldAction) {
                 if let Some(field) = command.ui.fields.get(index) {
                     match field.kind {
                         FieldKind::Boolean => toggle_selected_field(app),
-                        FieldKind::Text
-                        | FieldKind::Path
-                        | FieldKind::BrowsablePath { .. } => enter_selected_field(app),
+                        FieldKind::Text | FieldKind::Path | FieldKind::BrowsablePath { .. } => {
+                            enter_selected_field(app)
+                        }
                         FieldKind::Combo(_)
                         | FieldKind::Select(_)
                         | FieldKind::Preset(_)
@@ -1063,7 +1062,10 @@ fn handle_option_field_action(app: &mut DharaTui, action: OptionFieldAction) {
                 });
                 cycle_option_select(app, 1);
             } else {
-                app.embedded_focus = Some(EmbeddedFocus::Combo { field_index: field, part });
+                app.embedded_focus = Some(EmbeddedFocus::Combo {
+                    field_index: field,
+                    part,
+                });
             }
             apply_preset_if_selected(&mut app.state, &app.registry, field);
         }

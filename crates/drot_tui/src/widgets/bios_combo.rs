@@ -166,7 +166,9 @@ fn chrome_width_for_row(_row_width: u16) -> u16 {
 fn resolve_text_slot_width(field: &FieldSpec, row_width: u16) -> u16 {
     let auto = max_combo_option_width(&field.kind).max(1) as u16;
     let requested = field.tui_combo_width.unwrap_or(auto);
-    let max_text = row_width.saturating_sub(chrome_width_for_row(row_width)).max(1);
+    let max_text = row_width
+        .saturating_sub(chrome_width_for_row(row_width))
+        .max(1);
     requested.min(max_text)
 }
 
@@ -218,7 +220,9 @@ fn paint_value_text(
     };
 
     let display = if overflow && inner_active {
-        let offset = params.marquee.advance(params.marquee_key, value, slot_w, params.now);
+        let offset = params
+            .marquee
+            .advance(params.marquee_key, value, slot_w, params.now);
         clip_window(value, offset, slot_w)
     } else if overflow {
         clip_right(value, slot_w)
@@ -265,7 +269,9 @@ fn arrow_style(selected: bool, inner_active: bool, bg: ratatui::style::Color) ->
     } else if selected {
         Style::default().fg(dhara_theme::MUTED).bg(bg)
     } else {
-        Style::default().fg(dhara_theme::MUTED).bg(dhara_theme::COMBO_BG)
+        Style::default()
+            .fg(dhara_theme::MUTED)
+            .bg(dhara_theme::COMBO_BG)
     }
 }
 
@@ -309,7 +315,10 @@ mod tests {
     #[test]
     fn intrinsic_text_width_uses_longest_option() {
         let field = combo_field(None);
-        assert_eq!(resolve_text_slot_width(&field, 80), "Release".chars().count() as u16);
+        assert_eq!(
+            resolve_text_slot_width(&field, 80),
+            "Release".chars().count() as u16
+        );
     }
 
     #[test]

@@ -96,7 +96,10 @@ mod tests {
         let mut form = CommandForm::from_command_tui(command);
         apply_form_preset(&mut form, command, "local-integration");
 
-        assert_eq!(form.select_label_at(command, "configuration"), Some("Debug"));
+        assert_eq!(
+            form.select_label_at(command, "configuration"),
+            Some("Debug")
+        );
         assert_eq!(form.boolean_at(command, "step_verify"), Some(false));
 
         let args = form.build_args(command).expect("argv");
