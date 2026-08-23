@@ -16,7 +16,7 @@ pub fn commands() -> Vec<RegisteredCommand> {
         "build.run",
         &["build", "run"],
         "Run the full local repository build workflow",
-        "[--skip-config] [--skip-defs] [--skip-quality] [--skip-docs] [--skip-dotnet] [--skip-native] [--skip-verify] [--configuration <name>]",
+        "[--skip-config] [--skip-defs] [--skip-quality] [--skip-docs] [--skip-dotnet] [--skip-native] [--skip-verify] [--cross-native] [--configuration <name>]",
         "build",
         build_run_command,
     )]

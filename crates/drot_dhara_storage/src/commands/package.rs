@@ -8,6 +8,8 @@ use drot_kernel::paths::resolve_path_against_repo;
 use drot_kernel::{CommandResult, ToolContext};
 
 use crate::ops::native_merge::merge_native_stages;
+#[cfg(windows)]
+use crate::ops::nuget::stage_native_under_msvc_env;
 use crate::ops::nuget::{
     PackageOptions, pack as pack_package, publish as publish_package, stage_native_for_host,
 };
@@ -61,12 +63,7 @@ pub(crate) fn package_stage_native_command(
 
     #[cfg(windows)]
     if args.msvc_env {
-        let exe = std::env::current_exe().context("failed to resolve drot executable path")?;
-        let mut command = format!("\"{}\" package stage-native", exe.display());
-        if args.configuration != "Release" {
-            command.push_str(&format!(" --configuration {}", args.configuration));
-        }
-        drot_kernel::msvc::run_with_msvc_env(&command)?;
+        stage_native_under_msvc_env(&context.repo_root, &args.configuration)?;
         return Ok(CommandResult::with_message(
             "Staged host native assets under MSVC environment.",
         ));
@@ -89,6 +86,8 @@ pub(crate) fn package_stage_native_command(
             execute_publish: false,
             native_stage_override: None,
             prepacked_nuget_override: None,
+            include_cross_native: true,
+            expected_native_runtimes: None,
         },
     )
 }
@@ -134,10 +133,11 @@ pub(crate) fn package_publish_command(
 
 pub(crate) fn release_run_command(context: &ToolContext, args: &[String]) -> Result<CommandResult> {
     #[cfg(windows)]
-    if std::env::var_os("DHARA_TOOL_INSIDE_MSVC").is_none() {
+    if std::env::var_os(drot_kernel::msvc::INSIDE_MSVC_ENV_VAR).is_none() {
         let exe = std::env::current_exe().context("failed to resolve drot executable path")?;
         let mut command = format!(
-            "set DHARA_TOOL_INSIDE_MSVC=1&& \"{}\" release run",
+            "set {}=1&& \"{}\" release run",
+            drot_kernel::msvc::INSIDE_MSVC_ENV_VAR,
             exe.display()
         );
         for arg in args {

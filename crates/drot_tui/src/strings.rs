@@ -9,6 +9,7 @@ pub fn t(key: &str) -> &'static str {
 
         "doc.syntax" => "Syntax",
         "doc.options" => "Options",
+        "doc.cli_flags" => "CLI flags",
         "doc.empty" => "Select a task in the tree to view its description.",
 
         "options.empty" => "Select a task to edit options.",

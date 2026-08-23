@@ -4,6 +4,9 @@ mod build;
 mod config;
 mod defs;
 mod package;
+mod presets;
+
+pub use presets::{apply_form_preset, default_preset_id};
 mod quality;
 mod release;
 mod strings;

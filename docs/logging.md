@@ -100,7 +100,7 @@ flowchart TD
 ### Session open (INFO)
 
 ```
-drot 0.10.0 started — mode=direct, workers=4, extension=dhara_storage
+drot 0.11.0 started — mode=direct, workers=4, extension=dhara_storage
 ```
 
 Do **not** include the log file path on INFO.
@@ -110,7 +110,7 @@ Do **not** include the log file path on INFO.
 Open TUI (or CLI after activation) and quit without running a command:
 
 ```
-INFO  drot 0.10.0 started — mode=interactive, workers=4, extension=dhara_storage
+INFO  drot 0.11.0 started — mode=interactive, workers=4, extension=dhara_storage
 INFO  activation started — repo=...
 INFO  activation complete — no configuration drift
 INFO  drot exiting 0 at …
@@ -161,7 +161,7 @@ flowchart LR
 Example slice (defs build in direct mode):
 
 ```
-INFO  drot 0.10.0 started — mode=direct, workers=4, extension=dhara_storage
+INFO  drot 0.11.0 started — mode=direct, workers=4, extension=dhara_storage
 INFO  building definitions package…
 DEBUG phase extract started
 DEBUG phase extract finished in 15.4s — extracted archive
@@ -179,7 +179,8 @@ session end  exit=0  module=defs.build-trid-xml
 During a command run in interactive mode:
 
 - INFO audit lines go to the **file only** (console is OFF).
-- WARN/ERROR go to the **Troubleshooting** panel.
+- Tracing **WARN/ERROR** go to the **Troubleshooting** panel. Command-run failures log at **ERROR** (headline); subprocess tool diagnostics append as indented continuations under that headline.
+- Subprocess tool output (cargo/dotnet progress) is **buffered** during the run. On failure, diagnostic lines from the failing step append to the active error block; routine `Finished` / `Compiling` progress is filtered out. Each successful subprocess step clears the buffer.
 - The action panel **progress bar** and **status line** come from `ProgressSnapshot` via [`operation_progress`](../crates/drot_kernel/src/operation_progress.rs). See [TUI operation progress](tui-progress.md) for the full lifecycle.
 - Status priority: **active step detail** (`Parsing definitions (5000/21692)`) → analyzing message → command `activity_label` fallback.
 - The action panel title is fixed (`Actions`).

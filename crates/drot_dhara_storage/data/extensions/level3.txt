@@ -1,8 +1,4 @@
 3dd
-3dm
-3ds
-3dxml
-3mf
 aa
 aab
 aaf
@@ -60,7 +56,6 @@ bitwarden
 bkc
 bkf
 bks
-blend
 blx
 box
 bpw
@@ -72,16 +67,12 @@ bsq
 bwf
 bwt
 c2d
-c4d
 cab
 cae
 caf
 camt
 cap
 cas
-catdrawing
-catpart
-catproduct
 ccm
 cdb
 cdf
@@ -91,10 +82,8 @@ cer
 cert
 cfg
 cfx
-cgr
 cif
 cine
-collada
 colors
 computeshader
 controller
@@ -114,7 +103,6 @@ cxd
 czi
 d64
 daa
-dae
 dat
 data
 dav
@@ -132,7 +120,6 @@ def
 dem
 der
 dfxp
-dgn
 dicom
 dm3
 dm4
@@ -154,8 +141,6 @@ dtm
 dts
 dtshd
 dtsma
-dwg
-dxf
 dyn
 eac3
 ear
@@ -172,7 +157,6 @@ esp
 esu
 exp
 f06
-fbx
 fcp
 fcpbundle
 fcpxml
@@ -208,7 +192,6 @@ hdr
 hgt
 his
 htpasswd
-iam
 ib
 ibd
 ical
@@ -218,8 +201,6 @@ ids
 idx
 ifb
 ige
-iges
-igs
 iif
 ima
 img
@@ -229,7 +210,6 @@ ind
 ini
 inp
 ipa
-ipt
 iso
 itn
 ixbrl
@@ -254,9 +234,6 @@ kdb
 kdbx
 key
 keystore
-kicad_mod
-kicad_pcb
-kicad_sch
 kml
 kmz
 laccdb
@@ -291,8 +268,6 @@ mar
 mask
 mat
 maw
-max
-mb
 mbox
 mbtiles
 mbx
@@ -319,7 +294,6 @@ mmz
 mnc
 mo2
 mod
-model
 msg
 msh
 msi
@@ -355,13 +329,11 @@ nsf
 ntf
 nvram
 obf
-obj
 occlusion
 occlusioncullingdata
 ocsp
 odb
 ofc
-off
 ofx
 oib
 oif
@@ -414,7 +386,6 @@ pll
 plproj
 plt
 plx
-ply
 pmf
 por
 prc
@@ -424,7 +395,6 @@ prj
 profile
 prores
 prproj
-prt
 psm
 pst
 pub
@@ -469,7 +439,6 @@ rte
 sab
 sar
 sas7bdat
-sat
 sav
 save
 sbn
@@ -495,9 +464,6 @@ sisx
 sit
 sitx
 skr
-sldasm
-slddrw
-sldprt
 slot
 smi
 sparsebundle
@@ -513,11 +479,8 @@ srd
 srt
 ssa
 ssd
-step
 stk
-stl
 stm
-stp
 sub
 sup
 swm
@@ -549,7 +512,6 @@ twf
 txt
 txz
 tzst
-u3d
 uasset
 ubulk
 udic
@@ -584,7 +546,6 @@ vmsn
 vmss
 vortex
 vpk
-vrml
 vtt
 vud
 war
@@ -592,11 +553,8 @@ webm
 wim
 wld
 wpt
-wrl
 x3d
 x3dz
-x_b
-x_t
 xap
 xar
 xbrl

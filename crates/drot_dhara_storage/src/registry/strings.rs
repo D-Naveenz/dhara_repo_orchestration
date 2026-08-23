@@ -130,14 +130,67 @@ pub(crate) fn s(key: &str) -> &'static str {
         "cmd.build.run.field.skip_native.help" => {
             "Do not build and stage dhara-sd for host runtimes."
         }
+        "cmd.build.run.field.cross_native.label" => "Cross-native",
+        "cmd.build.run.field.cross_native.help" => {
+            "Also stage cross-native targets buildable on this host (for example win-arm64 on Windows x64). Requires MSVC ARM64 build tools when enabled on Windows."
+        }
         "cmd.build.run.field.skip_verify.label" => "Skip verify",
         "cmd.build.run.field.skip_verify.help" => "Do not pack and verify the NuGet package.",
         "cmd.build.run.field.configuration.label" => "Configuration",
         "cmd.build.run.field.configuration.help" => {
             "Build configuration used for native staging and package verification."
         }
+        "cmd.build.run.group.preset" => "Preset",
+        "cmd.build.run.group.workflow" => "Workflow steps",
+        "cmd.build.run.group.advanced" => "Advanced",
+        "cmd.build.run.field.preset.label" => "Build preset",
+        "cmd.build.run.field.preset.help" => {
+            "Quick TUI presets for local integration testing or production parity."
+        }
+        "cmd.build.run.field.step_config.label" => "Apply configuration sync",
+        "cmd.build.run.field.step_config.help" => {
+            "Synchronize dhara.config.toml into Cargo and NuGet manifests."
+        }
+        "cmd.build.run.field.step_defs.label" => "Sync file definitions",
+        "cmd.build.run.field.step_defs.help" => {
+            "Refresh embedded filedefs.dat when TrID input is available."
+        }
+        "cmd.build.run.field.step_quality.label" => "Run quality checks",
+        "cmd.build.run.field.step_quality.help" => {
+            "Run fmt, clippy, doc, Rust tests, and dotnet test."
+        }
+        "cmd.build.run.field.step_docs.label" => "cargo doc",
+        "cmd.build.run.field.step_docs.help" => "Include cargo doc in quality checks.",
+        "cmd.build.run.field.step_dotnet.label" => "dotnet test",
+        "cmd.build.run.field.step_dotnet.help" => "Include dotnet test in quality checks.",
+        "cmd.build.run.field.step_native.label" => "Stage native sidecar",
+        "cmd.build.run.field.step_native.help" => {
+            "Build and stage dhara-sd for selected host runtimes."
+        }
+        "cmd.build.run.field.step_verify.label" => "Verify NuGet package",
+        "cmd.build.run.field.step_verify.help" => {
+            "Pack and run consumer smoke checks (Release configuration required)."
+        }
+        "cmd.build.run.field.native_scope.label" => "Native scope",
+        "cmd.build.run.field.native_scope.help" => {
+            "Host-only staging for local work, or include cross-native targets."
+        }
 
-        // release.run
+        // release.run workflow
+        "cmd.release.run.group.preset" => "Preset",
+        "cmd.release.run.group.steps" => "Release steps",
+        "cmd.release.run.group.advanced" => "Advanced",
+        "cmd.release.run.field.preset.label" => "Release preset",
+        "cmd.release.run.field.preset.help" => "Dry-run validation or full publish workflow.",
+        "cmd.release.run.field.step_cargo.label" => "Publish Cargo crates",
+        "cmd.release.run.field.step_cargo.help" => "Run the Cargo release phase.",
+        "cmd.release.run.field.step_nuget.label" => "Publish NuGet package",
+        "cmd.release.run.field.step_nuget.help" => "Run NuGet pack and publish.",
+
+        "group.paths" => "Paths",
+        "group.package" => "Package",
+        "group.mode" => "Mode",
+        "group.general" => "General",
         "cmd.release.run.description" => {
             "Run the Cargo-first release workflow, with optional NuGet publishing."
         }

@@ -98,6 +98,8 @@ pub fn run(
         execute_publish: false,
         native_stage_override: options.native_stage_override.clone(),
         prepacked_nuget_override: options.prepacked_nuget.clone(),
+        include_cross_native: true,
+        expected_native_runtimes: None,
     };
 
     let session = ProgressSession;

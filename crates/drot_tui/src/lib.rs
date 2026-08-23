@@ -2,6 +2,7 @@ mod adapters;
 mod app;
 mod boot;
 mod command_bar;
+mod embedded;
 mod focus;
 mod screens;
 mod strings;

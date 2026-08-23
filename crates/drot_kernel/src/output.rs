@@ -6,8 +6,13 @@ use once_cell::sync::Lazy;
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum OutputStream {
     Stdout,
+    /// Operator diagnostic from tracing `ERROR` (not subprocess tool output).
     Stderr,
     Warn,
+    /// Child-process tool output (cargo, dotnet, etc.) — buffered in TUI; not a diagnostic by itself.
+    Subprocess,
+    /// Successful subprocess step — clears buffered tool output in the TUI.
+    SubprocessStepSucceeded,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -55,6 +60,58 @@ pub fn emit_warn_line(line: impl Into<String>) {
     emit(OutputStream::Warn, line.into());
 }
 
+pub fn emit_subprocess_stdout_line(line: impl Into<String>) {
+    emit_subprocess_line(true, line);
+}
+
+pub fn emit_subprocess_stderr_line(line: impl Into<String>) {
+    emit_subprocess_line(false, line);
+}
+
+pub fn emit_subprocess_step_succeeded() {
+    let sender = {
+        let slot = OUTPUT_SENDER
+            .lock()
+            .expect("output sender mutex should not be poisoned");
+        slot.clone()
+    };
+
+    if let Some(sender) = sender {
+        let _ = sender.send(OutputEvent {
+            stream: OutputStream::SubprocessStepSucceeded,
+            line: String::new(),
+        });
+    }
+}
+
+fn emit_subprocess_line(stdout: bool, line: impl Into<String>) {
+    let line = line.into();
+    let sender = {
+        let slot = OUTPUT_SENDER
+            .lock()
+            .expect("output sender mutex should not be poisoned");
+        slot.clone()
+    };
+
+    if let Some(sender) = sender {
+        let _ = sender.send(OutputEvent {
+            stream: OutputStream::Subprocess,
+            line,
+        });
+        return;
+    }
+
+    if crate::logging::interactive_mode_enabled() {
+        return;
+    }
+
+    if stdout {
+        println!("{line}");
+    } else {
+        eprintln!("{line}");
+    }
+}
+
 pub fn set_active_child(child: Option<Arc<Mutex<Child>>>) {
     let mut slot = ACTIVE_CHILD
         .lock()
@@ -99,7 +156,8 @@ fn emit(stream: OutputStream, line: String) {
 
     match stream {
         OutputStream::Stdout => println!("{line}"),
-        OutputStream::Stderr => eprintln!("{line}"),
-        OutputStream::Warn => eprintln!("{line}"),
+        OutputStream::Stderr | OutputStream::Warn => eprintln!("{line}"),
+        OutputStream::Subprocess => eprintln!("{line}"),
+        OutputStream::SubprocessStepSucceeded => {}
     }
 }

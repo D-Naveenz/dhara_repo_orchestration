@@ -1,10 +1,37 @@
-use drot_kernel::{ArgBinding, CommandUi, FieldKind, FieldSpec};
+use drot_kernel::{ArgBinding, CommandUi, FieldKind, FieldSpec, PresetOption};
 
 use super::strings::s;
 
 pub(crate) const VERSION_PARTS: &[&str] = &["major", "minor", "patch"];
-pub(crate) const CONFIGURATIONS: &[&str] = &["Release"];
+pub(crate) const CONFIGURATIONS: &[&str] = &["Debug", "Release"];
 pub(crate) const DRY_RUN_OPTIONS: &[&str] = &["dry-run", "execute"];
+pub(crate) const NATIVE_SCOPES: &[&str] = &["Host only", "Host + cross-native"];
+
+pub(crate) const BUILD_RUN_PRESETS: &[PresetOption] = &[
+    PresetOption {
+        id: "local-integration",
+        label: "Local integration",
+    },
+    PresetOption {
+        id: "production-parity",
+        label: "Production parity",
+    },
+    PresetOption {
+        id: "custom",
+        label: "Custom",
+    },
+];
+
+pub(crate) const RELEASE_RUN_PRESETS: &[PresetOption] = &[
+    PresetOption {
+        id: "dry-run",
+        label: "Dry run",
+    },
+    PresetOption {
+        id: "full-release",
+        label: "Full release",
+    },
+];
 
 pub(crate) fn ui_for_command(
     id: &'static str,
@@ -16,29 +43,30 @@ pub(crate) fn ui_for_command(
         "config.env.init" => quick_command(s("cmd.config.env.init.description"), false),
         "version.set" => CommandUi {
             description: s("cmd.version.set.description"),
-            fields: vec![FieldSpec {
-                key: "version",
-                label: s("cmd.version.set.field.version.label"),
-                help: s("cmd.version.set.field.version.help"),
-                kind: FieldKind::Text,
-                binding: ArgBinding::Positional,
-                required: true,
-                default_value: None,
-            }],
+            fields: vec![text_field(
+                "version",
+                s("cmd.version.set.field.version.label"),
+                s("cmd.version.set.field.version.help"),
+                ArgBinding::Positional,
+                true,
+                None,
+                Some(s("group.general")),
+            )],
             quick_run: true,
             supports_cancel: false,
         },
         "version.bump" => CommandUi {
             description: s("cmd.version.bump.description"),
-            fields: vec![FieldSpec {
-                key: "part",
-                label: s("cmd.version.bump.field.part.label"),
-                help: s("cmd.version.bump.field.part.help"),
-                kind: FieldKind::Select(VERSION_PARTS),
-                binding: ArgBinding::FlagValue("--part"),
-                required: true,
-                default_value: Some("minor"),
-            }],
+            fields: vec![combo_field(
+                "part",
+                s("cmd.version.bump.field.part.label"),
+                s("cmd.version.bump.field.part.help"),
+                "--part",
+                VERSION_PARTS,
+                Some("minor"),
+                None,
+                Some(s("group.general")),
+            )],
             quick_run: true,
             supports_cancel: false,
         },
@@ -49,6 +77,7 @@ pub(crate) fn ui_for_command(
                 s("cmd.defs.pack.field.output.label"),
                 s("cmd.defs.pack.field.output.help"),
                 "--output",
+                Some(s("group.paths")),
             )],
             quick_run: false,
             supports_cancel: false,
@@ -61,12 +90,14 @@ pub(crate) fn ui_for_command(
                     s("cmd.defs.build-trid-xml.field.input.label"),
                     s("cmd.defs.build-trid-xml.field.input.help"),
                     "--input",
+                    Some(s("group.paths")),
                 ),
                 optional_path(
                     "output",
                     s("cmd.defs.build-trid-xml.field.output.label"),
                     s("cmd.defs.build-trid-xml.field.output.help"),
                     "--output",
+                    Some(s("group.paths")),
                 ),
             ],
             quick_run: false,
@@ -79,6 +110,7 @@ pub(crate) fn ui_for_command(
                 s("cmd.defs.inspect.field.input.label"),
                 s("cmd.defs.inspect.field.input.help"),
                 "--input",
+                Some(s("group.paths")),
             )],
             quick_run: false,
             supports_cancel: false,
@@ -90,6 +122,7 @@ pub(crate) fn ui_for_command(
                 s("cmd.defs.inspect-trid-xml.field.input.label"),
                 s("cmd.defs.inspect-trid-xml.field.input.help"),
                 "--input",
+                Some(s("group.paths")),
             )],
             quick_run: false,
             supports_cancel: false,
@@ -102,12 +135,14 @@ pub(crate) fn ui_for_command(
                     s("cmd.defs.normalize.field.input.label"),
                     s("cmd.defs.normalize.field.input.help"),
                     "--input",
+                    Some(s("group.paths")),
                 ),
                 optional_path(
                     "output",
                     s("cmd.defs.normalize.field.output.label"),
                     s("cmd.defs.normalize.field.output.help"),
                     "--output",
+                    Some(s("group.paths")),
                 ),
             ],
             quick_run: false,
@@ -121,12 +156,14 @@ pub(crate) fn ui_for_command(
                     s("cmd.defs.verify.field.left.label"),
                     s("cmd.defs.verify.field.left.help"),
                     "--left",
+                    Some(s("group.paths")),
                 ),
                 required_path(
                     "right",
                     s("cmd.defs.verify.field.right.label"),
                     s("cmd.defs.verify.field.right.help"),
                     "--right",
+                    Some(s("group.paths")),
                 ),
             ],
             quick_run: false,
@@ -140,12 +177,14 @@ pub(crate) fn ui_for_command(
                     s("cmd.defs.sync-embedded.field.input.label"),
                     s("cmd.defs.sync-embedded.field.input.help"),
                     "--input",
+                    Some(s("group.paths")),
                 ),
                 optional_path(
                     "output",
                     s("cmd.defs.sync-embedded.field.output.label"),
                     s("cmd.defs.sync-embedded.field.output.help"),
                     "--output",
+                    Some(s("group.paths")),
                 ),
                 FieldSpec {
                     key: "check",
@@ -155,6 +194,12 @@ pub(crate) fn ui_for_command(
                     binding: ArgBinding::Switch("--check"),
                     required: false,
                     default_value: Some("false"),
+                    tui_default_value: None,
+                    group: Some(s("group.mode")),
+                    invert_switch: false,
+                    tui_only: false,
+                    tui_combo_width: None,
+                    tui_nest: 0,
                 },
             ],
             quick_run: false,
@@ -165,177 +210,49 @@ pub(crate) fn ui_for_command(
         "package.publish" => CommandUi {
             description: s("cmd.package.publish.description"),
             fields: vec![
-                FieldSpec {
-                    key: "configuration",
-                    label: s("cmd.package.publish.field.configuration.label"),
-                    help: s("cmd.package.publish.field.configuration.help"),
-                    kind: FieldKind::Select(CONFIGURATIONS),
-                    binding: ArgBinding::FlagValue("--configuration"),
-                    required: true,
-                    default_value: Some("Release"),
-                },
-                FieldSpec {
-                    key: "version",
-                    label: s("cmd.package.publish.field.version.label"),
-                    help: s("cmd.package.publish.field.version.help"),
-                    kind: FieldKind::Text,
-                    binding: ArgBinding::FlagValue("--version"),
-                    required: false,
-                    default_value: None,
-                },
-                FieldSpec {
-                    key: "source",
-                    label: s("cmd.package.publish.field.source.label"),
-                    help: s("cmd.package.publish.field.source.help"),
-                    kind: FieldKind::Text,
-                    binding: ArgBinding::FlagValue("--source"),
-                    required: false,
-                    default_value: None,
-                },
-                FieldSpec {
-                    key: "mode",
-                    label: s("cmd.package.publish.field.mode.label"),
-                    help: s("cmd.package.publish.field.mode.help"),
-                    kind: FieldKind::Select(DRY_RUN_OPTIONS),
-                    binding: ArgBinding::FlagValue("__mode"),
-                    required: true,
-                    default_value: Some("dry-run"),
-                },
+                radio_field(
+                    "mode",
+                    s("cmd.package.publish.field.mode.label"),
+                    s("cmd.package.publish.field.mode.help"),
+                    DRY_RUN_OPTIONS,
+                    Some("dry-run"),
+                    None,
+                    Some(s("group.mode")),
+                ),
+                combo_field(
+                    "configuration",
+                    s("cmd.package.publish.field.configuration.label"),
+                    s("cmd.package.publish.field.configuration.help"),
+                    "--configuration",
+                    CONFIGURATIONS,
+                    Some("Release"),
+                    None,
+                    Some(s("group.package")),
+                ),
+                text_field(
+                    "version",
+                    s("cmd.package.publish.field.version.label"),
+                    s("cmd.package.publish.field.version.help"),
+                    ArgBinding::FlagValue("--version"),
+                    false,
+                    None,
+                    Some(s("group.package")),
+                ),
+                text_field(
+                    "source",
+                    s("cmd.package.publish.field.source.label"),
+                    s("cmd.package.publish.field.source.help"),
+                    ArgBinding::FlagValue("--source"),
+                    false,
+                    None,
+                    Some(s("group.package")),
+                ),
             ],
             quick_run: false,
             supports_cancel: true,
         },
-        "build.run" => CommandUi {
-            description: s("cmd.build.run.description"),
-            fields: vec![
-                FieldSpec {
-                    key: "skip_config",
-                    label: s("cmd.build.run.field.skip_config.label"),
-                    help: s("cmd.build.run.field.skip_config.help"),
-                    kind: FieldKind::Boolean,
-                    binding: ArgBinding::Switch("--skip-config"),
-                    required: false,
-                    default_value: Some("false"),
-                },
-                FieldSpec {
-                    key: "skip_defs",
-                    label: s("cmd.build.run.field.skip_defs.label"),
-                    help: s("cmd.build.run.field.skip_defs.help"),
-                    kind: FieldKind::Boolean,
-                    binding: ArgBinding::Switch("--skip-defs"),
-                    required: false,
-                    default_value: Some("false"),
-                },
-                FieldSpec {
-                    key: "skip_quality",
-                    label: s("cmd.build.run.field.skip_quality.label"),
-                    help: s("cmd.build.run.field.skip_quality.help"),
-                    kind: FieldKind::Boolean,
-                    binding: ArgBinding::Switch("--skip-quality"),
-                    required: false,
-                    default_value: Some("false"),
-                },
-                FieldSpec {
-                    key: "skip_docs",
-                    label: s("cmd.build.run.field.skip_docs.label"),
-                    help: s("cmd.build.run.field.skip_docs.help"),
-                    kind: FieldKind::Boolean,
-                    binding: ArgBinding::Switch("--skip-docs"),
-                    required: false,
-                    default_value: Some("false"),
-                },
-                FieldSpec {
-                    key: "skip_dotnet",
-                    label: s("cmd.build.run.field.skip_dotnet.label"),
-                    help: s("cmd.build.run.field.skip_dotnet.help"),
-                    kind: FieldKind::Boolean,
-                    binding: ArgBinding::Switch("--skip-dotnet"),
-                    required: false,
-                    default_value: Some("false"),
-                },
-                FieldSpec {
-                    key: "skip_native",
-                    label: s("cmd.build.run.field.skip_native.label"),
-                    help: s("cmd.build.run.field.skip_native.help"),
-                    kind: FieldKind::Boolean,
-                    binding: ArgBinding::Switch("--skip-native"),
-                    required: false,
-                    default_value: Some("false"),
-                },
-                FieldSpec {
-                    key: "skip_verify",
-                    label: s("cmd.build.run.field.skip_verify.label"),
-                    help: s("cmd.build.run.field.skip_verify.help"),
-                    kind: FieldKind::Boolean,
-                    binding: ArgBinding::Switch("--skip-verify"),
-                    required: false,
-                    default_value: Some("false"),
-                },
-                FieldSpec {
-                    key: "configuration",
-                    label: s("cmd.build.run.field.configuration.label"),
-                    help: s("cmd.build.run.field.configuration.help"),
-                    kind: FieldKind::Select(CONFIGURATIONS),
-                    binding: ArgBinding::FlagValue("--configuration"),
-                    required: true,
-                    default_value: Some("Release"),
-                },
-            ],
-            quick_run: true,
-            supports_cancel: true,
-        },
-        "release.run" => CommandUi {
-            description: s("cmd.release.run.description"),
-            fields: vec![
-                FieldSpec {
-                    key: "configuration",
-                    label: s("cmd.release.run.field.configuration.label"),
-                    help: s("cmd.release.run.field.configuration.help"),
-                    kind: FieldKind::Select(CONFIGURATIONS),
-                    binding: ArgBinding::FlagValue("--configuration"),
-                    required: true,
-                    default_value: Some("Release"),
-                },
-                FieldSpec {
-                    key: "source",
-                    label: s("cmd.release.run.field.source.label"),
-                    help: s("cmd.release.run.field.source.help"),
-                    kind: FieldKind::Text,
-                    binding: ArgBinding::FlagValue("--source"),
-                    required: false,
-                    default_value: None,
-                },
-                FieldSpec {
-                    key: "dry_run",
-                    label: s("cmd.release.run.field.dry_run.label"),
-                    help: s("cmd.release.run.field.dry_run.help"),
-                    kind: FieldKind::Boolean,
-                    binding: ArgBinding::Switch("--dry-run"),
-                    required: false,
-                    default_value: Some("false"),
-                },
-                FieldSpec {
-                    key: "skip_cargo",
-                    label: s("cmd.release.run.field.skip_cargo.label"),
-                    help: s("cmd.release.run.field.skip_cargo.help"),
-                    kind: FieldKind::Boolean,
-                    binding: ArgBinding::Switch("--skip-cargo"),
-                    required: false,
-                    default_value: Some("false"),
-                },
-                FieldSpec {
-                    key: "skip_nuget",
-                    label: s("cmd.release.run.field.skip_nuget.label"),
-                    help: s("cmd.release.run.field.skip_nuget.help"),
-                    kind: FieldKind::Boolean,
-                    binding: ArgBinding::Switch("--skip-nuget"),
-                    required: false,
-                    default_value: Some("false"),
-                },
-            ],
-            quick_run: false,
-            supports_cancel: true,
-        },
+        "build.run" => build_run_ui(),
+        "release.run" => release_run_ui(),
         _ => CommandUi {
             description: summary,
             fields: {
@@ -345,6 +262,186 @@ pub(crate) fn ui_for_command(
             quick_run: false,
             supports_cancel: false,
         },
+    }
+}
+
+fn build_run_ui() -> CommandUi {
+    let workflow = s("cmd.build.run.group.workflow");
+    CommandUi {
+        description: s("cmd.build.run.description"),
+        fields: vec![
+            preset_field(
+                "preset",
+                s("cmd.build.run.field.preset.label"),
+                s("cmd.build.run.field.preset.help"),
+                BUILD_RUN_PRESETS,
+                Some(s("cmd.build.run.group.preset")),
+            ),
+            include_step(
+                "step_config",
+                s("cmd.build.run.field.step_config.label"),
+                s("cmd.build.run.field.step_config.help"),
+                "--skip-config",
+                Some("true"),
+                Some("true"),
+                Some(workflow),
+                0,
+            ),
+            include_step(
+                "step_defs",
+                s("cmd.build.run.field.step_defs.label"),
+                s("cmd.build.run.field.step_defs.help"),
+                "--skip-defs",
+                Some("true"),
+                Some("true"),
+                Some(workflow),
+                0,
+            ),
+            include_step(
+                "step_quality",
+                s("cmd.build.run.field.step_quality.label"),
+                s("cmd.build.run.field.step_quality.help"),
+                "--skip-quality",
+                Some("true"),
+                Some("true"),
+                Some(workflow),
+                0,
+            ),
+            include_step(
+                "step_docs",
+                s("cmd.build.run.field.step_docs.label"),
+                s("cmd.build.run.field.step_docs.help"),
+                "--skip-docs",
+                Some("true"),
+                Some("false"),
+                Some(workflow),
+                1,
+            ),
+            include_step(
+                "step_dotnet",
+                s("cmd.build.run.field.step_dotnet.label"),
+                s("cmd.build.run.field.step_dotnet.help"),
+                "--skip-dotnet",
+                Some("true"),
+                Some("true"),
+                Some(workflow),
+                1,
+            ),
+            include_step(
+                "step_native",
+                s("cmd.build.run.field.step_native.label"),
+                s("cmd.build.run.field.step_native.help"),
+                "--skip-native",
+                Some("true"),
+                Some("true"),
+                Some(workflow),
+                0,
+            ),
+            include_step(
+                "step_verify",
+                s("cmd.build.run.field.step_verify.label"),
+                s("cmd.build.run.field.step_verify.help"),
+                "--skip-verify",
+                Some("true"),
+                Some("false"),
+                Some(workflow),
+                0,
+            ),
+            combo_field(
+                "native_scope",
+                s("cmd.build.run.field.native_scope.label"),
+                s("cmd.build.run.field.native_scope.help"),
+                "--cross-native",
+                NATIVE_SCOPES,
+                Some("Host only"),
+                Some("Host only"),
+                Some(s("cmd.build.run.group.advanced")),
+            ),
+            combo_field(
+                "configuration",
+                s("cmd.build.run.field.configuration.label"),
+                s("cmd.build.run.field.configuration.help"),
+                "--configuration",
+                CONFIGURATIONS,
+                Some("Release"),
+                Some("Debug"),
+                Some(s("cmd.build.run.group.advanced")),
+            ),
+        ],
+        quick_run: true,
+        supports_cancel: true,
+    }
+}
+
+fn release_run_ui() -> CommandUi {
+    let steps = s("cmd.release.run.group.steps");
+    CommandUi {
+        description: s("cmd.release.run.description"),
+        fields: vec![
+            preset_field(
+                "preset",
+                s("cmd.release.run.field.preset.label"),
+                s("cmd.release.run.field.preset.help"),
+                RELEASE_RUN_PRESETS,
+                Some(s("cmd.release.run.group.preset")),
+            ),
+            include_step(
+                "step_cargo",
+                s("cmd.release.run.field.step_cargo.label"),
+                s("cmd.release.run.field.step_cargo.help"),
+                "--skip-cargo",
+                Some("true"),
+                Some("false"),
+                Some(steps),
+                0,
+            ),
+            include_step(
+                "step_nuget",
+                s("cmd.release.run.field.step_nuget.label"),
+                s("cmd.release.run.field.step_nuget.help"),
+                "--skip-nuget",
+                Some("true"),
+                Some("false"),
+                Some(steps),
+                0,
+            ),
+            combo_field(
+                "configuration",
+                s("cmd.release.run.field.configuration.label"),
+                s("cmd.release.run.field.configuration.help"),
+                "--configuration",
+                CONFIGURATIONS,
+                Some("Release"),
+                None,
+                Some(s("cmd.release.run.group.advanced")),
+            ),
+            text_field(
+                "source",
+                s("cmd.release.run.field.source.label"),
+                s("cmd.release.run.field.source.help"),
+                ArgBinding::FlagValue("--source"),
+                false,
+                None,
+                Some(s("cmd.release.run.group.advanced")),
+            ),
+            FieldSpec {
+                key: "dry_run",
+                label: s("cmd.release.run.field.dry_run.label"),
+                help: s("cmd.release.run.field.dry_run.help"),
+                kind: FieldKind::Boolean,
+                binding: ArgBinding::Switch("--dry-run"),
+                required: false,
+                default_value: Some("false"),
+                tui_default_value: Some("true"),
+                group: Some(s("cmd.release.run.group.advanced")),
+                invert_switch: false,
+                tui_only: false,
+                tui_combo_width: None,
+                tui_nest: 0,
+            },
+        ],
+        quick_run: false,
+        supports_cancel: true,
     }
 }
 
@@ -361,27 +458,165 @@ fn package_command(description: &'static str) -> CommandUi {
     CommandUi {
         description,
         fields: vec![
-            FieldSpec {
-                key: "configuration",
-                label: s("cmd.package.field.configuration.label"),
-                help: s("cmd.package.field.configuration.help"),
-                kind: FieldKind::Select(CONFIGURATIONS),
-                binding: ArgBinding::FlagValue("--configuration"),
-                required: true,
-                default_value: Some("Release"),
-            },
-            FieldSpec {
-                key: "version",
-                label: s("cmd.package.field.version.label"),
-                help: s("cmd.package.field.version.help"),
-                kind: FieldKind::Text,
-                binding: ArgBinding::FlagValue("--version"),
-                required: false,
-                default_value: None,
-            },
+            combo_field(
+                "configuration",
+                s("cmd.package.field.configuration.label"),
+                s("cmd.package.field.configuration.help"),
+                "--configuration",
+                CONFIGURATIONS,
+                Some("Release"),
+                None,
+                Some(s("group.package")),
+            ),
+            text_field(
+                "version",
+                s("cmd.package.field.version.label"),
+                s("cmd.package.field.version.help"),
+                ArgBinding::FlagValue("--version"),
+                false,
+                None,
+                Some(s("group.package")),
+            ),
         ],
         quick_run: true,
         supports_cancel: true,
+    }
+}
+
+fn preset_field(
+    key: &'static str,
+    label: &'static str,
+    help: &'static str,
+    options: &'static [PresetOption],
+    group: Option<&'static str>,
+) -> FieldSpec {
+    FieldSpec {
+        key,
+        label,
+        help,
+        kind: FieldKind::Preset(options),
+        binding: ArgBinding::Switch("__preset"),
+        required: false,
+        default_value: Some(options.first().map(|o| o.id).unwrap_or("")),
+        tui_default_value: None,
+        group,
+        invert_switch: false,
+        tui_only: true,
+        tui_combo_width: None,
+        tui_nest: 0,
+    }
+}
+
+#[allow(clippy::too_many_arguments)]
+fn include_step(
+    key: &'static str,
+    label: &'static str,
+    help: &'static str,
+    flag: &'static str,
+    cli_default: Option<&'static str>,
+    tui_default: Option<&'static str>,
+    group: Option<&'static str>,
+    nest: u8,
+) -> FieldSpec {
+    FieldSpec {
+        key,
+        label,
+        help,
+        kind: FieldKind::Boolean,
+        binding: ArgBinding::Switch(flag),
+        required: false,
+        default_value: cli_default,
+        tui_default_value: tui_default,
+        group,
+        invert_switch: true,
+        tui_only: false,
+        tui_combo_width: None,
+        tui_nest: nest,
+    }
+}
+
+#[allow(clippy::too_many_arguments)]
+fn combo_field(
+    key: &'static str,
+    label: &'static str,
+    help: &'static str,
+    flag: &'static str,
+    options: &'static [&'static str],
+    default_value: Option<&'static str>,
+    tui_default_value: Option<&'static str>,
+    group: Option<&'static str>,
+) -> FieldSpec {
+    let binding = if flag == "--cross-native" {
+        ArgBinding::Switch(flag)
+    } else {
+        ArgBinding::FlagValue(flag)
+    };
+    FieldSpec {
+        key,
+        label,
+        help,
+        kind: FieldKind::Combo(options),
+        binding,
+        required: false,
+        default_value,
+        tui_default_value,
+        group,
+        invert_switch: false,
+        tui_only: false,
+        tui_combo_width: None,
+        tui_nest: 0,
+    }
+}
+
+fn radio_field(
+    key: &'static str,
+    label: &'static str,
+    help: &'static str,
+    options: &'static [&'static str],
+    default_value: Option<&'static str>,
+    tui_default_value: Option<&'static str>,
+    group: Option<&'static str>,
+) -> FieldSpec {
+    FieldSpec {
+        key,
+        label,
+        help,
+        kind: FieldKind::Radio(options),
+        binding: ArgBinding::FlagValue("__mode"),
+        required: false,
+        default_value,
+        tui_default_value,
+        group,
+        invert_switch: false,
+        tui_only: false,
+        tui_combo_width: None,
+        tui_nest: 0,
+    }
+}
+
+fn text_field(
+    key: &'static str,
+    label: &'static str,
+    help: &'static str,
+    binding: ArgBinding,
+    required: bool,
+    default_value: Option<&'static str>,
+    group: Option<&'static str>,
+) -> FieldSpec {
+    FieldSpec {
+        key,
+        label,
+        help,
+        kind: FieldKind::Text,
+        binding,
+        required,
+        default_value,
+        tui_default_value: None,
+        group,
+        invert_switch: false,
+        tui_only: false,
+        tui_combo_width: None,
+        tui_nest: 0,
     }
 }
 
@@ -390,6 +625,7 @@ fn required_path(
     label: &'static str,
     help: &'static str,
     flag: &'static str,
+    group: Option<&'static str>,
 ) -> FieldSpec {
     FieldSpec {
         key,
@@ -399,6 +635,12 @@ fn required_path(
         binding: ArgBinding::FlagValue(flag),
         required: true,
         default_value: None,
+        tui_default_value: None,
+        group,
+        invert_switch: false,
+        tui_only: false,
+        tui_combo_width: None,
+        tui_nest: 0,
     }
 }
 
@@ -407,6 +649,7 @@ fn optional_path(
     label: &'static str,
     help: &'static str,
     flag: &'static str,
+    group: Option<&'static str>,
 ) -> FieldSpec {
     FieldSpec {
         key,
@@ -416,5 +659,11 @@ fn optional_path(
         binding: ArgBinding::FlagValue(flag),
         required: false,
         default_value: None,
+        tui_default_value: None,
+        group,
+        invert_switch: false,
+        tui_only: false,
+        tui_combo_width: None,
+        tui_nest: 0,
     }
 }

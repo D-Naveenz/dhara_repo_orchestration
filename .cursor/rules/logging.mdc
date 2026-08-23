@@ -22,8 +22,8 @@ TRACE           — line-by-line / per-item detail; highest volume
 
 | Pick this level when… | Example |
 | --------------------- | ------- |
-| ERROR | Module/command aborts; user-visible failure | subprocess or handler hard failure |
-| WARN | Completed with caveats | command run failed after duration; verification mismatch |
+| ERROR | Module/command aborts; user-visible failure | subprocess or handler hard failure; **command run failed after …** |
+| WARN | Completed with caveats | verification mismatch; disabled command execute |
 | INFO | One sentence a reader needs without DEBUG | session bookends; **command run** open/close with duration |
 | DEBUG | Supports troubleshooting; safe to omit from default runs | phase transitions, `TrID transform —`, paths, flags |
 | TRACE | Direct console verbose detail in CLI mode | full stderr mirror in direct mode (not file-specific) |

@@ -21,7 +21,7 @@ use drot_kernel::{
 };
 
 use crate::ops::native_rids::{
-    buildable_runtimes_on_host, native_lib_filename, package_native_path, platform, platform_target,
+    native_lib_filename, package_native_path, platform, platform_target, staging_runtimes_on_host,
 };
 use crate::ops::workflow_progress::{begin_workflow, plan_unit_step, run_planned_step};
 
@@ -34,6 +34,13 @@ pub struct PackageOptions {
     pub execute_publish: bool,
     pub native_stage_override: Option<PathBuf>,
     pub prepacked_nuget_override: Option<PathBuf>,
+    /// When staging on the current host, also build cross-native targets (for example `win-arm64`
+    /// on Windows x64). Defaults to true for `package stage-native` / CI; local `build run` sets
+    /// this to false unless `--cross-native` is passed.
+    pub include_cross_native: bool,
+    /// Native RIDs required in the stage directory and `.nupkg`. When unset, all
+    /// `ci.native_runtimes` from config are required (merged CI layout).
+    pub expected_native_runtimes: Option<Vec<String>>,
 }
 
 pub fn pack(
@@ -72,7 +79,7 @@ pub fn pack(
     let nuget_output = output_root.join("nuget");
     reset_directory(&nuget_output)?;
 
-    validate_staged_native_assets(&native_stage_root, config)?;
+    validate_staged_native_assets(&native_stage_root, config, options)?;
 
     let pack_project = |project: &str| {
         run_command(
@@ -109,13 +116,13 @@ pub fn pack(
     let package_id = read_csproj_package_id(repo_root, &config.ci.package_project)?;
     let package_path = nuget_output.join(format!("{package_id}.{version}.nupkg"));
     if nested {
-        inspect_package_contents(repo_root, &package_path, config)?;
+        inspect_package_contents(repo_root, &package_path, config, options)?;
     } else {
         run_planned_step(
             "inspect",
             "Inspecting package",
             "Inspecting package contents",
-            || inspect_package_contents(repo_root, &package_path, config),
+            || inspect_package_contents(repo_root, &package_path, config, options),
         )?;
     }
 
@@ -150,7 +157,8 @@ pub fn pack(
 }
 
 fn setup_pack_plan(config: &DharaRepoConfig, options: &PackageOptions) -> Result<()> {
-    let runtimes = buildable_runtimes_on_host(&config.ci.native_runtimes);
+    let runtimes =
+        staging_runtimes_on_host(&config.ci.native_runtimes, options.include_cross_native);
     if runtimes.is_empty()
         && options.native_stage_override.is_none()
         && native_stage_from_env().is_none()
@@ -182,6 +190,12 @@ pub fn verify(
     config: &DharaRepoConfig,
     options: &PackageOptions,
 ) -> Result<CommandResult> {
+    if !options.configuration.eq_ignore_ascii_case("Release") {
+        bail!(
+            "NuGet package verification requires Release configuration (got {})",
+            options.configuration
+        );
+    }
     log_module_step_debug(&format!(
         "verifying NuGet package (configuration={})",
         options.configuration
@@ -466,12 +480,18 @@ fn stage_native_assets(
     report_progress: bool,
 ) -> Result<()> {
     let profile_flag = if options.configuration.eq_ignore_ascii_case("Release") {
-        "--release"
+        Some("--release")
+    } else if options.configuration.eq_ignore_ascii_case("Debug") {
+        None
     } else {
-        bail!("only Release packaging is currently supported");
+        bail!(
+            "unsupported native staging configuration: {}",
+            options.configuration
+        );
     };
 
-    let runtimes = buildable_runtimes_on_host(&config.ci.native_runtimes);
+    let runtimes =
+        staging_runtimes_on_host(&config.ci.native_runtimes, options.include_cross_native);
     if runtimes.is_empty() {
         bail!("no native runtimes are buildable on the current host");
     }
@@ -498,23 +518,23 @@ fn stage_native_assets(
             stage_root = %stage_root.display(),
             "staging dhara-sd sidecar"
         );
-        run_command(
-            "cargo",
-            &[
-                "build".to_owned(),
-                "-p".to_owned(),
-                "dhara-sd".to_owned(),
-                profile_flag.to_owned(),
-                "--target".to_owned(),
-                target.clone(),
-            ],
-            repo_root,
-        )?;
+        let mut build_args = vec!["build".to_owned(), "-p".to_owned(), "dhara-sd".to_owned()];
+        if let Some(flag) = profile_flag {
+            build_args.push(flag.to_owned());
+        }
+        build_args.push("--target".to_owned());
+        build_args.push(target.clone());
+        run_command("cargo", &build_args, repo_root)?;
 
+        let profile_dir = if profile_flag.is_some() {
+            "release"
+        } else {
+            "debug"
+        };
         let source_path = repo_root
             .join("target")
             .join(target)
-            .join("release")
+            .join(profile_dir)
             .join(lib_name);
         let destination_path = stage_root
             .join("runtimes")
@@ -542,6 +562,26 @@ fn stage_native_assets(
     Ok(())
 }
 
+/// Re-runs `package stage-native` inside the Visual Studio cross-compilation environment.
+///
+/// Loads `vcvarsall.bat x64_arm64` on Windows x64 hosts so `win-arm64` (`aarch64-pc-windows-msvc`)
+/// links with the MSVC toolset. Used by `build run` and `package stage-native --msvc-env`.
+#[cfg(windows)]
+pub fn stage_native_under_msvc_env(repo_root: &Path, configuration: &str) -> Result<()> {
+    use anyhow::Context;
+
+    let exe = std::env::current_exe().context("failed to resolve drot executable path")?;
+    let mut command = format!(
+        "\"{}\" -r \"{}\" --yes package stage-native",
+        exe.display(),
+        repo_root.display()
+    );
+    if !configuration.eq_ignore_ascii_case("Release") {
+        command.push_str(&format!(" --configuration {configuration}"));
+    }
+    drot_kernel::msvc::run_with_msvc_env(&command)
+}
+
 /// Stages native libraries buildable on the current host into `{tool_root}/artifacts/native-stage`.
 pub fn stage_native_for_host(
     repo_root: &Path,
@@ -549,7 +589,8 @@ pub fn stage_native_for_host(
     config: &DharaRepoConfig,
     options: &PackageOptions,
 ) -> Result<CommandResult> {
-    let runtimes = buildable_runtimes_on_host(&config.ci.native_runtimes);
+    let runtimes =
+        staging_runtimes_on_host(&config.ci.native_runtimes, options.include_cross_native);
     if runtimes.is_empty() {
         bail!("no native runtimes are buildable on the current host");
     }
@@ -575,6 +616,7 @@ fn inspect_package_contents(
     repo_root: &Path,
     package_path: &Path,
     config: &DharaRepoConfig,
+    options: &PackageOptions,
 ) -> Result<()> {
     let entries = inspect_package_entries(package_path)?;
     debug!(
@@ -590,8 +632,8 @@ fn inspect_package_contents(
         bail!("managed assembly missing from package");
     }
 
-    for rid in &config.ci.native_runtimes {
-        let expected = package_native_path(rid)?;
+    for rid in expected_native_runtimes(config, options) {
+        let expected = package_native_path(&rid)?;
         if !entries.iter().any(|entry| entry == &expected) {
             bail!("native asset missing from package: {expected}");
         }
@@ -897,12 +939,16 @@ fn non_empty_option(value: String) -> Option<String> {
     }
 }
 
-fn validate_staged_native_assets(stage_root: &Path, config: &DharaRepoConfig) -> Result<()> {
-    for rid in &config.ci.native_runtimes {
-        let lib_name = native_lib_filename(rid)?;
+fn validate_staged_native_assets(
+    stage_root: &Path,
+    config: &DharaRepoConfig,
+    options: &PackageOptions,
+) -> Result<()> {
+    for rid in expected_native_runtimes(config, options) {
+        let lib_name = native_lib_filename(&rid)?;
         let path = stage_root
             .join("runtimes")
-            .join(rid)
+            .join(&rid)
             .join("native")
             .join(lib_name);
         if !path.is_file() {
@@ -913,6 +959,13 @@ fn validate_staged_native_assets(stage_root: &Path, config: &DharaRepoConfig) ->
         }
     }
     Ok(())
+}
+
+fn expected_native_runtimes(config: &DharaRepoConfig, options: &PackageOptions) -> Vec<String> {
+    options
+        .expected_native_runtimes
+        .clone()
+        .unwrap_or_else(|| config.ci.native_runtimes.clone())
 }
 
 fn absolute_native_stage_root(repo_root: &Path, stage: &Path) -> PathBuf {

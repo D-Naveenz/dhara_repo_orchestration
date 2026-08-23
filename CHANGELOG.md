@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## v0.11.0 - 2026-08-23
+
+### Added
+- TUI Options overhaul: BIOS-style combo and textbox widgets, nested workflow steps, presets with TUI-only defaults, and `docs/tui-options.md`.
+- Kernel form schema: `FieldKind::Preset`, `tui_default_value` / `tui_only` / `tui_combo_width` / `tui_nest`, and product hooks for applying presets.
+- `build.run --cross-native` to stage cross-native targets buildable on the host.
+- Windows MSVC DevShell re-exec helpers (`msvc` / non-Windows stub).
+
+### Changed
+- Options panel grouping and focus styling (content-sized combo/textbox highlights, terminal caret while editing).
+- Diagnostics and native staging behavior from the cross-native / filedefs cleanup work.
+
+### Technical
+- Public `FieldSpec` gained new fields (breaking for external struct literals under Cargo 0.x rules).
+
 ## v0.10.0 - 2026-08-08
 
 ### Changed

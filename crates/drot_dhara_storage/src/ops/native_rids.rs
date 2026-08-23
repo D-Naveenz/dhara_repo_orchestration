@@ -20,7 +20,34 @@ pub fn package_native_path(rid: &str) -> Result<String> {
     ))
 }
 
-/// RIDs that can be built on the current host OS and CPU without cross-compilation.
+/// RIDs that match the current host OS and CPU (no cross-compilation).
+pub fn native_runtimes_on_host(all_runtimes: &[String]) -> Vec<String> {
+    let host_os = std::env::consts::OS;
+    let host_arch = std::env::consts::ARCH;
+    all_runtimes
+        .iter()
+        .filter(|rid| is_rid_native_on_host(rid, host_os, host_arch))
+        .cloned()
+        .collect()
+}
+
+/// RIDs to stage on the current host.
+///
+/// When `include_cross_native` is false (default for local `build run`), only the host-native
+/// RID is built (for example `win-x64` on Windows x64). When true, also includes cross-compiled
+/// targets buildable on this host (for example `win-arm64` from Windows x64 via MSVC).
+pub fn staging_runtimes_on_host(
+    all_runtimes: &[String],
+    include_cross_native: bool,
+) -> Vec<String> {
+    if include_cross_native {
+        buildable_runtimes_on_host(all_runtimes)
+    } else {
+        native_runtimes_on_host(all_runtimes)
+    }
+}
+
+/// RIDs that can be built on the current host OS and CPU, including cross-compilation.
 pub fn buildable_runtimes_on_host(all_runtimes: &[String]) -> Vec<String> {
     let host_os = std::env::consts::OS;
     let host_arch = std::env::consts::ARCH;
@@ -31,11 +58,10 @@ pub fn buildable_runtimes_on_host(all_runtimes: &[String]) -> Vec<String> {
         .collect()
 }
 
-fn is_rid_buildable_on_host(rid: &str, host_os: &str, host_arch: &str) -> bool {
+fn is_rid_native_on_host(rid: &str, host_os: &str, host_arch: &str) -> bool {
     match host_os {
         "windows" => match host_arch {
-            // MSVC can cross-compile ARM64 from an x64 host.
-            "x86_64" => matches!(rid, "win-x64" | "win-arm64"),
+            "x86_64" => rid == "win-x64",
             "aarch64" => rid == "win-arm64",
             _ => false,
         },
@@ -45,6 +71,20 @@ fn is_rid_buildable_on_host(rid: &str, host_os: &str, host_arch: &str) -> bool {
             _ => false,
         },
         "macos" => rid == "osx-arm64",
+        _ => false,
+    }
+}
+
+fn is_rid_buildable_on_host(rid: &str, host_os: &str, host_arch: &str) -> bool {
+    if is_rid_native_on_host(rid, host_os, host_arch) {
+        return true;
+    }
+
+    match host_os {
+        "windows" => {
+            // MSVC can cross-compile ARM64 from an x64 host.
+            host_arch == "x86_64" && rid == "win-arm64"
+        }
         _ => false,
     }
 }
@@ -98,5 +138,26 @@ mod tests {
         assert!(is_rid_buildable_on_host("linux-arm64", "linux", "aarch64"));
         assert!(!is_rid_buildable_on_host("linux-x64", "linux", "aarch64"));
         assert!(!is_rid_buildable_on_host("win-x64", "linux", "x86_64"));
+    }
+
+    #[test]
+    fn native_runtimes_exclude_cross_compile_on_windows_x64() {
+        assert!(is_rid_native_on_host("win-x64", "windows", "x86_64"));
+        assert!(!is_rid_native_on_host("win-arm64", "windows", "x86_64"));
+        assert!(is_rid_buildable_on_host("win-arm64", "windows", "x86_64"));
+    }
+
+    #[test]
+    #[cfg(all(windows, target_arch = "x86_64"))]
+    fn staging_runtimes_toggle_cross_native_on_windows_x64() {
+        let all = vec!["win-x64".to_owned(), "win-arm64".to_owned()];
+        assert_eq!(
+            staging_runtimes_on_host(&all, false),
+            vec!["win-x64".to_owned()]
+        );
+        assert_eq!(
+            staging_runtimes_on_host(&all, true),
+            vec!["win-x64".to_owned(), "win-arm64".to_owned()]
+        );
     }
 }

@@ -1,6 +1,6 @@
 use std::time::{Duration, Instant};
 
-use tracing::{info, warn};
+use tracing::{error, info};
 
 use crate::context::CommandResult;
 use crate::operation_progress::{
@@ -88,13 +88,13 @@ impl CommandRun {
         }
 
         if let Some(error) = outcome.error {
-            warn!(
+            error!(
                 target: AUDIT_TARGET,
                 "{} failed after {duration} — {error}",
                 self.activity.failure_subject
             );
         } else {
-            warn!(
+            error!(
                 target: AUDIT_TARGET,
                 "{} failed after {duration} — exit {}",
                 self.activity.failure_subject,

@@ -14,6 +14,11 @@ use drot_kernel::{
 use drot_tui::{TuiBootParams, can_launch_tui, run_tui};
 
 pub fn run() -> Result<()> {
+    let raw_args: Vec<String> = env::args().skip(1).collect();
+    if drot_kernel::msvc::reexec_under_devshell_if_needed(&raw_args)? {
+        return Ok(());
+    }
+
     #[cfg(feature = "extension-dhara-storage")]
     {
         drot_dhara_storage::install_hooks();
@@ -24,7 +29,7 @@ pub fn run() -> Result<()> {
         set_linked_extension("none");
     }
 
-    let cli = parse_root_args(env::args().skip(1).collect(), ParseMode::Direct)?;
+    let cli = parse_root_args(raw_args, ParseMode::Direct)?;
 
     let mut registry = CommandRegistry::new();
     register_base_commands(&mut registry);

@@ -187,7 +187,7 @@ fn decode_hex_bytes(path: &Path, value: &str) -> Result<Vec<u8>, BuilderError> {
 
     let mut bytes = Vec::with_capacity(normalized.len() / 2);
     let chars = normalized.as_bytes();
-    for pair in chars.chunks_exact(2) {
+    for pair in chars.as_chunks::<2>().0 {
         let chunk = std::str::from_utf8(pair).map_err(|_| BuilderError::InvalidHex {
             path: path.to_path_buf(),
             value: value.to_string(),

@@ -5,6 +5,9 @@ pub mod filedefs;
 pub mod ops;
 pub mod registry;
 
+use drot_kernel::command::CommandSpec;
+use drot_kernel::forms::CommandForm;
+
 use std::path::Path;
 
 use drot_kernel::Extension;
@@ -72,9 +75,24 @@ impl ProductHooks for StorageProductHooks {
             },
         }
     }
+
+    fn initialize_tui_form(&self, form: &mut CommandForm, command: &CommandSpec) {
+        initialize_tui_form(form, command);
+    }
+
+    fn apply_tui_preset(&self, form: &mut CommandForm, command: &CommandSpec, preset_id: &str) {
+        registry::apply_form_preset(form, command, preset_id);
+    }
 }
 
 /// Registers [`StorageProductHooks`] with the kernel.
 pub fn install_hooks() {
     set_product_hooks(&STORAGE_HOOKS);
+}
+
+/// Applies the default TUI preset for commands that define workflow presets.
+pub fn initialize_tui_form(form: &mut CommandForm, command: &CommandSpec) {
+    if let Some(preset_id) = registry::default_preset_id(command.id) {
+        registry::apply_form_preset(form, command, preset_id);
+    }
 }
